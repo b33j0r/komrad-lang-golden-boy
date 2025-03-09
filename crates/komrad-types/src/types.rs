@@ -1,5 +1,6 @@
 use crate::channel::Channel;
 use crate::operators::{BinaryOp, UnaryOp};
+use crate::pattern::Pattern;
 use crate::RuntimeError;
 use std::fmt::Display;
 use std::hash::Hash;
@@ -207,4 +208,69 @@ pub enum Expr {
         args: Vec<Expr>,
         reply: Box<Expr>,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Statement {
+    NoOp,
+    Comment(String),
+    Assignment(String, Expr),
+    Expr(Expr),
+    Handler(Handler),
+    Field(Field),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Handler {
+    pub name: String,
+    pub pattern: Pattern,
+    pub block: Block,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Block {
+    pub statements: Vec<Statement>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Field {
+    pub name: String,
+    pub typ: String,
+    pub expr: Option<Expr>,
+}
+
+impl Block {
+    pub fn new(statements: Vec<Statement>) -> Self {
+        Self { statements }
+    }
+
+    pub fn statements(&self) -> &[Statement] {
+        &self.statements
+    }
+}
+
+impl Handler {
+    pub fn new(name: String, pattern: Pattern, block: Block) -> Self {
+        Self {
+            name,
+            pattern,
+            block,
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn pattern(&self) -> &Pattern {
+        &self.pattern
+    }
+
+    pub fn block(&self) -> &Block {
+        &self.block
+    }
+
+    pub fn statements(&self) -> &[Statement] {
+        self.block.statements()
+    }
 }

@@ -1019,6 +1019,7 @@ dependencies = [
  "miette",
  "nom",
  "nom_locate",
+ "owo-colors",
  "serde",
  "serde_json",
  "thiserror 2.0.12",

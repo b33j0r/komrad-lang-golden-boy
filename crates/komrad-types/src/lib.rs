@@ -4,8 +4,10 @@ mod address;
 mod channel;
 mod error;
 mod operators;
+mod pattern;
 mod reducer;
 mod scope;
+mod sexpr;
 mod span;
 mod types;
 

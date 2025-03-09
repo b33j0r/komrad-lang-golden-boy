@@ -14,6 +14,7 @@ thiserror.workspace = true
 miette = { version = "7.5.0", features = ["fancy"] }
 nom_locate = "5.0.0"
 dashmap.workspace = true
+owo-colors.workspace = true
 
 [features]
 default = []

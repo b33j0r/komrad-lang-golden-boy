@@ -8,6 +8,11 @@ figlet-rs = "0.1.5"
 
 [workspace]
 resolver = "2"
-members = [".", "crates/komrad-types"]
+members = [".", "crates/komrad-cli", "crates/komrad-parser", "crates/komrad-types", "crates/komrad-web"]
 
-
+[workspace.dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "io-util", "io-std", "signal"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter", "registry"] }
+thiserror = "2.0.12"
+nom = "8.0.0"

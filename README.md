@@ -40,15 +40,34 @@ message. Pattern holes start with an `_`. You can make a hole for
 an arbitrary value with `_name`, one that matches a predicate with
 `_(x >= 3.141)`, or one that takes an entire block with `_{block}`:
 
+The first form is just called a hole.
+
 ```
 [say hi to _name] {
   IO println "Hi, " + name + "!"
 }
+```
 
+The second form is called a predicate hole, and lets you perform
+type-checking, logic, and arithmetic:
+
+```
 [make sure not dave: _(x != "dave")] {
   IO println "Nope, " + x + " is not dave"
 }
+```
 
+You can use it to constrain types:
+
+```
+[say hi to _(name:String)] {
+  IO println "Hi, " + name + "!"
+}
+```
+
+The third form is called a block hole, and lets you pass around blocks of code:
+
+```
 [print _x then run _{code} on your machine] {
   IO println x
   IO println "Running it here"
@@ -70,12 +89,13 @@ one, along with `if-else`, `zombify-unzombify`, etc:
 [if (x => false) _] {
   // do nothing
 }
+```
 
-// Lowercase names are variables. You can send an assignment
-// message to an unbound variable to bind it.
+Now we can use it:
+
+```
 x = 3
 
-// Now let's test our if statement!
 if (x > 1) {
   IO println "x is greater than 1"
 }

@@ -31,10 +31,28 @@ impl Hash for Channel {
     }
 }
 
+/// The receiving end of a listener, used internally to dispatch a message to a handler.
+///
+/// Listeners are an internal struct that is used to receive messages from a channel.
+/// They are just about the only thing in this execution flow that isn't a Value.
 #[derive(Debug)]
 pub struct ChannelListener {
-    pub address: Address,
-    pub receiver: mpsc::Receiver<Msg>,
+    address: Address,
+    receiver: mpsc::Receiver<Msg>,
+}
+
+impl ChannelListener {
+    pub fn new(address: Address, receiver: mpsc::Receiver<Msg>) -> Self {
+        Self { address, receiver }
+    }
+
+    pub fn address(&self) -> &Address {
+        &self.address
+    }
+
+    pub async fn recv(&mut self) -> Option<Msg> {
+        self.receiver.recv().await
+    }
 }
 
 impl Display for ChannelListener {

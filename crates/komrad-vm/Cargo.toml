@@ -1,0 +1,15 @@
+[package]
+name = "komrad-vm"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+komrad-types = { path = "../komrad-types" }
+
+uuid.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+dashmap.workspace = true
+thiserror.workspace = true
+futures.workspace = true

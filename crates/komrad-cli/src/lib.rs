@@ -1,7 +1,8 @@
+use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 use owo_colors::OwoColorize;
 use palette::{LinSrgb};
-use tracing::{info, trace};
+use tracing::{debug, info, trace};
 
 mod banner;
 
@@ -18,10 +19,12 @@ struct Args {
 
 #[derive(Clone, Debug, Subcommand)]
 enum Subcommands {
-    /// Print a banner
-    Banner {
-        /// The text to print in the banner
-        text: String,
+    Parse {
+        file: Option<PathBuf>,
+    },
+
+    Run {
+        file: Option<PathBuf>,
     },
 }
 
@@ -41,12 +44,13 @@ pub async fn main() {
 
     banner();
 
+
     info!("{}", "Komrad CLI starting".bright_cyan());
 
 }
 
 fn banner() {
-    let text = "KOMRAD 0.1";
+    let text = "Komrad";
 
     let stops = vec![
         (0.0, LinSrgb::new(1.0, 0.0, 0.5)),
@@ -56,5 +60,5 @@ fn banner() {
     ];
 
     let banner = banner::gradient_banner(text, &stops);
-    trace!("\n{}", banner);
+    debug!("\n{}", banner);
 }

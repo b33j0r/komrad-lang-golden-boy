@@ -1,5 +1,6 @@
+use crate::Value;
 use miette::{Diagnostic, SourceSpan};
-use std::fmt::{Debug};
+use std::fmt::Debug;
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Error, Diagnostic)]
@@ -21,11 +22,7 @@ pub struct ParserError {
 }
 
 impl ParserError {
-    pub fn from_kind(
-        kind: RuntimeError,
-        src: String,
-        span: SourceSpan,
-    ) -> Self {
+    pub fn from_kind(kind: RuntimeError, src: String, span: SourceSpan) -> Self {
         Self {
             kind,
             span,
@@ -90,4 +87,7 @@ pub enum RuntimeError {
 
     #[error("Another error occurred: {0}")]
     AnotherError(String),
+
+    #[error("Division by zero: {0}/0")]
+    DivisionByZero(Box<Value>),
 }

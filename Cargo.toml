@@ -3,20 +3,29 @@ name = "komrad-lang"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "komrad"
+path = "src/main.rs"
+
 [dependencies]
 komrad-parser = { path = "crates/komrad-parser" }
 komrad-types = { path = "crates/komrad-types" }
 komrad-cli = { path = "crates/komrad-cli" }
+komrad-vm = { path = "crates/komrad-vm" }
 
 tokio.workspace = true
 
 [workspace]
 resolver = "2"
-members = [".", "crates/komrad-cli", "crates/komrad-parser", "crates/komrad-types", "crates/komrad-web"]
+members = [".", "crates/komrad-cli", "crates/komrad-parser", "crates/komrad-types", "crates/komrad-vm", "crates/komrad-web"]
 
 [workspace.dependencies]
+async-trait = "0.1.87"
+dashmap = "7.0.0-rc2"
+futures = { version = "0.3.31", features = [] }
+nom = "8.0.0"
+thiserror = "2.0.12"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "io-util", "io-std", "signal"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter", "registry"] }
-thiserror = "2.0.12"
-nom = "8.0.0"
+uuid = { version = "1.15.1", features = ["v7", "serde"] }

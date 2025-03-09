@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-figlet-rs = "0.1.5"
+komrad-parser = { path = "crates/komrad-parser" }
+komrad-types = { path = "crates/komrad-types" }
+komrad-cli = { path = "crates/komrad-cli" }
+
+tokio.workspace = true
 
 [workspace]
 resolver = "2"

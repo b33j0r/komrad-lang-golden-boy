@@ -263,6 +263,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "clap-verbosity-flag"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2678fade3b77aa3a8ff3aae87e9c008d3fb00473a41c71fbf74e91c8c7b37e84"
+dependencies = [
+ "clap",
+ "log",
+ "tracing-core",
+]
+
+[[package]]
 name = "clap_builder"
 version = "4.5.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -894,6 +905,7 @@ name = "komrad-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "clap-verbosity-flag",
  "figlet-rs",
  "owo-colors",
  "palette",
@@ -905,7 +917,10 @@ dependencies = [
 name = "komrad-lang"
 version = "0.1.0"
 dependencies = [
- "figlet-rs",
+ "komrad-cli",
+ "komrad-parser",
+ "komrad-types",
+ "tokio",
 ]
 
 [[package]]

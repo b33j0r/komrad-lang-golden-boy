@@ -3,13 +3,13 @@ use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Block, CallExpr, Expr, Value};
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::{multispace0, space0, space1};
+use nom::character::complete::{digit1, multispace0, space0, space1};
 use nom::combinator::map;
 use nom::multi::{many0, separated_list1};
-use nom::sequence::{delimited, preceded};
+use nom::sequence::delimited;
 use nom::Parser;
 
-/// Parse a value expression, e.g. `2`, `"hello"`, or `foo`. Not a call expression.
+/// Parse an expression that is not a "call" — i.e. block, number, string, or variable
 fn parse_value_expression(input: Span) -> KResult<Box<Expr>> {
     map(
         alt((
@@ -18,12 +18,12 @@ fn parse_value_expression(input: Span) -> KResult<Box<Expr>> {
             parse_string_expression,
             map(identifier::parse_identifier, Expr::Variable),
         )),
-        |expr| Box::new(expr) as Box<Expr>,
+        Box::new,
     )
     .parse(input)
 }
 
-/// Parse a block expression, e.g. `{\n statements ... \n }`.
+/// Parse a block expression, i.e. `{ ...statements... }`
 fn parse_block_expression(input: Span) -> KResult<Expr> {
     map(
         delimited(
@@ -33,27 +33,25 @@ fn parse_block_expression(input: Span) -> KResult<Expr> {
                 lines::parse_blank_line,
                 lines::parse_comment,
             ))),
-            preceded(multispace0, tag("}")),
+            delimited(multispace0, tag("}"), space0),
         ),
-        |statements| Expr::Value(Value::Block(Box::new(Block::new(statements)))),
+        |statements| Expr::Block(Box::new(Block::new(statements))),
     )
     .parse(input)
 }
 
-/// Parse the argument list parts of a call expression.
+/// Parse a call argument, which could be any "value expression" (block, number, string, variable).
+/// You already have parse_value_expression.
 fn parse_call_part_expression(input: Span) -> KResult<Box<Expr>> {
-    let (remaining, expr) = alt((
-        parse_value_expression,                             // Existing handling
-        map(parse_block_expression, |expr| Box::new(expr)), // Accept blocks as arguments
-    ))
-    .parse(input)?;
-
-    Ok((remaining, expr))
+    // The simplest approach is just parse_value_expression (which includes blocks).
+    parse_value_expression(input)
 }
 
-/// Parse a call expression, e.g. `foo do 2 to 5`.
+/// Parse a call expression like `foo bar { ... } baz`.
+///
+/// The first identifier is the target (`foo`).
+/// Then we parse zero or more arguments, each preceded by *multispace1* so newlines are allowed.
 fn parse_call_expression(input: Span) -> KResult<Expr> {
-    // get the receiver
     let (remaining, receiver) = identifier::parse_identifier.parse(input)?;
     let (remaining, _) = space0.parse(remaining)?;
     let (remaining, parts) =
@@ -64,8 +62,8 @@ fn parse_call_expression(input: Span) -> KResult<Expr> {
     ))
 }
 
-/// Parse an expression
-pub(crate) fn parse_expression(input: Span) -> KResult<Expr> {
+/// Parse an expression (calls, block, number, string, variable).
+pub fn parse_expression(input: Span) -> KResult<Expr> {
     alt((
         parse_call_expression,
         parse_number_expression,
@@ -75,10 +73,8 @@ pub(crate) fn parse_expression(input: Span) -> KResult<Expr> {
     .parse(input)
 }
 
-/// Minimal approach: parse a “number” and wrap it in an Expr::Value(Number).
-pub fn parse_number_expression(input: Span) -> KResult<Expr> {
-    use nom::character::complete::digit1;
-
+/// Minimal approach: parse digits as a number.
+fn parse_number_expression(input: Span) -> KResult<Expr> {
     map(digit1, |digits: Span| {
         let txt = digits.fragment();
         let val = txt.parse::<u64>().unwrap_or_default();
@@ -87,17 +83,19 @@ pub fn parse_number_expression(input: Span) -> KResult<Expr> {
     .parse(input)
 }
 
-/// Parse a string expression, e.g. "hello world".
+/// Minimal string parser (delegates to your strings module).
 fn parse_string_expression(input: Span) -> KResult<Expr> {
-    crate::parse::strings::parse_string(input)
-        .map(|(remaining, expr)| (remaining, Expr::Value(expr)))
+    crate::parse::strings::parse_string(input).map(|(remaining, val)| (remaining, Expr::Value(val)))
 }
 
 #[cfg(test)]
 mod test_parse_expression {
     use crate::parse::expressions::parse_value_expression;
+    use crate::parse::statements::parse_statement;
     use crate::parse::strings::test_parse_string::full_span;
-    use komrad_ast::prelude::{Block, CallExpr, Expr, Number, Statement, Value};
+    use komrad_ast::prelude::{
+        Block, CallExpr, Expr, Handler, Number, Pattern, Statement, TypeExpr, Value,
+    };
 
     #[test]
     fn test_parse_block_expression() {
@@ -113,7 +111,7 @@ mod test_parse_expression {
         let (remaining, expr) = parse_value_expression(input).unwrap();
         assert_eq!(
             expr,
-            Box::new(Expr::Value(Value::Block(
+            Box::new(Expr::Block(
                 Block::new(vec![
                     Statement::Assignment("x".into(), Expr::Value(Value::Number(Number::UInt(2))))
                         .into(),
@@ -123,13 +121,119 @@ mod test_parse_expression {
                     ))),
                 ])
                 .into()
-            )))
+            ))
         );
         assert_eq!(*remaining.fragment(), "");
     }
 
     #[test]
     fn test_parse_agent_block_expression() {
+        let input = full_span(
+            r#"
+        agent Alice {}
+        "#
+            .trim(),
+        );
+
+        let result = parse_statement(input);
+        let (_remaining, stmt) = result.unwrap().clone();
+
+        assert_eq!(
+            stmt,
+            Statement::Expr(Expr::Call(CallExpr::new(
+                Expr::Variable("agent".into()),
+                vec![
+                    Expr::Variable("Alice".into()).into(),
+                    Expr::Block(Block::new(vec![]).into()).into()
+                ]
+            )))
+        )
+    }
+
+    #[test]
+    fn test_parse_agent_block_expression_spaced() {
+        let input = full_span(
+            r#"
+        agent Alice { }
+        "#
+            .trim(),
+        );
+
+        let result = parse_statement(input);
+        let (_remaining, stmt) = result.unwrap().clone();
+
+        assert_eq!(
+            stmt,
+            Statement::Expr(Expr::Call(CallExpr::new(
+                Expr::Variable("agent".into()),
+                vec![
+                    Expr::Variable("Alice".into()).into(),
+                    Expr::Block(Block::new(vec![]).into()).into()
+                ]
+            )))
+        )
+    }
+
+    #[test]
+    fn test_parse_agent_block_expression_newline() {
+        let input = full_span(
+            r#"
+        agent Alice {
+        }
+        "#
+            .trim(),
+        );
+
+        let result = parse_statement(input);
+        let (_remaining, stmt) = result.unwrap().clone();
+
+        assert_eq!(
+            stmt,
+            Statement::Expr(Expr::Call(CallExpr::new(
+                Expr::Variable("agent".into()),
+                vec![
+                    Expr::Variable("Alice".into()).into(),
+                    Expr::Block(Block::new(vec![]).into()).into()
+                ]
+            )))
+        )
+    }
+
+    #[test]
+    fn test_parse_agent_block_expression_assignment() {
+        let input = full_span(
+            r#"
+        agent Alice {
+            y = 55
+        }
+        "#
+            .trim(),
+        );
+
+        let result = parse_statement(input);
+        let (_remaining, stmt) = result.unwrap().clone();
+
+        assert_eq!(
+            stmt,
+            Statement::Expr(Expr::Call(CallExpr::new(
+                Expr::Variable("agent".into()),
+                vec![
+                    Expr::Variable("Alice".into()).into(),
+                    Expr::Block(
+                        Block::new(vec![Statement::Assignment(
+                            "y".into(),
+                            Expr::Value(Value::Number(Number::UInt(55)))
+                        )])
+                        .into()
+                    )
+                    .into()
+                ]
+            )))
+        )
+    }
+
+    #[test]
+    fn test_parse_agent_block_expression_with_handler() {
         let input = full_span(
             r#"
         agent Alice {
@@ -139,17 +243,25 @@ mod test_parse_expression {
             .trim(),
         );
 
-        let result = parse_value_expression(input);
-        let (_remaining, expr) = result.unwrap().clone();
+        let result = parse_statement(input);
+        let (_remaining, stmt) = result.unwrap().clone();
 
         assert_eq!(
-            expr,
-            Box::new(Expr::Value(Value::Block(Box::from(Block::new(vec![
-                Statement::Expr(Expr::Call(CallExpr::new(
-                    Expr::Variable("start".into()),
-                    vec![]
-                ))),
-            ])))))
-        );
+            stmt,
+            Statement::Expr(Expr::Call(CallExpr::new(
+                Expr::Variable("agent".into()),
+                vec![
+                    Expr::Variable("Alice".into()).into(),
+                    Expr::Block(
+                        Block::new(vec![Statement::Handler(Handler::new(
+                            Pattern::new(vec![TypeExpr::Word("start".into(),)]),
+                            Block::new(vec![]),
+                        ))])
+                        .into()
+                    )
+                    .into()
+                ]
+            )))
+        )
     }
 }

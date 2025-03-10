@@ -93,7 +93,26 @@ impl CallExpr {
     }
 }
 
-impl Expr {}
+impl Expr {
+    pub fn is_block(&self) -> bool {
+        matches!(self, Expr::Block(_))
+    }
+    pub fn is_value(&self) -> bool {
+        matches!(self, Expr::Value(_))
+    }
+    pub fn is_variable(&self) -> bool {
+        matches!(self, Expr::Variable(_))
+    }
+    pub fn is_binary(&self) -> bool {
+        matches!(self, Expr::Binary(_))
+    }
+    pub fn is_call(&self) -> bool {
+        matches!(self, Expr::Call(_))
+    }
+    pub fn is_empty(&self) -> bool {
+        matches!(self, Expr::Value(Value::Empty))
+    }
+}
 
 impl Statement {}
 

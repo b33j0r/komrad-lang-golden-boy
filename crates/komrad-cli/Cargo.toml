@@ -4,10 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-clap = { version = "4.5.31" , features = ["derive", "unicode", "suggestions", "color"]}
+komrad-ast = { path = "../komrad-ast" }
+komrad-parser = { path = "../komrad-parser" }
+komrad-vm = { path = "../komrad-vm" }
+
+clap = { version = "4.5.31", features = ["derive", "unicode", "suggestions", "color"] }
 clap-verbosity-flag = { version = "3.0.2", features = ["tracing"] }
 owo-colors = { version = "4.2.0", features = [] }
-palette = { version = "0.7.6", features=[] }
+palette = { version = "0.7.6", features = [] }
 figlet-rs = { version = "0.1.5", features = [] }
 tracing.workspace = true
 tracing-subscriber.workspace = true

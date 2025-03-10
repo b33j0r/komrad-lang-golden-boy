@@ -43,6 +43,17 @@ pub async fn main() {
         Some(Subcommands::Parse { file }) => {
             if let Some(file) = file {
                 info!("Parsing file: {}", file.display());
+                let source = std::fs::read_to_string(&file).expect("Failed to read file");
+                match komrad_parser::parse_verbose(&source) {
+                    Ok(module_builder) => {
+                        info!("Parsed module: {:?}", module_builder);
+
+                        info!("Built module: {:?}", module_builder);
+                    }
+                    Err(err) => {
+                        info!("Failed to parse file: {}", err);
+                    }
+                }
             }
         }
         Some(Subcommands::Run { file }) => {

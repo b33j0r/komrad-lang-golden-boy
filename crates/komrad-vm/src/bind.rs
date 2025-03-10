@@ -44,6 +44,14 @@ impl TryBind for Pattern {
                 TypeExpr::Hole(name) | TypeExpr::BlockHole(name) => {
                     scope.set(name.clone(), value.clone()).await;
                 }
+                // For a type hole, check if the value is of the expected type.
+                TypeExpr::Type(typ) => {
+                    // Check if the value is of the expected type.
+                    if !value.is_type(typ) {
+                        return None;
+                    }
+                    // SUCCESS: just move on
+                }
                 // Type check type holes
                 TypeExpr::TypeHole(name, typ) => {
                     // Check if the value is of the expected type.

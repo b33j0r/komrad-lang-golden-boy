@@ -1,7 +1,5 @@
 use crate::channel::Channel;
-use crate::operators::{BinaryOp, UnaryOp};
 use crate::pattern::Pattern;
-use crate::RuntimeError;
 use std::fmt::Display;
 use std::hash::Hash;
 
@@ -193,15 +191,6 @@ pub enum Expr {
         left: Box<Expr>,
         op: BinaryOp,
         right: Box<Expr>,
-    },
-    Command {
-        callee: Box<Expr>,
-        command: String,
-        args: Vec<Expr>,
-    },
-    Tell {
-        callee: Box<Expr>,
-        args: Vec<Expr>,
     },
     Ask {
         callee: Box<Expr>,

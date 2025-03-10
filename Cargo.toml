@@ -17,16 +17,18 @@ tokio.workspace = true
 
 [workspace]
 resolver = "2"
-members = [".", "crates/komrad-cli", "crates/komrad-parser", "crates/komrad-types", "crates/komrad-vm", "crates/komrad-web"]
+members = [".", "crates/komrad-ast", "crates/komrad-cli", "crates/komrad-parser", "crates/komrad-types", "crates/komrad-vm", "crates/komrad-web"]
 
 [workspace.dependencies]
 async-trait = "0.1.87"
 dashmap = "7.0.0-rc2"
 futures = { version = "0.3.31", features = [] }
+miette = { version = "7.5.0", features = ["fancy"] }
 nom = "8.0.0"
+nom_locate = "5.0.0"
+owo-colors = "4.2.0"
 thiserror = "2.0.12"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "io-util", "io-std", "signal"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter", "registry"] }
 uuid = { version = "1.15.1", features = ["v7", "serde"] }
-owo-colors = "4.2.0"

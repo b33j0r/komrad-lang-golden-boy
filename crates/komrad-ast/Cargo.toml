@@ -1,0 +1,11 @@
+[package]
+name = "komrad-ast"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio.workspace = true
+async-trait.workspace = true
+thiserror.workspace = true
+miette.workspace = true
+uuid.workspace = true

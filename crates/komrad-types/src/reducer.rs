@@ -1,8 +1,6 @@
-use crate::operators::{BinaryOp, UnaryOp};
 use crate::scope::Scope;
 use crate::types::{literal, Expr};
 use crate::Value;
-use crate::{Msg, RuntimeError};
 
 #[async_trait::async_trait]
 pub trait Reducer {

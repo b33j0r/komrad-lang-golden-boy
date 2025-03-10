@@ -1,9 +1,9 @@
-use crate::Value;
+use komrad_ast::prelude::Number;
 use miette::{Diagnostic, SourceSpan};
 use std::fmt::Debug;
 use thiserror::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Error, Diagnostic)]
+#[derive(Debug, Clone, Error, Diagnostic)]
 #[error("{kind}")]
 pub struct ParserError {
     /// The specific kind of error encountered.
@@ -32,7 +32,7 @@ impl ParserError {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum ParseErrorKind {
     #[error("Invalid syntax")]
     InvalidSyntax,
@@ -62,7 +62,7 @@ pub enum ParseErrorKind {
     InvalidType(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum RuntimeError {
     #[error("Parse error: {0}")]
     ParseError(ParseErrorKind),
@@ -89,5 +89,5 @@ pub enum RuntimeError {
     AnotherError(String),
 
     #[error("Division by zero: {0}/0")]
-    DivisionByZero(Box<Value>),
+    DivisionByZero(Box<Number>),
 }

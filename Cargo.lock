@@ -973,6 +973,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "komrad-ast"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "miette",
+ "thiserror 2.0.12",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "komrad-cli"
 version = "0.1.0"
 dependencies = [
@@ -1000,9 +1011,11 @@ dependencies = [
 name = "komrad-parser"
 version = "0.1.0"
 dependencies = [
- "komrad-types",
+ "komrad-ast",
  "miette",
  "nom",
+ "nom_locate",
+ "owo-colors",
  "serde",
  "serde_json",
  "thiserror 2.0.12",
@@ -1033,7 +1046,7 @@ version = "0.1.0"
 dependencies = [
  "dashmap",
  "futures",
- "komrad-types",
+ "komrad-ast",
  "thiserror 2.0.12",
  "tokio",
  "tracing",

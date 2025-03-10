@@ -3,17 +3,15 @@ name = "komrad-parser"
 version = "0.1.0"
 edition = "2024"
 
-[[bin]]
-name = "komrad-parser"
-path = "src/lib.rs"
-
 [dependencies]
-komrad-types = { path = "../komrad-types" }
+komrad-ast = { path = "../komrad-ast" }
 
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "1", features = ["v7"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["preserve_order"] }
 nom.workspace = true
+nom_locate.workspace = true
 thiserror.workspace = true
 miette = { version = "7.5.0", features = ["fancy"] }
+owo-colors.workspace = true

@@ -1,8 +1,8 @@
+use komrad_ast::prelude::Message;
 use std::fmt::Display;
 use tokio::sync::mpsc;
 use tracing::warn;
 use uuid::Uuid;
-use komrad_types::Msg;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ModuleId(pub Uuid);
@@ -19,12 +19,12 @@ impl Display for ModuleId {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub enum ModuleCommand {
     Start,
     Stop,
     Restart,
-    Execute(Msg),
+    Execute(Message),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -95,19 +95,27 @@ impl ModuleActor {
             match command {
                 ModuleCommand::Start => {
                     warn!("Module {} started", self.name);
-                    if let Err(e) = self.event_tx.send(ModuleEvent {
-                        id: self.id.clone(),
-                        status: ModuleStatus::Started,
-                    }).await {
+                    if let Err(e) = self
+                        .event_tx
+                        .send(ModuleEvent {
+                            id: self.id.clone(),
+                            status: ModuleStatus::Started,
+                        })
+                        .await
+                    {
                         warn!("Failed to send start event for Module {}: {}", self.name, e);
                     }
                 }
                 ModuleCommand::Stop => {
                     warn!("Module {} stopped", self.name);
-                    if let Err(e) = self.event_tx.send(ModuleEvent {
-                        id: self.id.clone(),
-                        status: ModuleStatus::Stopped,
-                    }).await {
+                    if let Err(e) = self
+                        .event_tx
+                        .send(ModuleEvent {
+                            id: self.id.clone(),
+                            status: ModuleStatus::Stopped,
+                        })
+                        .await
+                    {
                         warn!("Failed to send stop event for Module {}: {}", self.name, e);
                     }
                     break; // Terminate actor on stop command

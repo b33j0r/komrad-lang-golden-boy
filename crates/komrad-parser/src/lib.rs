@@ -2,7 +2,6 @@
 // use komrad_types::ParserError;
 // use komrad_types::{ParseErrorKind, RuntimeError};
 
-
 //
 // fn main() {
 //     // Example usage of the ParserError
@@ -14,3 +13,7 @@
 //     let report = miette::Report::new(error);
 //     println!("{:?}", report);
 // }
+
+pub mod error;
+mod sexpr;
+pub mod span;

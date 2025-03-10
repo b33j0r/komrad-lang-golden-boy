@@ -1,6 +1,8 @@
 use crate::scope::Scope;
 use async_trait::async_trait;
-use komrad_ast::prelude::*;
+use komrad_ast::prelude::{
+    BinaryExpr, BinaryOp, Block, CallExpr, Expr, Message, RuntimeError, Statement, Value,
+};
 use std::pin::Pin;
 use tracing::{error, info};
 
@@ -91,12 +93,12 @@ impl Execute for CallExpr {
                 Err(_) => {
                     // Handle send error
                     error!("Failed to send message");
-                    return Value::Error(Error::SendError);
+                    return Value::Error(RuntimeError::SendError);
                 }
             }
             Value::Empty
         } else {
-            Value::Error(Error::ParseError)
+            Value::Error(RuntimeError::SendError)
         }
     }
 }
@@ -136,7 +138,7 @@ impl Execute for BinaryExpr {
                     if !r.is_zero() {
                         Value::Number(l / r)
                     } else {
-                        Value::Error(Error::DivisionByZero)
+                        Value::Error(RuntimeError::DivisionByZero)
                     }
                 }
                 _ => Value::Empty,
@@ -250,7 +252,7 @@ mod tests {
             Expr::Value(Value::Number(Number::Int(0))),
         ));
         let div_zero_result = div_zero_expr.execute(&mut scope).await;
-        assert_eq!(div_zero_result, Value::Error(Error::DivisionByZero));
+        assert_eq!(div_zero_result, Value::Error(RuntimeError::DivisionByZero));
     }
 
     #[tokio::test]

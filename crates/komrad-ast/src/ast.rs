@@ -1,27 +1,15 @@
 use crate::channel::Channel;
+use crate::error::RuntimeError;
 use crate::operators::BinaryExpr;
 use crate::prelude::BinaryOp;
 use crate::types::literal;
 use std::fmt::Display;
 use std::ops::{Add, Div, Mul, Sub};
-use thiserror::Error;
-
-#[derive(Debug, Clone, Error, PartialEq, Eq)]
-pub enum Error {
-    #[error("Failed to send message")]
-    SendError,
-    #[error("Failed to receive message")]
-    ReceiveError,
-    #[error("Failed to parse message")]
-    ParseError,
-    #[error("Division by zero")]
-    DivisionByZero,
-}
 
 #[derive(Debug, Clone)]
 pub enum Value {
     Empty,
-    Error(Error),
+    Error(RuntimeError),
     Channel(Channel),
     Boolean(bool),
     Word(String),

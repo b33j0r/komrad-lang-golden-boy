@@ -1,13 +1,11 @@
-use komrad_ast::prelude::Number;
 use miette::{Diagnostic, SourceSpan};
-use std::fmt::Debug;
 use thiserror::Error;
 
-#[derive(Debug, Clone, Error, Diagnostic)]
+#[derive(Debug, Clone, Error, Diagnostic, PartialEq, Eq)]
 #[error("{kind}")]
 pub struct ParserError {
     /// The specific kind of error encountered.
-    pub kind: RuntimeError,
+    pub kind: ParseErrorKind,
 
     /// The span in the source code where the error occurred.
     #[label("{label}")]
@@ -22,7 +20,7 @@ pub struct ParserError {
 }
 
 impl ParserError {
-    pub fn from_kind(kind: RuntimeError, src: String, span: SourceSpan) -> Self {
+    pub fn from_kind(kind: ParseErrorKind, src: String, span: SourceSpan) -> Self {
         Self {
             kind,
             span,
@@ -32,7 +30,7 @@ impl ParserError {
     }
 }
 
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Error, PartialEq, Eq)]
 pub enum ParseErrorKind {
     #[error("Invalid syntax")]
     InvalidSyntax,
@@ -62,32 +60,14 @@ pub enum ParseErrorKind {
     InvalidType(String),
 }
 
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Error, PartialEq, Eq)]
 pub enum RuntimeError {
-    #[error("Parse error: {0}")]
-    ParseError(ParseErrorKind),
-
-    #[error("Type error: {0}")]
-    TypeError(String),
-
-    #[error("Value error: {0}")]
-    ValueError(String),
-
-    #[error("Runtime error: {0}")]
-    RuntimeError(String),
-
-    #[error("Not implemented")]
-    NotImplemented(String),
-
-    #[error("Timeout")]
-    Timeout,
-
-    #[error("Channel closed")]
-    ChannelClosed,
-
-    #[error("Another error occurred: {0}")]
-    AnotherError(String),
-
-    #[error("Division by zero: {0}/0")]
-    DivisionByZero(Box<Number>),
+    #[error("Failed to send message")]
+    SendError,
+    #[error("Failed to receive message")]
+    ReceiveError,
+    #[error("Failed to parse message")]
+    ParseError(ParserError),
+    #[error("Division by zero")]
+    DivisionByZero,
 }

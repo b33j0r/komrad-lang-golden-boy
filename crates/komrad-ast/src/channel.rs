@@ -1,4 +1,4 @@
-use crate::ast::Error;
+use crate::error::RuntimeError;
 use crate::message::Message;
 use tokio::sync::mpsc;
 use uuid::Uuid;
@@ -38,24 +38,24 @@ impl Channel {
         self.uuid
     }
 
-    pub async fn send(&self, message: Message) -> Result<(), Error> {
+    pub async fn send(&self, message: Message) -> Result<(), RuntimeError> {
         self.sender
             .send(message)
             .await
-            .map_err(|_| Error::SendError)
+            .map_err(|_| RuntimeError::SendError)
     }
 }
 
 impl ChannelListener {
-    pub async fn recv(&mut self) -> Result<Message, Error> {
-        self.receiver.recv().await.ok_or(Error::ReceiveError)
+    pub async fn recv(&mut self) -> Result<Message, RuntimeError> {
+        self.receiver.recv().await.ok_or(RuntimeError::ReceiveError)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{Error, Value};
+    use crate::ast::{RuntimeError, Value};
     use crate::message::Message;
 
     #[tokio::test]
@@ -159,7 +159,7 @@ mod tests {
 
         let err = listener.recv().await;
         assert!(
-            matches!(err, Err(Error::ReceiveError)),
+            matches!(err, Err(RuntimeError::ReceiveError)),
             "Receiver should return an error after closure"
         );
     }
@@ -173,7 +173,7 @@ mod tests {
         let msg = Message::new(vec![Value::String("Lost Message".into())], None);
         let result = channel.send(msg.clone()).await;
         assert!(
-            matches!(result, Err(Error::SendError)),
+            matches!(result, Err(RuntimeError::SendError)),
             "Sending to a closed channel should return an error"
         );
     }

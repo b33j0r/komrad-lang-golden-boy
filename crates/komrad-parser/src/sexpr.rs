@@ -1,4 +1,4 @@
-use komrad_ast::operators::{BinaryOp, UnaryOp};
+use komrad_ast::prelude::{BinaryOp, UnaryOp};
 use owo_colors::OwoColorize;
 
 /// Our S‑expression type.
@@ -83,12 +83,8 @@ impl ToSexpr for BinaryOp {
             BinaryOp::Sub => Sexpr::Atom("-".into()),
             BinaryOp::Mul => Sexpr::Atom("*".into()),
             BinaryOp::Div => Sexpr::Atom("/".into()),
-            BinaryOp::Mod => Sexpr::Atom("%".into()),
             BinaryOp::And => Sexpr::Atom("&&".into()),
             BinaryOp::Or => Sexpr::Atom("||".into()),
-            BinaryOp::Xor => Sexpr::Atom("^".into()),
-            BinaryOp::Shl => Sexpr::Atom("<<".into()),
-            BinaryOp::Shr => Sexpr::Atom(">>".into()),
         }
     }
 }

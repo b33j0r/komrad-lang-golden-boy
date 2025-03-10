@@ -1,57 +1,26 @@
-use std::sync::Arc;
+use crate::module::{Module, ModuleApi, ModuleId};
 use dashmap::DashMap;
-use tokio::sync::mpsc;
-use tracing::warn;
-use crate::module::{Module, ModuleApi, ModuleEvent, ModuleId, ModuleStatus};
+use std::sync::Arc;
 
 pub struct System {
-    // Consolidate module lookup into a single DashMap keyed by module name.
-    module_map: Arc<DashMap<String, ModuleApi>>,
-    event_tx: mpsc::Sender<ModuleEvent>,
-    statuses: Arc<DashMap<ModuleId, ModuleStatus>>,
+    module_map: Arc<DashMap<String, Arc<ModuleApi>>>,
 }
 
 impl System {
     pub async fn spawn() -> Self {
-        let (event_tx, mut event_rx) = mpsc::channel::<ModuleEvent>(32);
-
-        let statuses = Arc::new(DashMap::new());
-        let actor_statuses = statuses.clone();
-
-        // Listen for module events to update statuses.
-        tokio::spawn(async move {
-            while let Some(event) = event_rx.recv().await {
-                let id = event.id;
-                let status = event.status;
-
-                actor_statuses.insert(id.clone(), status.clone());
-
-                match status {
-                    ModuleStatus::Started => {
-                        warn!("Module {} started", id);
-                    }
-                    ModuleStatus::Stopped => {
-                        warn!("Module {} stopped", id);
-                    }
-                }
-            }
-        });
-
-        System {
+        Self {
             module_map: Arc::new(DashMap::new()),
-            event_tx,
-            statuses,
         }
     }
 
-    pub async fn create_module(&mut self, name: &str) -> ModuleApi {
-        let api = Module::spawn(name.to_string(), self.event_tx.clone()).await;
+    pub async fn create_module(&self, name: &str) -> Arc<ModuleApi> {
+        let api = Module::spawn(name.to_string()).await;
         self.module_map.insert(api.name.clone(), api.clone());
+        tokio::task::yield_now().await;
         api
     }
 
-    // Lookup a module by its ModuleId by iterating over stored modules.
-    pub fn get_module_by_id(&self, id: &ModuleId) -> Option<ModuleApi> {
+    pub fn get_module_by_id(&self, id: &ModuleId) -> Option<Arc<ModuleApi>> {
         self.module_map.iter().find_map(|entry| {
             if entry.value().id == *id {
                 Some(entry.value().clone())
@@ -59,11 +28,6 @@ impl System {
                 None
             }
         })
-    }
-
-    // Get the current status of a module.
-    pub fn get_status(&self, id: &ModuleId) -> Option<ModuleStatus> {
-        self.statuses.get(id).map(|s| s.clone())
     }
 }
 
@@ -84,18 +48,22 @@ mod tests {
         let module = system.create_module("lifecycle_test").await;
 
         // Send a Start command and wait a bit for event propagation.
-        module.send_command(crate::module::ModuleCommand::Start).await;
-        sleep(Duration::from_millis(100)).await;
+        module
+            .send_command(crate::module::ModuleCommand::Start)
+            .await;
+        sleep(Duration::from_millis(1)).await;
 
-        let status = system.get_status(&module.id);
-        assert_eq!(status, Some(crate::module::ModuleStatus::Started));
+        let status = system.get_status(&module.id).await.unwrap();
+        assert_eq!(status, crate::module::ModuleStatus::Started);
 
         // Send a Stop command and wait for the actor to terminate.
-        module.send_command(crate::module::ModuleCommand::Stop).await;
-        sleep(Duration::from_millis(100)).await;
+        module
+            .send_command(crate::module::ModuleCommand::Stop)
+            .await;
+        sleep(Duration::from_millis(1)).await;
 
-        let status = system.get_status(&module.id);
-        assert_eq!(status, Some(crate::module::ModuleStatus::Stopped));
+        let status = system.get_status(&module.id).await.unwrap();
+        assert_eq!(status, crate::module::ModuleStatus::Stopped);
     }
 
     #[tokio::test]

@@ -1,6 +1,9 @@
-use komrad_ast::prelude::Message;
-use std::fmt::Display;
-use tokio::sync::mpsc;
+use crate::execute::Execute;
+use crate::scope::Scope;
+use komrad_ast::prelude::{Message, Statement, Value};
+use std::fmt::{Debug, Display};
+use std::sync::{Arc, RwLock};
+use tokio::sync::{mpsc, oneshot, watch};
 use tracing::warn;
 use uuid::Uuid;
 
@@ -19,24 +22,22 @@ impl Display for ModuleId {
     }
 }
 
-#[derive(Debug, Clone)]
 pub enum ModuleCommand {
-    Start,
     Stop,
-    Restart,
-    Execute(Message),
+    Send(Message),
+    Execute(Statement),
+    QueryScope(oneshot::Sender<Scope>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum ModuleStatus {
-    Started,
-    Stopped,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ModuleEvent {
-    pub id: ModuleId,
-    pub status: ModuleStatus,
+impl Debug for ModuleCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ModuleCommand::Stop => write!(f, "Stop"),
+            ModuleCommand::Send(msg) => write!(f, "Send({:?})", msg),
+            ModuleCommand::Execute(stmt) => write!(f, "Execute({:?})", stmt),
+            ModuleCommand::QueryScope(_) => write!(f, "QueryScope"),
+        }
+    }
 }
 
 pub struct Module;
@@ -52,26 +53,29 @@ pub struct ModuleActor {
     pub id: ModuleId,
     pub name: String,
     pub command_rx: mpsc::Receiver<ModuleCommand>,
-    pub event_tx: mpsc::Sender<ModuleEvent>,
+    scope: Scope,
 }
 
 impl Module {
-    pub async fn spawn(name: String, event_tx: mpsc::Sender<ModuleEvent>) -> ModuleApi {
+    pub async fn spawn(name: String) -> Arc<ModuleApi> {
         let id = ModuleId::new();
         let (command_tx, command_rx) = mpsc::channel(32);
 
-        let api = ModuleApi {
+        let actor = ModuleActor {
             id: id.clone(),
+            name: name.clone(),
+            command_rx,
+            scope: Scope::new(),
+        };
+
+        let api = ModuleApi {
+            id,
             name,
             command_tx,
         };
+        let api = Arc::new(api);
 
-        let actor = ModuleActor {
-            id,
-            name: api.name.clone(),
-            command_rx,
-            event_tx,
-        };
+        warn!("Created ModuleApi for {} with ID {}", api.name, api.id);
 
         tokio::spawn(async move {
             actor.run().await;
@@ -83,8 +87,24 @@ impl Module {
 
 impl ModuleApi {
     pub async fn send_command(&self, command: ModuleCommand) {
+        warn!("Sending command to Module {}: {:?}", self.name, command);
         if let Err(e) = self.command_tx.send(command).await {
             warn!("Failed to send command to Module {}: {}", self.name, e);
+        }
+    }
+
+    pub async fn get_scope(&self) -> Scope {
+        let (reply, mut reply_rx) = oneshot::channel();
+        self.command_tx
+            .send(ModuleCommand::QueryScope(reply))
+            .await
+            .unwrap();
+        match reply_rx.await {
+            Ok(scope) => scope,
+            Err(_) => {
+                warn!("Failed to receive scope from Module {}", self.name);
+                Scope::default()
+            }
         }
     }
 }
@@ -92,41 +112,29 @@ impl ModuleApi {
 impl ModuleActor {
     pub async fn run(mut self) {
         while let Some(command) = self.command_rx.recv().await {
+            warn!("Module {} received command: {:?}", self.name, command);
             match command {
-                ModuleCommand::Start => {
-                    warn!("Module {} started", self.name);
-                    if let Err(e) = self
-                        .event_tx
-                        .send(ModuleEvent {
-                            id: self.id.clone(),
-                            status: ModuleStatus::Started,
-                        })
-                        .await
-                    {
-                        warn!("Failed to send start event for Module {}: {}", self.name, e);
-                    }
-                }
                 ModuleCommand::Stop => {
                     warn!("Module {} stopped", self.name);
-                    if let Err(e) = self
-                        .event_tx
-                        .send(ModuleEvent {
-                            id: self.id.clone(),
-                            status: ModuleStatus::Stopped,
-                        })
-                        .await
-                    {
-                        warn!("Failed to send stop event for Module {}: {}", self.name, e);
-                    }
                     break; // Terminate actor on stop command
                 }
-                ModuleCommand::Restart => {
-                    warn!("Module {} restarted", self.name);
-                    // Optionally implement restart logic here.
+                ModuleCommand::Send(message) => {
+                    // Handle sending a message.
+                    warn!("Module {} received message: {:?}", self.name, message);
                 }
-                ModuleCommand::Execute(msg) => {
-                    warn!("Module {} executed message: {:?}", self.name, msg);
-                    // Optionally handle message execution here.
+                ModuleCommand::Execute(statement) => {
+                    // Handle executing a statement.
+                    warn!("Module {} executing statement: {:?}", self.name, statement);
+                    // Execute the statement in the module's scope.
+                    if let Value::Error(e) = statement.execute(&mut self.scope).await {
+                        warn!("Failed to execute statement in Module {}: {}", self.name, e);
+                    }
+                }
+                ModuleCommand::QueryScope(sender) => {
+                    // Send the current scope back to the requester.
+                    if let Err(_) = sender.send(self.scope.clone()) {
+                        warn!("Failed to send scope back to requester");
+                    }
                 }
             }
         }

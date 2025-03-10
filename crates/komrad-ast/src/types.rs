@@ -18,18 +18,9 @@ pub mod uuid7 {
     }
 }
 
-#[cfg(not(feature = "wasm"))]
 pub mod literal {
     pub type Int = i64;
     pub type UInt = u64;
     pub type Float = f64;
-    pub type Bytes = Vec<u8>;
-}
-
-#[cfg(feature = "wasm")]
-pub mod literal {
-    pub type Int = i32;
-    pub type UInt = u32;
-    pub type Float = f32;
     pub type Bytes = Vec<u8>;
 }

@@ -11,8 +11,11 @@ path = "src/main.rs"
 komrad-parser = { path = "crates/komrad-parser" }
 komrad-cli = { path = "crates/komrad-cli" }
 komrad-vm = { path = "crates/komrad-vm" }
+komrad-ast = { path = "crates/komrad-ast" }
 
 tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
 
 [workspace]
 resolver = "2"

@@ -1,7 +1,7 @@
-use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 use owo_colors::OwoColorize;
-use palette::{LinSrgb};
+use palette::LinSrgb;
+use std::path::PathBuf;
 use tracing::{debug, info, trace};
 
 mod banner;
@@ -12,20 +12,15 @@ struct Args {
     #[clap(subcommand)]
     subcommand: Option<Subcommands>,
 
-
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity,
 }
 
 #[derive(Clone, Debug, Subcommand)]
 enum Subcommands {
-    Parse {
-        file: Option<PathBuf>,
-    },
+    Parse { file: Option<PathBuf> },
 
-    Run {
-        file: Option<PathBuf>,
-    },
+    Run { file: Option<PathBuf> },
 }
 
 pub async fn main() {
@@ -44,9 +39,7 @@ pub async fn main() {
 
     banner();
 
-
     info!("{}", "Komrad CLI starting".bright_cyan());
-
 }
 
 fn banner() {

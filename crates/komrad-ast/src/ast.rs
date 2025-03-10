@@ -87,6 +87,24 @@ impl Number {
     }
 }
 
+impl From<literal::Int> for Number {
+    fn from(value: literal::Int) -> Self {
+        Number::Int(value)
+    }
+}
+
+impl From<literal::UInt> for Number {
+    fn from(value: literal::UInt) -> Self {
+        Number::Uint(value)
+    }
+}
+
+impl From<literal::Float> for Number {
+    fn from(value: literal::Float) -> Self {
+        Number::Float(value)
+    }
+}
+
 impl Add for Number {
     type Output = Number;
 

@@ -1000,10 +1000,13 @@ dependencies = [
 name = "komrad-lang"
 version = "0.1.0"
 dependencies = [
+ "komrad-ast",
  "komrad-cli",
  "komrad-parser",
  "komrad-vm",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

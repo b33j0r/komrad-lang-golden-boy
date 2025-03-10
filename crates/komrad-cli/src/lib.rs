@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use komrad_vm::ModuleCommand;
 use owo_colors::OwoColorize;
 use palette::LinSrgb;
 use std::path::PathBuf;
@@ -59,6 +60,26 @@ pub async fn main() {
         Some(Subcommands::Run { file }) => {
             if let Some(file) = file {
                 info!("Running file: {}", file.display());
+                let source = std::fs::read_to_string(&file).expect("Failed to read file");
+                match komrad_parser::parse_verbose(&source) {
+                    Ok(module_builder) => {
+                        info!("Parsed module: {:?}", module_builder);
+
+                        let system = komrad_vm::System::spawn();
+                        let module = system.await.create_module("main").await;
+
+                        module
+                            .send_command(ModuleCommand::ExecuteStatements(
+                                module_builder.statements().to_vec(),
+                            ))
+                            .await;
+
+                        info!("Built module: {:?}", module_builder);
+                    }
+                    Err(err) => {
+                        info!("Failed to parse file: {}", err);
+                    }
+                }
             }
         }
         None => {

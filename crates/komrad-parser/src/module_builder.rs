@@ -1,5 +1,7 @@
 use komrad_ast::prelude::Statement;
 use std::path::PathBuf;
+
+#[derive(Debug, Clone)]
 pub struct ModuleBuilder {
     name: String,
     source_file: Option<PathBuf>,
@@ -25,5 +27,9 @@ impl ModuleBuilder {
 
     pub fn add_statement(&mut self, statement: Statement) {
         self.statements.push(statement);
+    }
+
+    pub fn statements(&self) -> &[Statement] {
+        &self.statements
     }
 }

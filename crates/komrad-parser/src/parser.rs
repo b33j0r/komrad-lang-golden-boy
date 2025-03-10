@@ -1,10 +1,11 @@
 use crate::module_builder::ModuleBuilder;
+use crate::parse::{lines, statements};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::Statement;
 use miette::{NamedSource, Report};
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::space0;
+use nom::character::complete::{multispace0, space0};
 use nom::combinator::all_consuming;
 use nom::multi::many0;
 use nom::sequence::{delimited, separated_pair};
@@ -27,7 +28,17 @@ pub fn parse_verbose(input: &str) -> Result<ModuleBuilder, Report> {
 pub fn parse_module(input: Span) -> KResult<ModuleBuilder> {
     let mut builder = ModuleBuilder::new();
 
-    let (remaining, statements) = all_consuming(many0(alt((parse_statement,)))).parse(input)?;
+    let (remaining, statements) = all_consuming(delimited(
+        multispace0,
+        //
+        many0(alt((
+            statements::parse_statement,
+            lines::parse_blank_line,
+            lines::parse_comment,
+        ))), //
+        multispace0,
+    ))
+    .parse(input)?;
 
     for statement in statements {
         builder.add_statement(statement);
@@ -48,4 +59,43 @@ pub fn parse_assignment_statement(input: Span) -> KResult<Statement> {
     )
     .map(|(name, expr)| Statement::Assignment(name, expr))
     .parse(input)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parse::strings::test_parse_string::full_span;
+    use komrad_ast::prelude::{Expr, Number, Value};
+
+    #[test]
+    fn test_parse_assignment_statement() {
+        let input = full_span("foo = 42");
+        let result = parse_assignment_statement(input);
+        assert!(result.is_ok(), "Failed to parse assignment statement");
+        let (remaining, statement) = result.unwrap();
+        assert_eq!(*remaining.fragment(), "");
+        assert_eq!(
+            statement,
+            Statement::Assignment(
+                "foo".to_string(),
+                Expr::Value(Value::Number(Number::UInt(42)))
+            )
+        );
+    }
+
+    #[test]
+    fn test_parse_module() {
+        let input = full_span(
+            r#"
+            foo = 42
+            bar = 232
+            "#,
+        );
+        let result = parse_module(input);
+        println!("{:?}", result);
+        assert!(result.is_ok(), "Failed to parse module");
+        let (remaining, module) = result.unwrap();
+        assert_eq!(*remaining.fragment(), "");
+        assert_eq!(module.statements().len(), 2);
+    }
 }

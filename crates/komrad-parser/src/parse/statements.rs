@@ -5,7 +5,7 @@ use crate::parse::{expressions, fields, identifier};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::Statement;
 use nom::branch::alt;
-use nom::character::complete::{multispace0, newline};
+use nom::character::complete::{newline, space0};
 use nom::combinator::{map, opt};
 use nom::sequence::{delimited, separated_pair};
 use nom::Parser;
@@ -19,7 +19,7 @@ use nom::Parser;
 /// - comments
 pub fn parse_statement(input: Span) -> KResult<Statement> {
     // Optionally consume leading blank lines or partial whitespace
-    let (remaining, _) = multispace0.parse(input)?;
+    let (remaining, _) = space0.parse(input)?;
 
     let (remaining, statement) = alt((
         fields::parse_field_definition,

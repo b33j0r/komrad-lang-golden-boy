@@ -15,3 +15,4 @@ palette = { version = "0.7.6", features = [] }
 figlet-rs = { version = "0.1.5", features = [] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
+tokio.workspace = true

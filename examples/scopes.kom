@@ -1,0 +1,5 @@
+agent Chat {
+	[say _text from _user] {
+		IO println user ": " text
+	}
+}

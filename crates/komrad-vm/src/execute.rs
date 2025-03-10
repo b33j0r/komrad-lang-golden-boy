@@ -3,7 +3,6 @@ use async_trait::async_trait;
 use komrad_ast::prelude::{
     BinaryExpr, BinaryOp, Block, CallExpr, Expr, Message, RuntimeError, Statement, Value,
 };
-use std::pin::Pin;
 use tracing::{error, info};
 
 // Trait defining the execution behavior. Now it explicitly returns a pinned Future.
@@ -48,7 +47,7 @@ impl Execute for Statement {
             Statement::NoOp => Value::Empty,
             Statement::Comment(comment) => Value::Empty,
             Statement::Handler(handler) => {
-                error!("TODO NOT IMPLEMENTED - - Handler: {:?}", handler);
+                scope.add_handler(handler.clone()).await;
                 Value::Empty
             }
             Statement::Field(name, typ, expr) => {

@@ -3,7 +3,7 @@ use crate::scope::Scope;
 use komrad_agents::io_agent::IoAgent;
 use komrad_ast::prelude::{Agent, Message, Statement, Value};
 use std::fmt::{Debug, Display};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot, watch};
 use tracing::{debug, warn};
 use uuid::Uuid;
@@ -18,16 +18,12 @@ pub struct ModuleApi {
     pub id: ModuleId,
     pub name: String,
     command_tx: mpsc::Sender<ModuleCommand>,
-    exit_tx: watch::Sender<()>,
-    exited_rx: watch::Receiver<()>,
 }
 
 pub struct ModuleActor {
     pub id: ModuleId,
     pub name: String,
     pub command_rx: mpsc::Receiver<ModuleCommand>,
-    pub exit_rx: watch::Receiver<()>,
-    pub exited_tx: watch::Sender<()>,
     scope: Scope,
 }
 
@@ -89,8 +85,6 @@ impl Module {
             id: id.clone(),
             name: name.clone(),
             command_rx,
-            exit_rx,
-            exited_tx,
             scope: module_scope,
         };
 
@@ -98,8 +92,6 @@ impl Module {
             id,
             name,
             command_tx,
-            exit_tx,
-            exited_rx,
         };
         let api = Arc::new(api);
 
@@ -195,13 +187,7 @@ impl ModuleActor {
                         None => break, // Command channel closed unexpectedly.
                     }
                 },
-                _ = self.exit_rx.changed() => {
-                    warn!("Module {} received exit signal", self.name);
-                    break;
-                }
             }
         }
-        // Notify that we have exited.
-        let _ = self.exited_tx.send(());
     }
 }

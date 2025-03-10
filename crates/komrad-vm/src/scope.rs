@@ -1,7 +1,6 @@
-use komrad_ast::prelude::Value;
+use komrad_ast::prelude::{Handler, Value};
 use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
+use std::fmt::{Debug, Display};
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -10,6 +9,7 @@ use tokio::sync::RwLock;
 pub struct Scope {
     parent: Option<Box<Scope>>,
     bindings: Arc<RwLock<HashMap<String, Value>>>,
+    handlers: Arc<RwLock<Vec<Arc<Handler>>>>,
     dirty: bool,
 }
 
@@ -18,6 +18,7 @@ impl Scope {
         Scope {
             parent: None,
             bindings: Arc::new(RwLock::new(HashMap::new())),
+            handlers: Arc::new(RwLock::new(Vec::new())),
             dirty: false,
         }
     }
@@ -26,6 +27,7 @@ impl Scope {
         Scope {
             parent: Some(Box::new(parent)),
             bindings: Arc::new(RwLock::new(HashMap::new())),
+            handlers: Arc::new(RwLock::new(Vec::new())),
             dirty: false,
         }
     }
@@ -55,6 +57,22 @@ impl Scope {
         bindings.insert(name, value);
         self.dirty = true;
     }
+
+    pub async fn add_handler(&mut self, handler: Arc<Handler>) {
+        self.handlers.write().await.push(handler);
+        self.dirty = true;
+    }
+
+    pub async fn get_handlers(&self) -> Vec<Arc<Handler>> {
+        let mut handlers = self.handlers.read().await.clone();
+        let mut current_scope = self.parent.as_deref();
+        while let Some(scope) = current_scope {
+            let parent_handlers = scope.handlers.read().await.clone();
+            handlers.extend(parent_handlers);
+            current_scope = scope.parent.as_deref();
+        }
+        handlers
+    }
 }
 
 impl Default for Scope {
@@ -70,6 +88,37 @@ impl Debug for Scope {
             .field("bindings", &self.bindings)
             .field("dirty", &self.dirty)
             .finish()
+    }
+}
+
+impl Scope {
+    // Add this method to your Scope implementation
+    pub fn debug_str<'a>(
+        &'a self,
+    ) -> Pin<Box<dyn std::future::Future<Output = String> + Send + 'a>> {
+        Box::pin(async move {
+            let mut result = String::new();
+
+            // Access the bindings safely in an async context
+            let bindings = self.bindings.read().await;
+            for (name, value) in bindings.iter() {
+                result.push_str(&format!("{}: {} = {}\n", name, value.get_type(), value));
+            }
+
+            // Access parent if it exists
+            if let Some(parent) = &self.parent {
+                let parent_str = parent.debug_str().await;
+                result.push_str(&format!("Parent: {}", parent_str));
+            }
+
+            result
+        })
+    }
+}
+
+impl Display for Scope {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Scope[{}]", if self.dirty { "dirty" } else { "clean" })
     }
 }
 

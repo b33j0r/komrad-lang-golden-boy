@@ -1,6 +1,7 @@
 use crate::operators::BinaryExpr;
 use crate::prelude::{BinaryOp, ValueType};
 use crate::value::Value;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CallExpr {
@@ -24,7 +25,7 @@ pub enum Statement {
     Expr(Expr),
     Assignment(String, Expr),
     Field(String, TypeExpr, Option<Expr>),
-    Handler(Handler),
+    Handler(Arc<Handler>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -114,7 +115,26 @@ impl Expr {
     }
 }
 
-impl Statement {}
+impl Statement {
+    pub fn is_no_op(&self) -> bool {
+        matches!(self, Statement::NoOp)
+    }
+    pub fn is_comment(&self) -> bool {
+        matches!(self, Statement::Comment(_))
+    }
+    pub fn is_expr(&self) -> bool {
+        matches!(self, Statement::Expr(_))
+    }
+    pub fn is_assignment(&self) -> bool {
+        matches!(self, Statement::Assignment(_, _))
+    }
+    pub fn is_field(&self) -> bool {
+        matches!(self, Statement::Field(_, _, _))
+    }
+    pub fn is_handler(&self) -> bool {
+        matches!(self, Statement::Handler(_))
+    }
+}
 
 impl Block {
     pub fn new(statements: Vec<Statement>) -> Self {

@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use komrad_vm::ModuleCommand;
+use komrad_vm::{ModuleCommand, Scope};
 use owo_colors::OwoColorize;
 use palette::LinSrgb;
 use std::path::PathBuf;
@@ -15,12 +15,15 @@ struct Args {
 
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity,
+
+    /// Wait for ctrl+c to exit
+    #[arg(long, global = true, default_value_t = false)]
+    wait: bool,
 }
 
 #[derive(Clone, Debug, Subcommand)]
 enum Subcommands {
     Parse { file: Option<PathBuf> },
-
     Run { file: Option<PathBuf> },
 }
 
@@ -68,13 +71,28 @@ pub async fn main() {
                         let system = komrad_vm::System::spawn();
                         let module = system.await.create_module("main").await;
 
-                        module
-                            .send_command(ModuleCommand::ExecuteStatements(
-                                module_builder.statements().to_vec(),
-                            ))
-                            .await;
+                        let scope = module.get_scope().await;
+                        info!("Module scope: {:?}", scope);
 
-                        info!("Built module: {:?}", module_builder);
+                        for statement in module_builder.statements() {
+                            if statement.is_no_op() {
+                                continue;
+                            }
+                            module
+                                .send_command(ModuleCommand::ExecuteStatement(statement.clone()))
+                                .await;
+                        }
+
+                        if args.wait {
+                            info!("Waiting for ctrl+c to exit...");
+                            tokio::signal::ctrl_c()
+                                .await
+                                .expect("Failed to wait for ctrl+c");
+                        } else {
+                            info!("Exiting immediately...");
+                        }
+
+                        info!("Module scope: {:?}", scope);
                     }
                     Err(err) => {
                         info!("Failed to parse file: {}", err);

@@ -1009,6 +1009,7 @@ dependencies = [
  "komrad-vm",
  "owo-colors",
  "palette",
+ "tokio",
  "tracing",
  "tracing-subscriber",
 ]

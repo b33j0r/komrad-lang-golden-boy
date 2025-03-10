@@ -8,6 +8,7 @@ use nom::character::complete::{space0, space1};
 use nom::multi::{many0, separated_list1};
 use nom::sequence::{delimited, preceded, separated_pair};
 use nom::Parser;
+use std::sync::Arc;
 
 /// Parse a handler block, e.g. `{ IO println "hello!" }` -> Block(statements)
 pub fn parse_handler_block(input: Span) -> KResult<Block> {
@@ -93,7 +94,10 @@ pub fn parse_handler_statement(input: Span) -> KResult<Statement> {
     let (remaining, parts) = parse_handle_pattern.parse(input)?;
     let (input, _) = tag("]").parse(remaining)?;
     let (remaining, block) = parse_handler_block.parse(input)?;
-    Ok((remaining, Statement::Handler(Handler::new(parts, block))))
+    Ok((
+        remaining,
+        Statement::Handler(Arc::new(Handler::new(parts, block))),
+    ))
 }
 
 #[cfg(test)]

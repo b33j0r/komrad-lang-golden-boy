@@ -37,8 +37,6 @@ pub async fn main() {
         .with_level(true)
         .init();
 
-    banner();
-
     info!("{}", "Komrad CLI starting".bright_cyan());
 
     match args.subcommand {
@@ -51,6 +49,9 @@ pub async fn main() {
             if let Some(file) = file {
                 info!("Running file: {}", file.display());
             }
+        }
+        None => {
+            banner();
         }
     }
 }

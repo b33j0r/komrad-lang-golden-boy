@@ -1,4 +1,5 @@
-use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr, Number};
+use komrad_ast::number::Number;
+use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr};
 use komrad_ast::value::Value;
 use komrad_vm::ModuleCommand;
 use tracing::info;

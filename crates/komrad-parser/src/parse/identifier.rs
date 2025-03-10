@@ -1,3 +1,6 @@
+use crate::span::{KResult, Span};
+use komrad_ast::prelude::{ErrorKind, ParserError};
+use miette::SourceSpan;
 use nom::bytes::complete::{take_while, take_while1};
 use nom::combinator::recognize;
 use nom::sequence::pair;
@@ -18,18 +21,22 @@ pub(crate) fn parse_identifier(input: Span) -> KResult<String> {
     let identifier = matched_span.fragment().trim().to_string();
 
     if identifier.starts_with('-') || identifier.ends_with('-') {
-        return Err(nom::Err::Error(ParseError::new(
-            ErrorKind::InvalidAtom,
-            matched_span,
-        )));
+        return Err(nom::Err::Error(ParserError {
+            kind: ErrorKind::InvalidIdentifier(identifier.clone()),
+            span: SourceSpan::new(
+                matched_span.location_offset().into(),
+                matched_span.fragment().len().into(),
+            ),
+            src: remaining.extra.into(),
+        }));
     }
     Ok((remaining, identifier))
 }
 
 #[cfg(test)]
 mod test_parse_identifier {
-    use crate::error::Span;
     use crate::parse::identifier::parse_identifier;
+    use komrad_ast::prelude::Span;
     use miette::NamedSource;
     use std::sync::Arc;
 

@@ -1,8 +1,7 @@
-use crate::error::KResult;
 use crate::parse::expressions::parse_expression;
 use crate::parse::identifier::parse_identifier;
-use crate::prelude::Span;
-use komrad_runtime::prelude::{Statement, ValueType};
+use crate::span::{KResult, Span};
+use komrad_ast::prelude::{Statement, TypeExpr, ValueType};
 use nom::bytes::complete::tag;
 use nom::character::complete::space0;
 use nom::combinator::opt;
@@ -12,10 +11,10 @@ use nom::Parser;
 pub fn parse_value_type(input: Span) -> KResult<ValueType> {
     let (remaining, typ) = parse_identifier.parse(input)?;
     let value_type = match typ.as_str() {
-        "()" => ValueType::Empty,
-        "Err" => ValueType::Err,
-        "Maybe" => ValueType::Maybe,
-        "Tuple" => ValueType::Tuple,
+        "Empty" => ValueType::Empty,
+        "Error" => ValueType::Error,
+        "Word" => ValueType::Word,
+        "List" => ValueType::List,
         "Channel" => ValueType::Channel,
         "Boolean" => ValueType::Boolean,
         "String" => ValueType::String,
@@ -38,15 +37,16 @@ pub fn parse_field_definition(input: Span) -> KResult<Statement> {
         .parse(input)?;
 
     let (name, _, typ, _, expr) = field;
-    let field_definition = Statement::FieldDefinition(name.to_string(), typ, expr);
+    let type_expr = TypeExpr::Type(typ.clone());
+    let field_definition = Statement::Field(name.to_string(), type_expr, expr);
     Ok((remaining, field_definition))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::full_span;
-    use komrad_runtime::prelude::Expr;
+    use crate::parse::strings::test_parse_string::full_span;
+    use komrad_ast::prelude::{Expr, Number, Value};
 
     #[test]
     fn test_parse_field_definition() {
@@ -57,10 +57,10 @@ mod tests {
         assert_eq!(*remaining.fragment(), "");
         assert_eq!(
             field,
-            Statement::FieldDefinition(
+            Statement::Field(
                 "foo".to_string(),
-                ValueType::Number,
-                Some(Expr::Value(42.into()))
+                TypeExpr::Type(ValueType::Number),
+                Some(Expr::Value(Value::Number(Number::UInt(42))))
             )
         );
     }

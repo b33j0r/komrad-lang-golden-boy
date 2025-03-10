@@ -14,7 +14,6 @@
 //     println!("{:?}", report);
 // }
 
-pub mod error;
 mod module_builder;
 pub mod parse;
 pub mod parser;

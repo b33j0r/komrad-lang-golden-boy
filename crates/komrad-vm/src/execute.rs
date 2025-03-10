@@ -1,9 +1,8 @@
 use crate::scope::Scope;
 use async_trait::async_trait;
 use komrad_ast::prelude::{
-    BinaryExpr, BinaryOp, Block, CallExpr, Expr, Message, RuntimeError, Statement,
+    BinaryExpr, BinaryOp, Block, CallExpr, Expr, Message, RuntimeError, Statement, Value,
 };
-use komrad_ast::value::Value;
 use std::pin::Pin;
 use tracing::{error, info};
 
@@ -45,7 +44,22 @@ impl Execute for Statement {
                 scope.set(name.clone(), value.clone()).await;
                 value
             }
-            Statement::Expression(expr) => expr.execute(scope).await,
+            Statement::Expr(expr) => expr.execute(scope).await,
+            Statement::NoOp => Value::Empty,
+            Statement::Comment(comment) => Value::Empty,
+            Statement::Handler(handler) => {
+                error!("TODO NOT IMPLEMENTED - - Handler: {:?}", handler);
+                Value::Empty
+            }
+            Statement::Field(name, typ, expr) => {
+                if let Some(expr) = expr {
+                    let value = expr.execute(scope).await;
+                    scope.set(name.clone(), value.clone()).await;
+                    value
+                } else {
+                    Value::Empty
+                }
+            }
         }
     }
 }
@@ -67,6 +81,7 @@ impl Execute for Expr {
             }
             Expr::Binary(b) => b.execute(scope).await,
             Expr::Call(call) => call.execute(scope).await,
+            Expr::Block(block) => Value::Block(block.clone()),
         }
     }
 }
@@ -168,6 +183,7 @@ impl Execute for BinaryExpr {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use komrad_ast::number::Number;
     use komrad_ast::prelude::*;
 
     #[tokio::test]
@@ -180,7 +196,7 @@ mod tests {
         assign_stmt.execute(&mut scope).await;
 
         // Now, evaluate the variable "x".
-        let var_stmt = Statement::Expression(Expr::Variable("x".to_string()));
+        let var_stmt = Statement::Expr(Expr::Variable("x".to_string()));
         let var_result = var_stmt.execute(&mut scope).await;
         assert_ne!(var_result, Value::Empty);
     }
@@ -194,7 +210,7 @@ mod tests {
         let assign_stmt =
             Statement::Assignment("x".to_string(), Expr::Value(Value::Number(Number::Int(42))));
         // Then evaluate the variable "x".
-        let var_stmt = Statement::Expression(Expr::Variable("x".to_string()));
+        let var_stmt = Statement::Expr(Expr::Variable("x".to_string()));
 
         // Create a block with the two statements.
         let block = Block::new(vec![assign_stmt, var_stmt]);

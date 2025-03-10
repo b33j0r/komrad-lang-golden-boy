@@ -10,3 +10,5 @@ thiserror.workspace = true
 miette.workspace = true
 uuid.workspace = true
 tracing.workspace = true
+nom.workspace = true
+nom_locate.workspace = true

@@ -1,15 +1,13 @@
 use crate::execute::Execute;
 use crate::scope::Scope;
 use komrad_agents::io_agent::IoAgent;
-use komrad_ast::prelude::{Agent, Message, Statement};
-use komrad_ast::value::Value;
+use komrad_ast::prelude::{Agent, Message, Statement, Value};
 use std::fmt::{Debug, Display};
 use std::sync::{Arc, RwLock};
 use tokio::sync::{mpsc, oneshot, watch};
 use tracing::{debug, warn};
 use uuid::Uuid;
 
-/// Module only provides `spawn`, which returns a `ModuleApi`.
 pub struct Module;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

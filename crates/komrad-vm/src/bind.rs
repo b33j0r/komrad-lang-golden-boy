@@ -1,7 +1,6 @@
 use crate::scope::Scope;
 use async_trait::async_trait;
-use komrad_ast::prelude::{Message, Pattern, TypeExpr};
-use komrad_ast::value::Value;
+use komrad_ast::prelude::{Message, Pattern, TypeExpr, Value};
 
 #[async_trait]
 pub trait TryBind {
@@ -45,6 +44,15 @@ impl TryBind for Pattern {
                 TypeExpr::Hole(name) | TypeExpr::BlockHole(name) => {
                     scope.set(name.clone(), value.clone()).await;
                 }
+                // Type check type holes
+                TypeExpr::TypeHole(name, typ) => {
+                    // Check if the value is of the expected type.
+                    if !value.is_type(typ) {
+                        return None;
+                    }
+                    // Bind the value to the name.
+                    scope.set(name.clone(), value.clone()).await;
+                }
                 // For a Word literal, require that the message value is a Word with the same content.
                 TypeExpr::Word(literal) => {
                     if *value != Value::Word(literal.clone()) {
@@ -73,7 +81,7 @@ impl TryBind for Pattern {
 mod tests {
     use super::*;
     use crate::scope::Scope;
-    use komrad_ast::prelude::Number;
+    use komrad_ast::number::Number;
     use tokio;
 
     /// Test binding a pattern composed entirely of holes.

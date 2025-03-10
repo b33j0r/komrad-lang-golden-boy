@@ -1,16 +1,27 @@
-use crate::error::{KResult, Span};
+// statements.rs
 use crate::parse::handlers::parse_handler_statement;
 use crate::parse::lines::{parse_blank_line, parse_comment};
 use crate::parse::{expressions, fields, identifier};
-use komrad_runtime::prelude::Statement;
+use crate::span::{KResult, Span};
+use komrad_ast::prelude::Statement;
 use nom::branch::alt;
-use nom::combinator::map;
+use nom::character::complete::{multispace0, newline};
+use nom::combinator::{map, opt};
 use nom::sequence::{delimited, separated_pair};
 use nom::Parser;
 
-/// Parse a single statement: either "IDENT = expression" or just "expression".
+/// Parse a single statement: possible forms are:
+/// - "IDENT: Type = expression" (field)
+/// - "[pattern] { ... }" (handler)
+/// - "IDENT = expression" (assignment)
+/// - expression alone
+/// - blank lines
+/// - comments
 pub fn parse_statement(input: Span) -> KResult<Statement> {
-    alt((
+    // Optionally consume leading blank lines or partial whitespace
+    let (remaining, _) = multispace0.parse(input)?;
+
+    let (remaining, statement) = alt((
         fields::parse_field_definition,
         parse_handler_statement,
         parse_assignment_statement,
@@ -18,7 +29,12 @@ pub fn parse_statement(input: Span) -> KResult<Statement> {
         parse_blank_line,
         parse_comment,
     ))
-    .parse(input)
+    .parse(remaining)?;
+
+    // Optionally consume a trailing newline so that statements can appear on multiple lines
+    let (remaining, _) = opt(newline).parse(remaining)?;
+
+    Ok((remaining, statement))
 }
 
 /// A minimal assignment parser: "IDENT = expression"

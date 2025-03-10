@@ -1,5 +1,5 @@
-use crate::error::{KResult, ParseError, Span};
-use komrad_runtime::prelude::Value;
+use crate::span::{KResult, Span};
+use komrad_ast::prelude::{ParserError, Value};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_till1};
 use nom::combinator::map_res;
@@ -72,7 +72,7 @@ pub fn parse_triple_string_inner(input: Span) -> KResult<String> {
     fold_many0(
         alt((
             map_res(take_till1(|c| c == '\\' || c == '"'), |s: Span| {
-                Ok::<_, ParseError>(s.fragment().to_string())
+                Ok::<_, ParserError>(s.fragment().to_string())
             }),
             parse_escape_sequence,
         )),
@@ -106,12 +106,21 @@ pub fn parse_escape_sequence(input: Span) -> KResult<String> {
 
 #[cfg(test)]
 pub mod test_parse_string {
-    use crate::error::{full_span, Span};
     use crate::parse::strings::{
         parse_double_quoted_string, parse_escape_sequence, parse_single_quoted_string,
         parse_triple_quoted_string,
     };
+    use crate::span::Span;
+    use miette::NamedSource;
     use nom::character::complete::anychar;
+    use std::sync::Arc;
+
+    pub fn full_span(input: &str) -> Span {
+        Span::new_extra(
+            input,
+            Arc::new(NamedSource::new("<test>", input.to_string())),
+        )
+    }
 
     #[test]
     fn test_parse_single_quoted_string() {

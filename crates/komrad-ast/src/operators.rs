@@ -18,14 +18,14 @@ pub enum UnaryOp {
     Dec,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BinaryExpr {
     pub op: BinaryOp,
     pub left: Box<Expr>,
     pub right: Box<Expr>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UnaryExpr {
     pub op: UnaryOp,
     pub expr: Box<Expr>,

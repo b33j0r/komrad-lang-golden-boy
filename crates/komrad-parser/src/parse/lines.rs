@@ -1,5 +1,5 @@
-use crate::error::{KResult, Span};
-use komrad_runtime::prelude::Statement;
+use crate::span::{KResult, Span};
+use komrad_ast::prelude::Statement;
 
 /// Parse a blank line as a NoOp statement.
 pub(crate) fn parse_blank_line(input: Span) -> KResult<Statement> {

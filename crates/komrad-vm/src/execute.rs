@@ -75,7 +75,7 @@ impl Execute for Expr {
                 if let Some(value) = scope.get(name).await {
                     value.clone()
                 } else {
-                    Value::Empty
+                    Value::Word(name.clone())
                 }
             }
             Expr::Binary(b) => b.execute(scope).await,

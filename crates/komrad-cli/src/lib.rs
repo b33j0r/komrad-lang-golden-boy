@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use komrad_ast::prelude::{CallExpr, Expr, Statement, Value};
 use komrad_vm::{ModuleCommand, Scope};
 use owo_colors::OwoColorize;
 use palette::LinSrgb;
@@ -70,7 +71,7 @@ pub async fn main() {
 
                         let system = komrad_vm::System::spawn();
                         let module = system.await.create_module("main").await;
-
+                        let module_channel = module.get_channel();
                         let scope = module.get_scope().await;
                         info!("Module scope: {:?}", scope);
 
@@ -82,6 +83,18 @@ pub async fn main() {
                                 .send_command(ModuleCommand::ExecuteStatement(statement.clone()))
                                 .await;
                         }
+
+                        module
+                            .send_command(ModuleCommand::ExecuteStatement(Statement::Expr(
+                                Expr::Call(
+                                    //
+                                    CallExpr::new(
+                                        Expr::Value(Value::Channel(module_channel)).into(),
+                                        vec![Expr::Value(Value::Word("main".to_string())).into()],
+                                    ),
+                                ),
+                            )))
+                            .await;
 
                         if args.wait {
                             info!("Waiting for ctrl+c to exit...");

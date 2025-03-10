@@ -4,17 +4,19 @@ use std::sync::Arc;
 
 pub struct System {
     module_map: Arc<DashMap<String, Arc<ModuleApi>>>,
+    per_module_capacity: usize,
 }
 
 impl System {
     pub async fn spawn() -> Self {
         Self {
             module_map: Arc::new(DashMap::new()),
+            per_module_capacity: 32,
         }
     }
 
     pub async fn create_module(&self, name: &str) -> Arc<ModuleApi> {
-        let api = Module::spawn(name.to_string()).await;
+        let api = Module::spawn(name.to_string(), self.per_module_capacity).await;
         self.module_map.insert(api.name.clone(), api.clone());
         tokio::task::yield_now().await;
         api

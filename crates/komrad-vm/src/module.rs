@@ -1,7 +1,7 @@
 use crate::execute::Execute;
 use crate::scope::Scope;
 use komrad_agents::io_agent::IoAgent;
-use komrad_ast::prelude::{Agent, Message, Statement, Value};
+use komrad_ast::prelude::{Agent, Channel, ChannelListener, Message, Statement, Value};
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot, watch};
@@ -18,6 +18,7 @@ pub struct ModuleApi {
     pub id: ModuleId,
     pub name: String,
     command_tx: mpsc::Sender<ModuleCommand>,
+    channel: Channel,
 }
 
 pub struct ModuleActor {
@@ -25,6 +26,7 @@ pub struct ModuleActor {
     pub name: String,
     pub command_rx: mpsc::Receiver<ModuleCommand>,
     scope: Scope,
+    channel_listener: ChannelListener,
 }
 
 impl ModuleId {
@@ -66,7 +68,7 @@ impl Debug for ModuleCommand {
 }
 
 impl Module {
-    pub async fn spawn(name: String) -> Arc<ModuleApi> {
+    pub async fn spawn(name: String, capacity: usize) -> Arc<ModuleApi> {
         let id = ModuleId::new();
         let (command_tx, command_rx) = mpsc::channel(32);
         let (exit_tx, exit_rx) = watch::channel(()); // exit signal channel
@@ -81,17 +83,21 @@ impl Module {
             .set("IO".to_string(), Value::Channel(io_actor_chan))
             .await;
 
+        let (channel, channel_listener) = Channel::new(capacity);
+
         let actor = ModuleActor {
             id: id.clone(),
             name: name.clone(),
             command_rx,
             scope: module_scope,
+            channel_listener,
         };
 
         let api = ModuleApi {
             id,
             name,
             command_tx,
+            channel: channel.clone(),
         };
         let api = Arc::new(api);
 
@@ -135,12 +141,34 @@ impl ModuleApi {
             }
         }
     }
+
+    pub fn get_channel(&self) -> Channel {
+        self.channel.clone()
+    }
 }
 
 impl ModuleActor {
     pub async fn run(mut self) {
         loop {
             tokio::select! {
+                message = self.channel_listener.recv() => {
+                    match message {
+                        Ok(message) => {
+                            warn!("Module {} received message: {:?}", self.name, message);
+                            // Handle incoming messages.
+                            if let Some(reply_to) = message.reply_to() {
+                                let reply_message = Message::new(vec![Value::String("ack".into())], None);
+                                if let Err(e) = reply_to.send(reply_message).await {
+                                    warn!("Failed to send reply: {}", e);
+                                }
+                            }
+                        },
+                        Err(e) => {
+                            warn!("Module {} failed to receive message: {}", self.name, e);
+                            break; // Exit the loop if the channel is closed.
+                        }
+                    }
+                },
                 command = self.command_rx.recv() => {
                     match command {
                         Some(command) => {

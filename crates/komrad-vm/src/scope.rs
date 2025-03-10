@@ -1,4 +1,4 @@
-use komrad_ast::prelude::Value;
+use komrad_ast::value::Value;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -76,7 +76,8 @@ impl Debug for Scope {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use komrad_ast::prelude::{Number, Value};
+    use komrad_ast::prelude::Number;
+    use komrad_ast::value::Value;
 
     #[tokio::test]
     async fn test_scope() {

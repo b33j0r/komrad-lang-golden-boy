@@ -1,8 +1,9 @@
 use crate::scope::Scope;
 use async_trait::async_trait;
 use komrad_ast::prelude::{
-    BinaryExpr, BinaryOp, Block, CallExpr, Expr, Message, RuntimeError, Statement, Value,
+    BinaryExpr, BinaryOp, Block, CallExpr, Expr, Message, RuntimeError, Statement,
 };
+use komrad_ast::value::Value;
 use std::pin::Pin;
 use tracing::{error, info};
 

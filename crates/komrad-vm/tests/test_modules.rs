@@ -1,4 +1,5 @@
-use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr, Number, Statement, Value};
+use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr, Number, Statement};
+use komrad_ast::value::Value;
 use komrad_vm::{ModuleCommand, System};
 use tokio::time::{sleep, Duration};
 

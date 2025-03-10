@@ -1,37 +1,9 @@
-use crate::channel::Channel;
-use crate::error::RuntimeError;
 use crate::operators::BinaryExpr;
 use crate::prelude::BinaryOp;
 use crate::types::literal;
+use crate::value::Value;
 use std::fmt::Display;
 use std::ops::{Add, Div, Mul, Sub};
-
-#[derive(Debug, Clone)]
-pub enum Value {
-    Empty,
-    Error(RuntimeError),
-    Channel(Channel),
-    Boolean(bool),
-    Word(String),
-    String(String),
-    Number(Number),
-    List(Vec<Value>),
-}
-
-impl PartialEq for Value {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Value::Empty, Value::Empty) => true,
-            (Value::Error(e1), Value::Error(e2)) => e1 == e2,
-            (Value::Channel(c1), Value::Channel(c2)) => c1 == c2,
-            (Value::Boolean(b1), Value::Boolean(b2)) => b1 == b2,
-            (Value::Word(w1), Value::Word(w2)) => w1 == w2,
-            (Value::String(s1), Value::String(s2)) => s1 == s2,
-            (Value::Number(n1), Value::Number(n2)) => n1 == n2,
-            _ => false,
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub enum Number {
@@ -196,29 +168,6 @@ pub struct Pattern {
 pub struct Handler {
     pattern: Pattern,
     block: Block,
-}
-
-fn indent_lines(s: &str, indent: usize) -> String {
-    let indent_str = " ".repeat(indent);
-    s.lines()
-        .map(|line| format!("{}{}", indent_str, line))
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-impl Display for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Value::Empty => write!(f, "Empty"),
-            Value::Error(e) => write!(f, "Error: {}", e),
-            Value::Channel(c) => write!(f, "Channel: {}", c.uuid()),
-            Value::Boolean(b) => write!(f, "Boolean: {}", b),
-            Value::Word(w) => write!(f, "Word: {}", w),
-            Value::String(s) => write!(f, "String: {}", s),
-            Value::Number(n) => write!(f, "Number: {}", n),
-            Value::List(l) => write!(f, "List: {:?}", l),
-        }
-    }
 }
 
 impl Number {}

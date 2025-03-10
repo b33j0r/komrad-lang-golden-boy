@@ -40,6 +40,19 @@ pub async fn main() {
     banner();
 
     info!("{}", "Komrad CLI starting".bright_cyan());
+
+    match args.subcommand {
+        Some(Subcommands::Parse { file }) => {
+            if let Some(file) = file {
+                info!("Parsing file: {}", file.display());
+            }
+        }
+        Some(Subcommands::Run { file }) => {
+            if let Some(file) = file {
+                info!("Running file: {}", file.display());
+            }
+        }
+    }
 }
 
 fn banner() {

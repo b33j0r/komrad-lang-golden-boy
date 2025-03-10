@@ -1,7 +1,8 @@
 use crate::execute::Execute;
 use crate::scope::Scope;
 use komrad_agents::io_agent::IoAgent;
-use komrad_ast::prelude::{Message, Statement, Value};
+use komrad_ast::prelude::{Agent, Message, Statement};
+use komrad_ast::value::Value;
 use std::fmt::{Debug, Display};
 use std::sync::{Arc, RwLock};
 use tokio::sync::{mpsc, oneshot, watch};
@@ -78,9 +79,12 @@ impl Module {
         let (exited_tx, exited_rx) = watch::channel(()); // exited confirmation channel
 
         let mut module_scope = Scope::new();
-        let io_actor = IoAgent::spawn_default();
+        let io_actor = IoAgent::default();
+        let io_actor_spawned = io_actor.clone();
+        let io_actor_chan = io_actor_spawned.spawn();
+
         module_scope
-            .set("IO".to_string(), Value::Channel(io_actor))
+            .set("IO".to_string(), Value::Channel(io_actor_chan))
             .await;
 
         let actor = ModuleActor {

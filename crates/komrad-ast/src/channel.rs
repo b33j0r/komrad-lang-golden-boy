@@ -50,13 +50,17 @@ impl ChannelListener {
     pub async fn recv(&mut self) -> Result<Message, RuntimeError> {
         self.receiver.recv().await.ok_or(RuntimeError::ReceiveError)
     }
+
+    pub fn uuid(&self) -> Uuid {
+        self.uuid
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{RuntimeError, Value};
     use crate::message::Message;
+    use crate::value::Value;
 
     #[tokio::test]
     async fn test_channel_basic_send_receive() {

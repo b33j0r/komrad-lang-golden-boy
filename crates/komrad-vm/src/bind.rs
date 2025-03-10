@@ -1,6 +1,7 @@
 use crate::scope::Scope;
 use async_trait::async_trait;
-use komrad_ast::prelude::{Message, Pattern, TypeExpr, Value};
+use komrad_ast::prelude::{Message, Pattern, TypeExpr};
+use komrad_ast::value::Value;
 
 #[async_trait]
 pub trait TryBind {

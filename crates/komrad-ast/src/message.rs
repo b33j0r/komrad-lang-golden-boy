@@ -1,5 +1,5 @@
-use crate::ast::Value;
 use crate::channel::Channel;
+use crate::value::Value;
 
 #[derive(Debug, Clone)]
 pub struct Message {

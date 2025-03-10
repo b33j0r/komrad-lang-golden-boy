@@ -24,7 +24,7 @@ pub async fn main() {
 
     // Execute that statement in the module
     module
-        .send_command(ModuleCommand::Execute(assignment_statement))
+        .send_command(ModuleCommand::ExecuteStatement(assignment_statement))
         .await;
 
     // Get the module scope
@@ -34,19 +34,34 @@ pub async fn main() {
     // Print the value of x
     info!("Value of x: {:?}", x_value);
 
+    // Set y to 3.0 manually
+    module
+        .send_command(ModuleCommand::ModifyScope {
+            key: "y".to_string(),
+            value: Value::Number(Number::from(3.0)),
+        })
+        .await;
+
+    // Get the module scope again
+    let scope = module.get_scope().await;
+    // Retrieve the value of y
+    let y_value = scope.get("y").await.unwrap();
+    // Print the value of y
+    info!("Value of y: {:?}", y_value);
+
     // Send a multiply by 2 command
     let multiply_statement = komrad_ast::prelude::Statement::Assignment(
         "x".to_string(),
         Expr::Binary(BinaryExpr {
             left: Box::new(Expr::Variable("x".to_string())),
             op: BinaryOp::Mul,
-            right: Box::new(Expr::Value(Value::Number(Number::from(2.0)))),
+            right: Box::new(Expr::Variable("y".to_string())),
         }),
     );
 
     // Execute the multiply statement
     module
-        .send_command(ModuleCommand::Execute(multiply_statement))
+        .send_command(ModuleCommand::ExecuteStatement(multiply_statement))
         .await;
 
     // Get the module scope

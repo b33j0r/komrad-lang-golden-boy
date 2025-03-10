@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 komrad-ast = { path = "../komrad-ast" }
+komrad-agents = { path = "../komrad-agents" }
 
 async-trait.workspace = true
 uuid.workspace = true

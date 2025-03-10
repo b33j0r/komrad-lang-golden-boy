@@ -2,7 +2,7 @@ use crate::scope::Scope;
 use async_trait::async_trait;
 use komrad_ast::prelude::*;
 use std::pin::Pin;
-use tracing::info;
+use tracing::{error, info};
 
 // Trait defining the execution behavior. Now it explicitly returns a pinned Future.
 #[async_trait]
@@ -82,7 +82,18 @@ impl Execute for CallExpr {
         info!("Executing call: {:?}", target);
 
         if let Value::Channel(channel) = target {
-            channel.send(Message::new(args, None)).await;
+            match channel.send(Message::new(args, None)).await {
+                Ok(_) => {
+                    // If the channel is a sender, we return an empty value.
+                    // The receiver will handle the message.
+                    return Value::Empty;
+                }
+                Err(_) => {
+                    // Handle send error
+                    error!("Failed to send message");
+                    return Value::Error(Error::SendError);
+                }
+            }
             Value::Empty
         } else {
             Value::Error(Error::ParseError)

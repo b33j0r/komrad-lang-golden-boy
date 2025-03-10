@@ -973,6 +973,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "komrad-agents"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "komrad-ast",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "komrad-ast"
 version = "0.1.0"
 dependencies = [
@@ -1032,6 +1043,7 @@ dependencies = [
  "async-trait",
  "dashmap",
  "futures",
+ "komrad-agents",
  "komrad-ast",
  "thiserror 2.0.12",
  "tokio",

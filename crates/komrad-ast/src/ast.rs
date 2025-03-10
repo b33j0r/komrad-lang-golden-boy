@@ -1,11 +1,10 @@
+use crate::channel::Channel;
 use crate::operators::BinaryExpr;
 use crate::prelude::BinaryOp;
 use crate::types::literal;
 use std::fmt::Display;
 use std::ops::{Add, Div, Mul, Sub};
 use thiserror::Error;
-use tokio::sync::mpsc;
-use uuid::Uuid;
 
 #[derive(Debug, Clone, Error, PartialEq, Eq)]
 pub enum Error {
@@ -17,30 +16,6 @@ pub enum Error {
     ParseError,
     #[error("Division by zero")]
     DivisionByZero,
-}
-
-#[derive(Debug, Clone)]
-pub struct Message {
-    terms: Vec<Value>,
-    reply_to: Option<mpsc::Sender<Message>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Channel {
-    uuid: Uuid,
-    sender: mpsc::Sender<Message>,
-}
-
-impl PartialEq for Channel {
-    fn eq(&self, other: &Self) -> bool {
-        self.uuid == other.uuid
-    }
-}
-
-#[derive(Debug)]
-pub struct ChannelListener {
-    uuid: Uuid,
-    receiver: mpsc::Receiver<Message>,
 }
 
 #[derive(Debug, Clone)]
@@ -243,52 +218,20 @@ fn indent_lines(s: &str, indent: usize) -> String {
         .join("\n")
 }
 
-impl Message {
-    pub fn new(terms: Vec<Value>, reply_to: Option<mpsc::Sender<Message>>) -> Self {
-        Message { terms, reply_to }
-    }
-
-    pub fn terms(&self) -> &Vec<Value> {
-        &self.terms
-    }
-
-    pub fn reply_to(&self) -> Option<&mpsc::Sender<Message>> {
-        self.reply_to.as_ref()
-    }
-}
-
-impl Channel {
-    pub fn new(capacity: usize) -> (Self, ChannelListener) {
-        let (sender, receiver) = mpsc::channel(capacity);
-        let uuid = Uuid::now_v7();
-        (
-            Channel {
-                uuid,
-                sender: sender.clone(),
-            },
-            ChannelListener { uuid, receiver },
-        )
-    }
-
-    pub fn uuid(&self) -> Uuid {
-        self.uuid
-    }
-
-    pub async fn send(&self, message: Message) -> Result<(), Error> {
-        self.sender
-            .send(message)
-            .await
-            .map_err(|_| Error::SendError)
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Empty => write!(f, "Empty"),
+            Value::Error(e) => write!(f, "Error: {}", e),
+            Value::Channel(c) => write!(f, "Channel: {}", c.uuid()),
+            Value::Boolean(b) => write!(f, "Boolean: {}", b),
+            Value::Word(w) => write!(f, "Word: {}", w),
+            Value::String(s) => write!(f, "String: {}", s),
+            Value::Number(n) => write!(f, "Number: {}", n),
+            Value::List(l) => write!(f, "List: {:?}", l),
+        }
     }
 }
-
-impl ChannelListener {
-    pub async fn recv(&mut self) -> Result<Message, Error> {
-        self.receiver.recv().await.ok_or(Error::ReceiveError)
-    }
-}
-
-impl Value {}
 
 impl Number {}
 

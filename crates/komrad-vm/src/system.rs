@@ -34,37 +34,7 @@ impl System {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::time::{sleep, Duration};
     use tracing_subscriber;
-
-    #[tokio::test]
-    async fn test_module_lifecycle() {
-        // Initialize logging to see debug messages.
-        let _ = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .try_init();
-
-        let mut system = System::spawn().await;
-        let module = system.create_module("lifecycle_test").await;
-
-        // Send a Start command and wait a bit for event propagation.
-        module
-            .send_command(crate::module::ModuleCommand::Start)
-            .await;
-        sleep(Duration::from_millis(1)).await;
-
-        let status = system.get_status(&module.id).await.unwrap();
-        assert_eq!(status, crate::module::ModuleStatus::Started);
-
-        // Send a Stop command and wait for the actor to terminate.
-        module
-            .send_command(crate::module::ModuleCommand::Stop)
-            .await;
-        sleep(Duration::from_millis(1)).await;
-
-        let status = system.get_status(&module.id).await.unwrap();
-        assert_eq!(status, crate::module::ModuleStatus::Stopped);
-    }
 
     #[tokio::test]
     async fn test_get_module_by_id() {

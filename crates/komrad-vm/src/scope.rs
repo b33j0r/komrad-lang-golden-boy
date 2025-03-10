@@ -1,5 +1,6 @@
 use komrad_ast::prelude::Value;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -59,6 +60,16 @@ impl Scope {
 impl Default for Scope {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Debug for Scope {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Scope")
+            .field("parent", &self.parent)
+            .field("bindings", &self.bindings)
+            .field("dirty", &self.dirty)
+            .finish()
     }
 }
 

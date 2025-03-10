@@ -15,5 +15,5 @@
 // }
 
 pub mod error;
-mod sexpr;
+pub mod sexpr;
 pub mod span;

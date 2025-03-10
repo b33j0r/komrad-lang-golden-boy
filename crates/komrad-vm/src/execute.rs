@@ -1,4 +1,5 @@
 use crate::scope::Scope;
+use async_trait::async_trait;
 use komrad_ast::prelude::*;
 use std::pin::Pin;
 use tracing::info;

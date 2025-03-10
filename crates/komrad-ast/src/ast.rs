@@ -1,5 +1,6 @@
 use crate::operators::BinaryExpr;
 use crate::prelude::BinaryOp;
+use crate::types::literal;
 use std::fmt::Display;
 use std::ops::{Add, Div, Mul, Sub};
 use thiserror::Error;
@@ -71,9 +72,9 @@ impl PartialEq for Value {
 
 #[derive(Debug, Clone)]
 pub enum Number {
-    Int(i64),
-    Uint(u64),
-    Float(f64),
+    Int(literal::Int),
+    Uint(literal::UInt),
+    Float(literal::Float),
 }
 
 impl Number {

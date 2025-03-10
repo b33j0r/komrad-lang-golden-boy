@@ -1,3 +1,4 @@
+mod bind;
 mod execute;
 mod module;
 mod scope;

@@ -9,7 +9,6 @@ path = "src/main.rs"
 
 [dependencies]
 komrad-parser = { path = "crates/komrad-parser" }
-komrad-types = { path = "crates/komrad-types" }
 komrad-cli = { path = "crates/komrad-cli" }
 komrad-vm = { path = "crates/komrad-vm" }
 
@@ -17,7 +16,7 @@ tokio.workspace = true
 
 [workspace]
 resolver = "2"
-members = [".", "crates/komrad-ast", "crates/komrad-cli", "crates/komrad-parser", "crates/komrad-types", "crates/komrad-vm", "crates/komrad-web"]
+members = [".", "crates/komrad-ast", "crates/komrad-cli", "crates/komrad-parser", "crates/komrad-vm", "crates/komrad-web"]
 
 [workspace.dependencies]
 async-trait = "0.1.87"

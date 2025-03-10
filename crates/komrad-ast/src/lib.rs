@@ -2,6 +2,7 @@ extern crate core;
 
 mod ast;
 mod operators;
+mod types;
 
 pub mod prelude {
     pub use crate::ast::*;

@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-komrad-types = { path = "../komrad-types" }
 komrad-parser = { path = "../komrad-parser" }
+komrad-ast = { path = "../komrad-ast" }
 
 tokio.workspace = true
 tera = { version = "1.20.0", optional = true }

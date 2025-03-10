@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 komrad-ast = { path = "../komrad-ast" }
 
+async-trait.workspace = true
 uuid.workspace = true
 tokio.workspace = true
 tracing.workspace = true

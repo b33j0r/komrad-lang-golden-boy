@@ -5,171 +5,149 @@ use std::pin::Pin;
 use tracing::info;
 
 // Trait defining the execution behavior. Now it explicitly returns a pinned Future.
+#[async_trait]
 pub trait Execute {
     type Output;
     type Context;
 
-    fn execute<'a>(
-        &'a self,
-        ctx: &'a mut Self::Context,
-    ) -> Pin<Box<dyn std::future::Future<Output = Self::Output> + Send + 'a>>;
+    async fn execute(&self, ctx: &mut Self::Context) -> Self::Output;
 }
 
+#[async_trait]
 impl Execute for Block {
     type Output = Value;
     type Context = Scope;
 
     // Boxing the future since this method involves recursion.
-    fn execute<'a>(
-        &'a self,
-        scope: &'a mut Self::Context,
-    ) -> Pin<Box<dyn Future<Output = Self::Output> + Send + 'a>> {
-        Box::pin(async move {
-            let mut last_value = Value::Empty;
+    async fn execute(&self, scope: &mut Self::Context) -> Self::Output {
+        let mut last_value = Value::Empty;
 
-            for statement in self.statements() {
-                last_value = statement.execute(scope).await;
-            }
+        for statement in self.statements() {
+            last_value = statement.execute(scope).await;
+        }
 
-            last_value
-        })
+        last_value
     }
 }
 
+#[async_trait]
 impl Execute for Statement {
     type Output = Value;
     type Context = Scope;
 
-    fn execute<'a>(
-        &'a self,
-        scope: &'a mut Self::Context,
-    ) -> Pin<Box<dyn std::future::Future<Output = Self::Output> + Send + 'a>> {
-        Box::pin(async move {
-            match self {
-                Statement::Assignment(name, expr) => {
-                    let value = expr.execute(scope).await;
-                    scope.set(name.clone(), value.clone()).await;
-                    value
-                }
-                Statement::Expression(expr) => expr.execute(scope).await,
+    async fn execute(&self, scope: &mut Self::Context) -> Self::Output {
+        match self {
+            Statement::Assignment(name, expr) => {
+                let value = expr.execute(scope).await;
+                scope.set(name.clone(), value.clone()).await;
+                value
             }
-        })
+            Statement::Expression(expr) => expr.execute(scope).await,
+        }
     }
 }
 
+#[async_trait]
 impl Execute for Expr {
     type Output = Value;
     type Context = Scope;
 
-    fn execute<'a>(
-        &'a self,
-        scope: &'a mut Self::Context,
-    ) -> Pin<Box<dyn std::future::Future<Output = Self::Output> + Send + 'a>> {
-        Box::pin(async move {
-            match self {
-                Expr::Value(value) => value.clone(),
-                Expr::Variable(name) => {
-                    if let Some(value) = scope.get(name).await {
-                        value.clone()
-                    } else {
-                        Value::Empty
-                    }
+    async fn execute(&self, scope: &mut Self::Context) -> Self::Output {
+        match self {
+            Expr::Value(value) => value.clone(),
+            Expr::Variable(name) => {
+                if let Some(value) = scope.get(name).await {
+                    value.clone()
+                } else {
+                    Value::Empty
                 }
-                Expr::Binary(b) => b.execute(scope).await,
-                Expr::Call(call) => call.execute(scope).await,
             }
-        })
+            Expr::Binary(b) => b.execute(scope).await,
+            Expr::Call(call) => call.execute(scope).await,
+        }
     }
 }
 
+#[async_trait]
 impl Execute for CallExpr {
     type Output = Value;
     type Context = Scope;
 
-    fn execute<'a>(
-        &'a self,
-        scope: &'a mut Self::Context,
-    ) -> Pin<Box<dyn std::future::Future<Output = Self::Output> + Send + 'a>> {
-        Box::pin(async move {
-            let mut args = Vec::new();
-            for arg in self.args() {
-                args.push(arg.execute(scope).await);
-            }
-            let target = self.target().execute(scope).await;
-            info!("Executing call: {:?}", target);
+    async fn execute(&self, scope: &mut Self::Context) -> Self::Output {
+        let mut args = Vec::new();
+        for arg in self.args() {
+            args.push(arg.execute(scope).await);
+        }
+        let target = self.target().execute(scope).await;
+        info!("Executing call: {:?}", target);
 
-            if let Value::Channel(channel) = target {
-                channel.send(Message::new(args, None)).await;
-                Value::Empty
-            } else {
-                Value::Error(Error::ParseError)
-            }
-        })
+        if let Value::Channel(channel) = target {
+            channel.send(Message::new(args, None)).await;
+            Value::Empty
+        } else {
+            Value::Error(Error::ParseError)
+        }
     }
 }
 
+#[async_trait]
 impl Execute for BinaryExpr {
     type Output = Value;
     type Context = Scope;
 
-    fn execute<'a>(
-        &'a self,
-        scope: &'a mut Self::Context,
-    ) -> Pin<Box<dyn std::future::Future<Output = Self::Output> + Send + 'a>> {
-        Box::pin(async move {
-            let left = self.left().execute(scope).await;
-            let right = self.right().execute(scope).await;
+    async fn execute(&self, scope: &mut Self::Context) -> Self::Output {
+        let left = self.left().execute(scope).await;
+        let right = self.right().execute(scope).await;
 
-            match self.operator() {
-                // Math
-                BinaryOp::Add => match (left, right) {
-                    (Value::Number(l), Value::Number(r)) => Value::Number(l + r),
-                    (Value::String(l), Value::String(r)) => Value::String(format!("{}{}", l, r)),
-                    _ => Value::Empty,
-                },
-                BinaryOp::Sub => {
-                    if let (Value::Number(l), Value::Number(r)) = (left, right) {
-                        Value::Number(l - r)
-                    } else {
-                        Value::Empty
-                    }
+        match self.operator() {
+            // Math
+            BinaryOp::Add => match (left, right) {
+                (Value::Number(l), Value::Number(r)) => Value::Number(l + r),
+                (Value::String(l), Value::String(r)) => Value::String(format!("{}{}", l, r)),
+                _ => Value::Empty,
+            },
+            BinaryOp::Sub => {
+                if let (Value::Number(l), Value::Number(r)) = (left, right) {
+                    Value::Number(l - r)
+                } else {
+                    Value::Empty
                 }
-                BinaryOp::Mul => {
-                    if let (Value::Number(l), Value::Number(r)) = (left, right) {
-                        Value::Number(l * r)
-                    } else {
-                        Value::Empty
-                    }
-                }
-                BinaryOp::Div => match (left, right) {
-                    (Value::Number(l), Value::Number(r)) => {
-                        if !r.is_zero() {
-                            Value::Number(l / r)
-                        } else {
-                            Value::Error(Error::DivisionByZero)
-                        }
-                    }
-                    _ => Value::Empty,
-                },
-
-                // Logical
-                BinaryOp::And => {
-                    if let (Value::Boolean(l), Value::Boolean(r)) = (left, right) {
-                        Value::Boolean(l && r)
-                    } else {
-                        Value::Empty
-                    }
-                }
-
-                BinaryOp::Or => {
-                    if let (Value::Boolean(l), Value::Boolean(r)) = (left, right) {
-                        Value::Boolean(l || r)
-                    } else {
-                        Value::Empty
-                    }
-                } // Bitwise
             }
-        })
+            BinaryOp::Mul => {
+                if let (Value::Number(l), Value::Number(r)) = (left, right) {
+                    Value::Number(l * r)
+                } else {
+                    Value::Empty
+                }
+            }
+            BinaryOp::Div => match (left, right) {
+                (Value::Number(l), Value::Number(r)) => {
+                    if !r.is_zero() {
+                        Value::Number(l / r)
+                    } else {
+                        Value::Error(Error::DivisionByZero)
+                    }
+                }
+                _ => Value::Empty,
+            },
+
+            // Logical
+            BinaryOp::And => {
+                if let (Value::Boolean(l), Value::Boolean(r)) = (left, right) {
+                    Value::Boolean(l && r)
+                } else {
+                    Value::Empty
+                }
+            }
+
+            BinaryOp::Or => {
+                if let (Value::Boolean(l), Value::Boolean(r)) = (left, right) {
+                    Value::Boolean(l || r)
+                } else {
+                    Value::Empty
+                }
+            } // Bitwise
+        }
     }
 }
 

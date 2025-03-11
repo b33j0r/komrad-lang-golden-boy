@@ -1,7 +1,7 @@
 use crate::scope::Scope;
 use async_trait::async_trait;
 use komrad_ast::prelude::{
-    BinaryExpr, BinaryOp, Block, CallExpr, Expr, Message, RuntimeError, Statement, Value,
+    BinaryExpr, BinaryOp, Block, CallExpr, Expr, Message, RuntimeError, Statement, TypeExpr, Value,
 };
 use tracing::{error, info};
 
@@ -51,7 +51,7 @@ impl Execute for Statement {
             }
             Statement::Expr(expr) => expr.execute(scope).await,
             Statement::NoOp => Value::Empty,
-            Statement::Comment(comment) => Value::Empty,
+            Statement::Comment(_comment_text) => Value::Empty,
             Statement::Handler(handler) => {
                 scope.add_handler(handler.clone()).await;
                 Value::Empty
@@ -59,6 +59,13 @@ impl Execute for Statement {
             Statement::Field(name, typ, expr) => {
                 if let Some(expr) = expr {
                     let value = expr.execute(scope).await;
+                    let value_type = value.get_type_expr();
+                    if value_type.is_subtype_of(typ) {
+                        return Value::Error(RuntimeError::TypeMismatch(format!(
+                            "Expected type {:?}, found {:?}",
+                            typ, value_type
+                        )));
+                    }
                     scope.set(name.clone(), value.clone()).await;
                     value
                 } else {

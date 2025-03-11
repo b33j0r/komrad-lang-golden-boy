@@ -1,5 +1,6 @@
 use crate::operators::BinaryExpr;
-use crate::prelude::{BinaryOp, ValueType};
+use crate::prelude::BinaryOp;
+use crate::type_expr::TypeExpr;
 use crate::value::Value;
 use std::hash::Hash;
 use std::sync::Arc;
@@ -32,17 +33,6 @@ pub enum Statement {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Block {
     statements: Vec<Statement>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum TypeExpr {
-    Empty,
-    Type(ValueType),
-    Word(String),
-    Hole(String),
-    TypeHole(String, ValueType),
-    BlockHole(String),
-    Value(Value),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -154,28 +144,6 @@ impl Pattern {
 
     pub fn terms(&self) -> &Vec<TypeExpr> {
         &self.terms
-    }
-}
-
-impl TypeExpr {
-    pub fn new_empty() -> Self {
-        TypeExpr::Empty
-    }
-
-    pub fn new_word(word: String) -> Self {
-        TypeExpr::Word(word)
-    }
-
-    pub fn new_hole(hole: String) -> Self {
-        TypeExpr::Hole(hole)
-    }
-
-    pub fn new_block_hole(block_hole: String) -> Self {
-        TypeExpr::BlockHole(block_hole)
-    }
-
-    pub fn new_value(value: Value) -> Self {
-        TypeExpr::Value(value)
     }
 }
 

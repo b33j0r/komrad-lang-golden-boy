@@ -1,177 +1,18 @@
 use crate::execute::Execute;
+use crate::module::ModuleCommand;
+use crate::module::ModuleId;
 use crate::scope::Scope;
 use crate::try_bind::TryBind;
-use komrad_ast::prelude::{Agent, Channel, ChannelListener, Message, Statement, Value};
-use std::fmt::{Debug, Display};
-use std::sync::Arc;
-use tokio::sync::{mpsc, oneshot, watch};
+use komrad_ast::prelude::{ChannelListener, Message, Value};
+use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
-use uuid::Uuid;
-
-pub struct Module;
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ModuleId(pub Uuid);
-
-#[derive(Debug, Clone)]
-pub struct ModuleApi {
-    pub id: ModuleId,
-    pub name: String,
-    command_tx: mpsc::Sender<ModuleCommand>,
-    channel: Channel,
-}
 
 pub struct ModuleActor {
     pub id: ModuleId,
     pub name: String,
     pub command_rx: mpsc::Receiver<ModuleCommand>,
-    scope: Scope,
-    channel_listener: ChannelListener,
-}
-
-impl ModuleId {
-    pub fn new() -> Self {
-        Self(Uuid::now_v7())
-    }
-}
-
-impl Display for ModuleId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-pub enum ModuleCommand {
-    Stop,
-    Send(Message),
-    ExecuteStatement(Statement),
-    ExecuteStatements(Vec<Statement>),
-    QueryScope(oneshot::Sender<Scope>),
-    ModifyScope { key: String, value: Value },
-}
-
-impl Debug for ModuleCommand {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ModuleCommand::Stop => write!(f, "Stop"),
-            ModuleCommand::Send(msg) => write!(f, "Send({:?})", msg),
-            ModuleCommand::ExecuteStatement(stmt) => write!(f, "Execute({:?})", stmt),
-            ModuleCommand::ExecuteStatements(stmts) => {
-                write!(f, "ExecuteStatements({:?})", stmts)
-            }
-            ModuleCommand::QueryScope(_) => write!(f, "QueryScope"),
-            ModuleCommand::ModifyScope { key, value } => {
-                write!(f, "ModifyScope({:?}, {:?})", key, value)
-            }
-        }
-    }
-}
-
-impl Module {
-    pub async fn spawn(name: String, capacity: usize) -> Arc<ModuleApi> {
-        let id = ModuleId::new();
-        let (command_tx, command_rx) = mpsc::channel(32);
-        let (exit_tx, exit_rx) = watch::channel(()); // exit signal channel
-        let (exited_tx, exited_rx) = watch::channel(()); // exited confirmation channel
-
-        let mut module_scope = Scope::new();
-        // let io_actor = IoAgent::default();
-        // let io_actor_spawned = io_actor.clone();
-        // let io_actor_chan = io_actor_spawned.spawn();
-
-        let (default_agents, default_agent_channels) =
-            komrad_agents::default_agents::DefaultAgents::new();
-
-        module_scope
-            .set(
-                "IO".to_string(),
-                Value::Channel(default_agent_channels.io_agent),
-            )
-            .await;
-
-        module_scope
-            .set(
-                "Registry".to_string(),
-                Value::Channel(default_agent_channels.registry_agent),
-            )
-            .await;
-
-        module_scope
-            .set(
-                "agent".to_string(),
-                Value::Channel(default_agent_channels.agent_agent),
-            )
-            .await;
-
-        module_scope
-            .set(
-                "spawn".to_string(),
-                Value::Channel(default_agent_channels.spawn_agent),
-            )
-            .await;
-
-        let (channel, channel_listener) = Channel::new(capacity);
-
-        let actor = ModuleActor {
-            id: id.clone(),
-            name: name.clone(),
-            command_rx,
-            scope: module_scope,
-            channel_listener,
-        };
-
-        let api = ModuleApi {
-            id,
-            name,
-            command_tx,
-            channel: channel.clone(),
-        };
-        let api = Arc::new(api);
-
-        warn!("Created ModuleApi for {} with ID {}", api.name, api.id);
-
-        tokio::spawn(async move {
-            actor.run().await;
-        });
-
-        api
-    }
-}
-
-impl ModuleApi {
-    pub async fn send_command(&self, command: ModuleCommand) {
-        warn!("Sending command to Module {}: {:?}", self.name, command);
-        if let Err(e) = self.command_tx.send(command).await {
-            warn!("Failed to send command to Module {}: {}", self.name, e);
-        }
-    }
-
-    pub async fn get_scope(&self) -> Option<Scope> {
-        let (reply, mut reply_rx) = oneshot::channel();
-        match self.command_tx.send(ModuleCommand::QueryScope(reply)).await {
-            Err(e) => {
-                warn!(
-                    "Failed to send QueryScope command to Module {}: {}",
-                    self.name, e
-                );
-                return None;
-            }
-            Ok(_) => {
-                debug!("Sent QueryScope command to Module {}", self.name);
-            }
-        }
-        match reply_rx.await {
-            Ok(scope) => Some(scope),
-            Err(_) => {
-                warn!("Failed to receive scope from Module {}", self.name);
-                None
-            }
-        }
-    }
-
-    pub fn get_channel(&self) -> Channel {
-        self.channel.clone()
-    }
+    pub(crate) scope: Scope,
+    pub(crate) channel_listener: ChannelListener,
 }
 
 impl ModuleActor {

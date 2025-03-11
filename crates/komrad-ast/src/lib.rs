@@ -8,8 +8,11 @@ mod error;
 mod message;
 mod number;
 mod operators;
+mod type_expr;
+mod typed;
 mod types;
 mod value;
+mod value_type;
 
 pub mod prelude {
     pub use crate::agent::*;
@@ -20,6 +23,8 @@ pub mod prelude {
     pub use crate::message::*;
     pub use crate::number::*;
     pub use crate::operators::*;
+    pub use crate::type_expr::*;
     pub use crate::types::*;
     pub use crate::value::*;
+    pub use crate::value_type::*;
 }

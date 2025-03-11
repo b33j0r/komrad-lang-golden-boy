@@ -104,8 +104,7 @@ pub fn parse_handler_statement(input: Span) -> KResult<Statement> {
 mod tests {
     use super::*;
     use crate::parse::strings::test_parse_string::full_span;
-    use komrad_ast::prelude::ValueType;
-    use komrad_ast::prelude::{Pattern, Statement, TypeExpr};
+    use komrad_ast::prelude::{Pattern, Statement};
 
     #[test]
     fn test_parse_simple_handler_pattern() {

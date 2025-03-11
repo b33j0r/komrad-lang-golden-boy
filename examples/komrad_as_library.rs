@@ -1,7 +1,7 @@
 use komrad_ast::number::Number;
 use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr};
 use komrad_ast::value::Value;
-use komrad_vm::ModuleCommand;
+use komrad_vm::module::module_command::ModuleCommand;
 use tracing::info;
 
 #[tokio::main]

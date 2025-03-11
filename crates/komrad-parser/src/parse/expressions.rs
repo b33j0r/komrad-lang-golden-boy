@@ -95,9 +95,8 @@ mod test_parse_expression {
     use crate::parse::expressions::parse_value_expression;
     use crate::parse::statements::parse_statement;
     use crate::parse::strings::test_parse_string::full_span;
-    use komrad_ast::prelude::{
-        Block, CallExpr, Expr, Handler, Number, Pattern, Statement, TypeExpr, Value,
-    };
+    use komrad_ast::prelude::{Block, CallExpr, Expr, Handler, Number, Pattern, Statement, Value};
+    use komrad_ast::type_expr::TypeExpr;
 
     #[test]
     fn test_parse_block_expression() {

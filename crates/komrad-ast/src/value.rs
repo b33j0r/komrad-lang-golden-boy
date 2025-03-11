@@ -2,7 +2,8 @@ use crate::ast::Block;
 use crate::channel::Channel;
 use crate::error::RuntimeError;
 use crate::number::Number;
-use crate::prelude::{literal, EmbeddedBlock};
+use crate::prelude::{literal, EmbeddedBlock, TypeExpr};
+use crate::value_type::ValueType;
 use std::fmt::Display;
 use std::hash::Hash;
 
@@ -19,41 +20,6 @@ pub enum Value {
     Block(Box<Block>),
     Bytes(Vec<u8>),
     EmbeddedBlock(EmbeddedBlock),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum ValueType {
-    User(String),
-    Empty,
-    Error,
-    Channel,
-    Boolean,
-    Word,
-    String,
-    Number,
-    List,
-    Block,
-    Bytes,
-    EmbeddedBlock,
-}
-
-impl Display for ValueType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ValueType::User(name) => write!(f, "{}", name),
-            ValueType::Empty => write!(f, "Empty"),
-            ValueType::Error => write!(f, "Error"),
-            ValueType::Channel => write!(f, "Channel"),
-            ValueType::Boolean => write!(f, "Boolean"),
-            ValueType::Word => write!(f, "Word"),
-            ValueType::String => write!(f, "String"),
-            ValueType::Number => write!(f, "Number"),
-            ValueType::List => write!(f, "List"),
-            ValueType::Block => write!(f, "Block"),
-            ValueType::Bytes => write!(f, "Bytes"),
-            ValueType::EmbeddedBlock => write!(f, "EmbeddedBlock"),
-        }
-    }
 }
 
 impl Default for Value {
@@ -179,20 +145,19 @@ impl Value {
         }
     }
 
-    pub fn is_type(&self, typ: &ValueType) -> bool {
-        match (self, typ) {
-            (Value::Empty, ValueType::Empty) => true,
-            (Value::Error(_), ValueType::Error) => true,
-            (Value::Channel(_), ValueType::Channel) => true,
-            (Value::Boolean(_), ValueType::Boolean) => true,
-            (Value::Word(_), ValueType::Word) => true,
-            (Value::String(_), ValueType::String) => true,
-            (Value::Number(_), ValueType::Number) => true,
-            (Value::List(_), ValueType::List) => true,
-            (Value::Block(_), ValueType::Block) => true,
-            (Value::Bytes(_), ValueType::Bytes) => true,
-            (Value::EmbeddedBlock(_), ValueType::EmbeddedBlock) => true,
-            _ => false,
+    pub fn get_type_expr(&self) -> TypeExpr {
+        match self {
+            Value::Empty => TypeExpr::new_empty(),
+            Value::Error(_) => TypeExpr::Type(ValueType::Error),
+            Value::Channel(_) => TypeExpr::Type(ValueType::Channel),
+            Value::Boolean(_) => TypeExpr::Type(ValueType::Boolean),
+            Value::Word(_) => TypeExpr::Type(ValueType::Word),
+            Value::String(_) => TypeExpr::Type(ValueType::String),
+            Value::Number(_) => TypeExpr::Type(ValueType::Number),
+            Value::List(_) => TypeExpr::Type(ValueType::List),
+            Value::Block(_) => TypeExpr::Type(ValueType::Block),
+            Value::Bytes(_) => TypeExpr::Type(ValueType::Bytes),
+            Value::EmbeddedBlock(_) => TypeExpr::Type(ValueType::EmbeddedBlock),
         }
     }
 }

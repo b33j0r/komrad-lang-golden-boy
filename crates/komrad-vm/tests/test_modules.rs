@@ -1,7 +1,8 @@
 use komrad_ast::number::Number;
 use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr, Statement};
 use komrad_ast::value::Value;
-use komrad_vm::{ModuleCommand, System};
+use komrad_vm::module::module_command::ModuleCommand;
+use komrad_vm::System;
 use tokio::time::{sleep, Duration};
 
 #[tokio::test]

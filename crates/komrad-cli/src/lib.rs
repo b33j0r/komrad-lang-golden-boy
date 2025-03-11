@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use komrad_ast::prelude::{CallExpr, Expr, Statement, Value};
-use komrad_vm::{ModuleCommand, Scope};
+use komrad_vm::ModuleCommand;
+use komrad_vm::Scope;
 use owo_colors::OwoColorize;
 use palette::LinSrgb;
 use std::path::PathBuf;

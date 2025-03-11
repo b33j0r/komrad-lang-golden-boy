@@ -1,46 +1,40 @@
 use komrad_ast::prelude::{
-    Block, CallExpr, Channel, Expr, Message, Number, Statement, ToBlock, ToBoxedExpr, Value,
+    Block, CallExpr, Channel, Expr, Message, Number, Statement, ToBlock, Value,
 };
-use tokio::time::{sleep, Duration};
 
-// --- Helper function ---
-/// A helper that creates a complete agent definition for Alice.
-/// In a real scenario, Alice’s definition would be sent to AgentAgent,
-/// which would transform [Alice, <block>] into [define, agent, Alice, <block>].
-/// Here we use it only for reference.
-fn create_real_alice_agent_definition() -> Statement {
-    Statement::Expr(Expr::Call(CallExpr::new(
-        // The "agent" keyword.
-        Expr::Variable("agent".into()),
-        vec![
-            // Agent name: "Alice" (converted to a Value via .into())
-            Expr::Variable("Alice".into()).into(),
-            // The agent’s block:
-            // {
-            //     a = spawn Bob {}
-            //     a foo
-            // }
-            vec![
-                // Assignment: a = spawn Bob {}
-                Statement::Assignment(
-                    "a".into(),
-                    Expr::Call(CallExpr::new(
-                        Expr::Variable("spawn".into()),
-                        vec![Expr::Variable("Bob".into()).into()],
-                    )),
-                )
-                .into(),
-                // Call: a foo
-                Statement::Expr(Expr::Call(CallExpr::new(
-                    Expr::Variable("a".into()),
-                    vec![Expr::Variable("foo".into()).into()],
-                ))),
-            ]
-            .to_block()
-            .to_boxed_expr(),
-        ],
-    )))
-}
+// fn create_alice_agent_definition() -> Statement {
+//     Statement::Expr(Expr::Call(CallExpr::new(
+//         // The "agent" keyword.
+//         Expr::Variable("agent".into()),
+//         vec![
+//             // Agent name: "Alice" (converted to a Value via .into())
+//             Expr::Variable("Alice".into()).into(),
+//             // The agent’s block:
+//             // {
+//             //     a = spawn Bob {}
+//             //     a foo
+//             // }
+//             vec![
+//                 // Assignment: a = spawn Bob {}
+//                 Statement::Assignment(
+//                     "a".into(),
+//                     Expr::Call(CallExpr::new(
+//                         Expr::Variable("spawn".into()),
+//                         vec![Expr::Variable("Bob".into()).into()],
+//                     )),
+//                 )
+//                 .into(),
+//                 // Call: a foo
+//                 Statement::Expr(Expr::Call(CallExpr::new(
+//                     Expr::Variable("a".into()),
+//                     vec![Expr::Variable("foo".into()).into()],
+//                 ))),
+//             ]
+//             .to_block()
+//             .to_boxed_expr(),
+//         ],
+//     )))
+// }
 
 #[cfg(test)]
 mod tests {
@@ -49,7 +43,6 @@ mod tests {
     use komrad_agents::agent_agent::AgentAgent;
     use komrad_agents::registry_agent::RegistryAgent;
     use komrad_agents::spawn_agent::SpawnAgent;
-    use komrad_ast::prelude::*;
     use tokio::time::{sleep, Duration};
 
     // Test 1: Basic channel message send/receive.

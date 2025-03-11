@@ -1,7 +1,6 @@
-use crate::agent_agent::AgentAgent;
 use crate::registry_agent::RegistryAgent;
 use komrad_agent::{AgentBehavior, AgentLifecycle};
-use komrad_ast::prelude::{Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
+use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::info;
@@ -78,7 +77,7 @@ impl AgentBehavior for SpawnAgent {
 mod tests {
     use super::*;
     use crate::registry_agent::RegistryAgent;
-    use komrad_ast::prelude::{Channel, Message, Value};
+    use komrad_ast::prelude::{Channel, Message, RuntimeError, Value};
 
     #[tokio::test]
     async fn test_spawn_agent_forwarding_defined() {

@@ -3,7 +3,7 @@ use komrad_agent::{AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::info;
+use tracing::debug;
 
 /// SpawnAgent is a syntax proxy bound as `spawn`.
 /// It forwards messages like:
@@ -64,10 +64,7 @@ impl AgentBehavior for SpawnAgent {
             new_terms.push(term.clone());
         }
         let new_msg = Message::new(new_terms, msg.reply_to());
-        info!(
-            "😍SpawnAgent sending message: {:}",
-            new_msg.to_sexpr().format(0)
-        );
+        debug!("⏭️ SpawnAgent {:}", new_msg.to_sexpr().format(0));
         let _ = self.registry.send(new_msg).await;
         true
     }

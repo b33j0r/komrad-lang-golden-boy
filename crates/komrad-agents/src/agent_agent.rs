@@ -1,8 +1,9 @@
 use crate::registry_agent::RegistryAgent;
 use komrad_agent::{AgentBehavior, AgentLifecycle};
-use komrad_ast::prelude::{Channel, ChannelListener, Message, Value};
+use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::debug;
 
 /// AgentAgent is a syntax proxy bound as `agent`.
 /// It forwards an incoming message such as:
@@ -64,6 +65,7 @@ impl AgentBehavior for AgentAgent {
             new_terms.push(term.clone());
         }
         let new_msg = Message::new(new_terms, msg.reply_to());
+        debug!("⏭️ AgentAgent {:}", new_msg.to_sexpr().format(0));
         let _ = self.registry.send(new_msg).await;
         true
     }

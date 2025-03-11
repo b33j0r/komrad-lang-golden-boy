@@ -7,7 +7,5 @@ agent Bob {
 [main] {
 	IO println "Main started"
 	bob = spawn Bob {}
-	alice = spawn Bob {}
-	eve = spawn Eve {}
 	bob start
 }

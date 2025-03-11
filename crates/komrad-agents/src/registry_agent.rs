@@ -1,9 +1,9 @@
 use komrad_agent::{AgentBehavior, AgentLifecycle};
-use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, RuntimeError, Value};
+use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
-use tracing::error;
+use tracing::{debug, info};
 
 /// RegistryAgent holds definitions of agents as AST Blocks.
 pub struct RegistryAgent {
@@ -55,11 +55,11 @@ impl AgentLifecycle for RegistryAgent {
 #[async_trait::async_trait]
 impl AgentBehavior for RegistryAgent {
     async fn handle_message(&self, msg: Message) -> bool {
-        error!("RegistryAgent: received message: {:?}", msg);
+        info!("⚙️ {:}", msg.to_sexpr().format(0));
         if let Some(cmd) = msg.first_word() {
             match cmd.as_str() {
                 "define" => {
-                    error!("RegistryAgent: define command received");
+                    debug!("RegistryAgent: define command received");
                     let terms = msg.terms();
                     if terms.len() < 4 {
                         if let Some(reply_chan) = msg.reply_to() {
@@ -129,7 +129,7 @@ impl AgentBehavior for RegistryAgent {
                     }
                 }
                 "spawn" => {
-                    error!("RegistryAgent: spawn command received");
+                    debug!("RegistryAgent: spawn command received");
                     let terms = msg.terms();
                     if terms.len() < 3 {
                         if let Some(reply_chan) = msg.reply_to() {

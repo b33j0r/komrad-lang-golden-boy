@@ -51,10 +51,10 @@ impl DefaultAgents {
 impl DefaultAgentChannels {
     pub fn get_channels(&self) -> HashMap<String, Channel> {
         let mut channels = HashMap::new();
-        channels.insert("io_agent".to_string(), self.io_agent.clone());
-        channels.insert("registry_agent".to_string(), self.registry_agent.clone());
-        channels.insert("agent_agent".to_string(), self.agent_agent.clone());
-        channels.insert("spawn_agent".to_string(), self.spawn_agent.clone());
+        channels.insert("IO".to_string(), self.io_agent.clone());
+        channels.insert("Registry".to_string(), self.registry_agent.clone());
+        channels.insert("agent".to_string(), self.agent_agent.clone());
+        channels.insert("spawn".to_string(), self.spawn_agent.clone());
         channels
     }
 }

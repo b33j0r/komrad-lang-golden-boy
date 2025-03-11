@@ -1,13 +1,6 @@
 agent Bob {
-	count: Int = 0
-
-	[start] {
-		IO println "Bob started"
-	}
 }
 
 [main] {
 	IO println "Main started"
-	bob = spawn Bob
-	bob start
 }

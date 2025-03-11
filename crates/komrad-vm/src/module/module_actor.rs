@@ -3,7 +3,7 @@ use crate::module::ModuleCommand;
 use crate::module::ModuleId;
 use crate::scope::Scope;
 use crate::try_bind::TryBind;
-use komrad_ast::prelude::{ChannelListener, Message, Value};
+use komrad_ast::prelude::{ChannelListener, Message, ToSexpr, Value};
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
 
@@ -22,7 +22,7 @@ impl ModuleActor {
                 maybe_msg = self.channel_listener.recv() => {
                     match maybe_msg {
                         Ok(message) => {
-                            info!("Module {} received message: {:?}", self.name, message);
+                            info!("📥 {} <- {:}", self.name, message.to_sexpr().format(0));
 
                             // 2) Dispatch the message by matching all handlers
                             let result = self.dispatch_message(message).await;
@@ -39,7 +39,7 @@ impl ModuleActor {
                 command = self.command_rx.recv() => {
                     match command {
                         Some(command) => {
-                            info!("Module {} received command: {:?}", self.name, command);
+                            info!("👨🏻‍💼 {} <- {:}", self.name, command.to_sexpr().format(0));
                             match command {
                                 ModuleCommand::Stop => {
                                     info!("Module {} received Stop command", self.name);
@@ -47,11 +47,11 @@ impl ModuleActor {
                                 }
                                 ModuleCommand::Send(message) => {
                                     // Handle sending a message.
-                                    info!("Module {} received message: {:?}", self.name, message);
+                                    info!("Module {} received message: {:}", self.name, message.to_sexpr().format(0));
                                 }
                                 ModuleCommand::ExecuteStatement(statement) => {
                                     // Handle executing a statement.
-                                    info!("Module {} executing statement: {:?}", self.name, statement);
+                                    info!("⚡️ {} => {:}", self.name, statement.to_sexpr().format(0));
                                     // Execute the statement in the module's scope.
                                     if let Value::Error(e) = statement.execute(&mut self.scope).await {
                                         warn!("Failed to execute statement in Module {}: {}", self.name, e);
@@ -60,7 +60,7 @@ impl ModuleActor {
                                 ModuleCommand::ExecuteStatements(statements) => {
                                     // Handle executing multiple statements.
                                     for statement in statements {
-                                        info!("Module {} executing statement: {:?}", self.name, statement);
+                                        info!("Module {} executing statement: {:}", self.name, statement.to_sexpr().format(0));
                                         if let Value::Error(e) = statement.execute(&mut self.scope).await {
                                             warn!("Failed to execute statement in Module {}: {}", self.name, e);
                                         }
@@ -94,7 +94,7 @@ impl ModuleActor {
 
         // 2) Try each handler’s pattern
         for handler in handlers {
-            debug!("Checking handler: {:?}", handler);
+            debug!("🎰: {:}", handler.to_sexpr().format(0));
             let pattern = handler.pattern();
             if let Some(mut scope) = pattern.try_bind(message.clone(), &mut self.scope).await {
                 // 3) If the pattern matches, execute the block

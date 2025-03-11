@@ -3,7 +3,7 @@ use crate::module::module_id::ModuleId;
 use crate::scope::Scope;
 use komrad_ast::prelude::{Channel, ToSexpr};
 use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 #[derive(Debug, Clone)]
 pub struct ModuleApi {
@@ -15,11 +15,7 @@ pub struct ModuleApi {
 
 impl ModuleApi {
     pub async fn send_command(&self, command: ModuleCommand) {
-        warn!(
-            "Sending command to Module {}: {:}",
-            self.name,
-            command.to_sexpr().format(0)
-        );
+        info!("📡 {} -> {:}", self.name, command.to_sexpr().format(0));
         if let Err(e) = self.command_tx.send(command).await {
             warn!("Failed to send command to Module {}: {}", self.name, e);
         }

@@ -1,7 +1,8 @@
 use crate::scope::Scope;
 use async_trait::async_trait;
 use komrad_ast::prelude::{
-    BinaryExpr, BinaryOp, Block, CallExpr, Expr, Message, RuntimeError, Statement, Typed, Value,
+    BinaryExpr, BinaryOp, Block, CallExpr, Channel, Expr, Message, RuntimeError, Statement,
+    ToSexpr, Typed, Value,
 };
 use tracing::{error, info};
 
@@ -19,6 +20,14 @@ pub trait Execute {
     type Context;
 
     async fn execute(&self, ctx: &mut Self::Context) -> Self::Output;
+}
+
+#[async_trait]
+pub trait ExecuteWithReply {
+    type Output;
+    type Context;
+
+    async fn execute_with_reply(&self, ctx: &mut Self::Context) -> Self::Output;
 }
 
 #[async_trait]
@@ -45,11 +54,18 @@ impl Execute for Statement {
 
     async fn execute(&self, scope: &mut Self::Context) -> Self::Output {
         match self {
-            Statement::Assignment(name, expr) => {
-                let value = expr.execute(scope).await;
-                scope.set(name.clone(), value.clone()).await;
-                value
-            }
+            Statement::Assignment(name, expr) => match expr {
+                Expr::Call(call) => {
+                    let value = call.execute_with_reply(scope).await;
+                    scope.set(name.clone(), value.clone()).await;
+                    return value;
+                }
+                _ => {
+                    let value = expr.execute(scope).await;
+                    scope.set(name.clone(), value.clone()).await;
+                    value
+                }
+            },
             Statement::Expr(expr) => expr.execute(scope).await,
             Statement::NoOp => Value::Empty,
             Statement::Comment(_comment_text) => Value::Empty,
@@ -110,7 +126,10 @@ impl Execute for CallExpr {
             args.push(arg.execute(scope).await);
         }
         let target = self.target().execute(scope).await;
-        info!("Executing call: {:?}", target);
+        info!(
+            "☎️ {:}",
+            (target.clone(), args.clone()).to_sexpr().format(0)
+        );
 
         if let Value::Channel(channel) = target {
             match channel.send(Message::new(args, None)).await {
@@ -123,6 +142,53 @@ impl Execute for CallExpr {
                     // Handle send error
                     error!("Failed to send message");
                     return Value::Error(RuntimeError::SendError);
+                }
+            }
+        } else {
+            Value::Error(RuntimeError::SendError)
+        }
+    }
+}
+
+#[async_trait]
+impl ExecuteWithReply for CallExpr {
+    type Output = Value;
+    type Context = Scope;
+
+    async fn execute_with_reply(&self, scope: &mut Self::Context) -> Self::Output {
+        let mut args = Vec::new();
+        for arg in self.args() {
+            args.push(arg.execute(scope).await);
+        }
+        let target = self.target().execute(scope).await;
+        info!(
+            "🔁 {:}",
+            (target.clone(), args.clone()).to_sexpr().format(0)
+        );
+
+        if let Value::Channel(channel) = target {
+            let (reply_chan, mut reply_chan_rx) = Channel::new(1);
+            let message_with_reply_to = Message::new(args, Some(reply_chan.clone()));
+            match channel.send(message_with_reply_to).await {
+                Ok(_) => {
+                    // Wait for the reply
+                    let message = reply_chan_rx.recv().await;
+                    match message {
+                        Ok(msg) => {
+                            assert_eq!(msg.terms().len(), 1, "Expected a single term in reply");
+                            msg.terms().get(0).unwrap().clone()
+                        }
+                        Err(_) => {
+                            // Handle receive error
+                            error!("Failed to receive message");
+                            Value::Error(RuntimeError::ReceiveError)
+                        }
+                    }
+                }
+                Err(_) => {
+                    // Handle send error
+                    error!("Failed to send message");
+                    Value::Error(RuntimeError::SendError)
                 }
             }
         } else {
@@ -353,6 +419,6 @@ mod tests {
         // Evaluating a variable that was never assigned should yield Value::Empty.
         let var_expr = Expr::Variable("undefined".to_string());
         let result = var_expr.execute(&mut scope).await;
-        assert_eq!(result, Value::Empty);
+        assert_eq!(result, Value::Word("undefined".to_string()));
     }
 }

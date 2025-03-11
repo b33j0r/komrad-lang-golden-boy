@@ -19,6 +19,10 @@ struct Args {
     /// Wait for ctrl+c to exit
     #[arg(long, global = true, default_value_t = false)]
     wait: bool,
+
+    /// Wait for 100 ms before exiting
+    #[arg(long, global = true, default_value_t = false)]
+    wait_100: bool,
 }
 
 #[derive(Clone, Debug, Subcommand)]
@@ -90,8 +94,11 @@ pub async fn main() {
                     let system = komrad_vm::System::spawn();
                     let module = system.await.create_module("main").await;
                     let module_channel = module.get_channel();
-                    let scope = module.get_scope().await;
-                    info!("Module scope: {:?}", scope);
+                    if let Some(scope) = module.get_scope().await {
+                        debug!("Module {} scope: {:}", module.name, scope);
+                    } else {
+                        info!("Failed to get module scope");
+                    }
 
                     for statement in module_builder.statements() {
                         if statement.is_no_op() {
@@ -114,16 +121,23 @@ pub async fn main() {
                         )))
                         .await;
 
+                    if args.wait_100 {
+                        info!("Waiting for 100 ms...");
+                        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                    }
+
                     if args.wait {
-                        info!("Waiting for ctrl+c to exit...");
+                        info!("Waiting for ctrl+c...");
                         tokio::signal::ctrl_c()
                             .await
                             .expect("Failed to wait for ctrl+c");
-                    } else {
-                        info!("Exiting immediately...");
                     }
 
-                    info!("Module scope: {:?}", scope);
+                    if let Some(scope) = module.get_scope().await {
+                        info!("Module scope: {:}", scope);
+                    } else {
+                        info!("Failed to get module scope");
+                    }
                 }
                 Err(err) => {
                     info!("Failed to parse file: {}", err);

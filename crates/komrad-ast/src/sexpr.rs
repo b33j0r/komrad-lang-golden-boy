@@ -5,7 +5,6 @@ use crate::prelude::{
 use crate::type_expr::TypeExpr;
 use crate::value::Value;
 use owo_colors::OwoColorize;
-use std::fmt::Write;
 use std::fmt::{self, Display, Formatter};
 
 pub trait ToSexpr {
@@ -117,7 +116,7 @@ impl ToSexpr for Value {
                 Sexpr::Atom("error".to_string()),
                 Sexpr::Atom(err.to_string()),
             ]),
-            Value::Channel(_) => Sexpr::List(vec![Sexpr::Atom("channel".to_string())]),
+            Value::Channel(c) => c.to_sexpr(),
             Value::Boolean(b) => Sexpr::List(vec![
                 Sexpr::Atom("bool".to_string()),
                 Sexpr::Atom(b.to_string()),
@@ -220,7 +219,7 @@ impl ToSexpr for Statement {
 
 impl ToSexpr for Block {
     fn to_sexpr(&self) -> Sexpr {
-        let mut items = vec![Sexpr::Atom("block".to_string())];
+        let mut items = vec![];
 
         for stmt in self.statements() {
             items.push(stmt.to_sexpr());
@@ -284,7 +283,7 @@ impl ToSexpr for TypeExpr {
 
 impl ToSexpr for Message {
     fn to_sexpr(&self) -> Sexpr {
-        let mut items = vec![Sexpr::Atom("message".to_string())];
+        let mut items = vec![];
 
         for term in self.terms() {
             items.push(term.to_sexpr());
@@ -300,6 +299,7 @@ impl ToSexpr for Message {
         Sexpr::List(items)
     }
 }
+
 impl ToSexpr for ValueType {
     fn to_sexpr(&self) -> Sexpr {
         match self {
@@ -328,6 +328,17 @@ impl ToSexpr for Channel {
             Sexpr::Atom("channel".to_string()),
             Sexpr::Atom(self.uuid().to_string()),
         ])
+    }
+}
+
+impl ToSexpr for (Value, Vec<Value>) {
+    fn to_sexpr(&self) -> Sexpr {
+        let mut items = vec![];
+        items.push(self.0.to_sexpr());
+        for value in &self.1 {
+            items.push(value.to_sexpr());
+        }
+        Sexpr::List(items)
     }
 }
 

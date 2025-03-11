@@ -118,7 +118,8 @@ impl Scope {
 
 impl Display for Scope {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Scope[{}]", if self.dirty { "dirty" } else { "clean" })
+        let debug_str = futures::executor::block_on(self.debug_str());
+        write!(f, "\n{}", debug_str.trim())
     }
 }
 

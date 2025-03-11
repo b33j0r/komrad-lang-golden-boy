@@ -1,3 +1,4 @@
+use crate::parse::embedded_block::parse_embedded_block_value;
 use crate::parse::{identifier, lines, statements};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Block, CallExpr, Expr, Value};
@@ -68,6 +69,7 @@ pub fn parse_expression(input: Span) -> KResult<Expr> {
         parse_call_expression,
         parse_number_expression,
         parse_string_expression,
+        map(parse_embedded_block_value, Expr::Value),
         map(identifier::parse_identifier, Expr::Variable),
     ))
     .parse(input)
@@ -253,10 +255,13 @@ mod test_parse_expression {
                 vec![
                     Expr::Variable("Alice".into()).into(),
                     Expr::Block(
-                        Block::new(vec![Statement::Handler(Handler::new(
-                            Pattern::new(vec![TypeExpr::Word("start".into(),)]),
-                            Block::new(vec![]),
-                        ))])
+                        Block::new(vec![Statement::Handler(
+                            Handler::new(
+                                Pattern::new(vec![TypeExpr::Word("start".into(),)]),
+                                Block::new(vec![]),
+                            )
+                            .into()
+                        )])
                         .into()
                     )
                     .into()

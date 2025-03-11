@@ -85,7 +85,7 @@ impl Debug for Scope {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Scope")
             .field("parent", &self.parent)
-            .field("bindings", &self.bindings)
+            // .field("bindings", &self.bindings)
             .field("dirty", &self.dirty)
             .finish()
     }

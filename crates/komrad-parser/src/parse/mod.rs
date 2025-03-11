@@ -5,3 +5,5 @@ pub mod identifier;
 pub mod lines;
 pub mod statements;
 pub mod strings;
+
+pub mod embedded_block;

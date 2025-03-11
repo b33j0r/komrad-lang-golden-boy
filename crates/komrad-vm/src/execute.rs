@@ -5,6 +5,12 @@ use komrad_ast::prelude::{
 };
 use tracing::{error, info};
 
+pub enum ExecutionResult<T, E> {
+    Skip,
+    Ok(T),
+    Err(E),
+}
+
 // Trait defining the execution behavior. Now it explicitly returns a pinned Future.
 #[async_trait]
 pub trait Execute {

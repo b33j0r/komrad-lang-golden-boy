@@ -2,7 +2,7 @@ use crate::ast::Block;
 use crate::channel::Channel;
 use crate::error::RuntimeError;
 use crate::number::Number;
-use crate::prelude::literal;
+use crate::prelude::{literal, EmbeddedBlock};
 use std::fmt::Display;
 use std::hash::Hash;
 
@@ -18,6 +18,7 @@ pub enum Value {
     List(Vec<Value>),
     Block(Box<Block>),
     Bytes(Vec<u8>),
+    EmbeddedBlock(EmbeddedBlock),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -33,6 +34,7 @@ pub enum ValueType {
     List,
     Block,
     Bytes,
+    EmbeddedBlock,
 }
 
 impl Display for ValueType {
@@ -49,6 +51,7 @@ impl Display for ValueType {
             ValueType::List => write!(f, "List"),
             ValueType::Block => write!(f, "Block"),
             ValueType::Bytes => write!(f, "Bytes"),
+            ValueType::EmbeddedBlock => write!(f, "EmbeddedBlock"),
         }
     }
 }
@@ -172,6 +175,7 @@ impl Value {
             Value::List(_) => ValueType::List,
             Value::Block(_) => ValueType::Block,
             Value::Bytes(_) => ValueType::Bytes,
+            Value::EmbeddedBlock(_) => ValueType::EmbeddedBlock,
         }
     }
 
@@ -187,6 +191,7 @@ impl Value {
             (Value::List(_), ValueType::List) => true,
             (Value::Block(_), ValueType::Block) => true,
             (Value::Bytes(_), ValueType::Bytes) => true,
+            (Value::EmbeddedBlock(_), ValueType::EmbeddedBlock) => true,
             _ => false,
         }
     }
@@ -205,6 +210,7 @@ impl PartialEq for Value {
             (Value::List(l1), Value::List(l2)) => l1 == l2,
             (Value::Block(b1), Value::Block(b2)) => b1 == b2,
             (Value::Bytes(b1), Value::Bytes(b2)) => b1 == b2,
+            (Value::EmbeddedBlock(b1), Value::EmbeddedBlock(b2)) => b1 == b2,
             _ => false,
         }
     }
@@ -223,6 +229,7 @@ impl Display for Value {
             Value::List(l) => write!(f, "List: {:?}", l),
             Value::Block(b) => write!(f, "Block: {:?}", b),
             Value::Bytes(b) => write!(f, "Bytes: {:?}", b),
+            Value::EmbeddedBlock(b) => write!(f, "EmbeddedBlock: {:?}", b),
         }
     }
 }
@@ -240,6 +247,7 @@ impl Hash for Value {
             Value::List(l) => l.hash(state),
             Value::Block(b) => b.hash(state),
             Value::Bytes(b) => b.hash(state),
+            Value::EmbeddedBlock(b) => b.hash(state),
         }
     }
 }

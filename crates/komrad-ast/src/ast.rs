@@ -1,6 +1,7 @@
 use crate::operators::BinaryExpr;
 use crate::prelude::{BinaryOp, ValueType};
 use crate::value::Value;
+use std::hash::Hash;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -189,5 +190,40 @@ impl Handler {
 
     pub fn block(&self) -> &Block {
         &self.block
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct EmbeddedBlock {
+    pub tags: Vec<String>,
+    pub text: String,
+}
+
+impl EmbeddedBlock {
+    pub fn new(tags: Vec<String>, text: String) -> Self {
+        EmbeddedBlock { tags, text }
+    }
+
+    pub fn tags(&self) -> &Vec<String> {
+        &self.tags
+    }
+
+    pub fn text(&self) -> &String {
+        &self.text
+    }
+}
+
+impl PartialEq for EmbeddedBlock {
+    fn eq(&self, other: &Self) -> bool {
+        self.tags == other.tags && self.text == other.text
+    }
+}
+
+impl Eq for EmbeddedBlock {}
+
+impl Hash for EmbeddedBlock {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.tags.hash(state);
+        self.text.hash(state);
     }
 }

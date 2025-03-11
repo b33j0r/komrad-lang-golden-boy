@@ -1,6 +1,6 @@
-use crate::bind::TryBind;
 use crate::execute::Execute;
 use crate::scope::Scope;
+use crate::try_bind::TryBind;
 use komrad_agents::io_agent::IoAgent;
 use komrad_ast::prelude::{Agent, Channel, ChannelListener, Message, Statement, Value};
 use std::fmt::{Debug, Display};
@@ -155,7 +155,7 @@ impl ModuleActor {
                 maybe_msg = self.channel_listener.recv() => {
                     match maybe_msg {
                         Ok(message) => {
-                            warn!("Module {} received message: {:?}", self.name, message);
+                            info!("Module {} received message: {:?}", self.name, message);
 
                             // 2) Dispatch the message by matching all handlers
                             let result = self.dispatch_message(message).await;
@@ -172,19 +172,19 @@ impl ModuleActor {
                 command = self.command_rx.recv() => {
                     match command {
                         Some(command) => {
-                            warn!("Module {} received command: {:?}", self.name, command);
+                            info!("Module {} received command: {:?}", self.name, command);
                             match command {
                                 ModuleCommand::Stop => {
-                                    warn!("Module {} received Stop command", self.name);
+                                    info!("Module {} received Stop command", self.name);
                                     break;
                                 }
                                 ModuleCommand::Send(message) => {
                                     // Handle sending a message.
-                                    warn!("Module {} received message: {:?}", self.name, message);
+                                    info!("Module {} received message: {:?}", self.name, message);
                                 }
                                 ModuleCommand::ExecuteStatement(statement) => {
                                     // Handle executing a statement.
-                                    warn!("Module {} executing statement: {:?}", self.name, statement);
+                                    info!("Module {} executing statement: {:?}", self.name, statement);
                                     // Execute the statement in the module's scope.
                                     if let Value::Error(e) = statement.execute(&mut self.scope).await {
                                         warn!("Failed to execute statement in Module {}: {}", self.name, e);
@@ -193,7 +193,7 @@ impl ModuleActor {
                                 ModuleCommand::ExecuteStatements(statements) => {
                                     // Handle executing multiple statements.
                                     for statement in statements {
-                                        warn!("Module {} executing statement: {:?}", self.name, statement);
+                                        info!("Module {} executing statement: {:?}", self.name, statement);
                                         if let Value::Error(e) = statement.execute(&mut self.scope).await {
                                             warn!("Failed to execute statement in Module {}: {}", self.name, e);
                                         }
@@ -208,7 +208,7 @@ impl ModuleActor {
                                 ModuleCommand::ModifyScope { key, value } => {
                                     // Modify the module's scope.
                                     self.scope.set(key.clone(), value.clone()).await;
-                                    warn!("Module {} modified scope: {} = {:?}", self.name, key, value);
+                                    info!("Module {} modified scope: {} = {:?}", self.name, key, value);
                                 }
                             }
                         },

@@ -96,6 +96,9 @@ pub enum ErrorKind {
 
     #[error("Invalid type: {0}")]
     InvalidType(String),
+
+    #[error("Unexpected end of block")]
+    UnexpectedEndOfEmbeddedBlock,
 }
 
 #[derive(Debug, Clone, Error, PartialEq, Eq, Hash)]

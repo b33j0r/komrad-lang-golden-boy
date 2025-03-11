@@ -1,0 +1,10 @@
+[package]
+name = "komrad-agent"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+komrad-ast = { path = "../komrad-ast" }
+
+async-trait.workspace = true
+tokio.workspace = true

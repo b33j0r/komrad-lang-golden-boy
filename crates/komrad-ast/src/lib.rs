@@ -1,6 +1,5 @@
 extern crate core;
 
-mod agent;
 mod ast;
 mod channel;
 mod convert;

@@ -5,7 +5,7 @@ use tokio::sync::{Mutex, RwLock};
 
 /// RegistryAgent holds definitions of agents as AST Blocks.
 pub struct RegistryAgent {
-    pub(crate) registry: RwLock<HashMap<String, Block>>,
+    pub registry: RwLock<HashMap<String, Block>>,
     channel: Channel,
     listener: Arc<Mutex<ChannelListener>>,
     running: Arc<Mutex<bool>>,

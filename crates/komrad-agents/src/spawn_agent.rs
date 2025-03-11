@@ -65,7 +65,7 @@ impl AgentBehavior for SpawnAgent {
         }
         let new_msg = Message::new(new_terms, msg.reply_to());
         info!(
-            "😍SpawnAgent sending message: {:?}",
+            "😍SpawnAgent sending message: {:}",
             new_msg.to_sexpr().format(0)
         );
         let _ = self.registry.send(new_msg).await;

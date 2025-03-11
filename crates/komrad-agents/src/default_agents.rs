@@ -1,6 +1,7 @@
 use crate::agent_agent::AgentAgent;
 use crate::io_agent::IoAgent;
 use crate::registry_agent::RegistryAgent;
+use crate::spawn_agent::SpawnAgent;
 use komrad_agent::AgentBehavior;
 use komrad_ast::prelude::Channel;
 use std::collections::HashMap;
@@ -10,7 +11,7 @@ pub struct DefaultAgents {
     pub io_agent: Arc<IoAgent>,
     pub registry_agent: Arc<RegistryAgent>,
     pub agent_agent: Arc<AgentAgent>,
-    pub spawn_agent: Arc<AgentAgent>,
+    pub spawn_agent: Arc<SpawnAgent>,
 }
 
 pub struct DefaultAgentChannels {
@@ -25,7 +26,7 @@ impl DefaultAgents {
         let io_agent = IoAgent::default();
         let registry_agent = RegistryAgent::new();
         let agent_agent = AgentAgent::new(registry_agent.clone());
-        let spawn_agent = AgentAgent::new(registry_agent.clone());
+        let spawn_agent = SpawnAgent::new(registry_agent.clone());
 
         let io_agent_channel = io_agent.clone().spawn();
         let registry_agent_channel = registry_agent.clone().spawn();

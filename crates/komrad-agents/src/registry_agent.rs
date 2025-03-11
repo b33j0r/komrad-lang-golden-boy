@@ -3,6 +3,7 @@ use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, RuntimeError
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
+use tracing::error;
 
 /// RegistryAgent holds definitions of agents as AST Blocks.
 pub struct RegistryAgent {
@@ -54,9 +55,11 @@ impl AgentLifecycle for RegistryAgent {
 #[async_trait::async_trait]
 impl AgentBehavior for RegistryAgent {
     async fn handle_message(&self, msg: Message) -> bool {
+        error!("RegistryAgent: received message: {:?}", msg);
         if let Some(cmd) = msg.first_word() {
             match cmd.as_str() {
                 "define" => {
+                    error!("RegistryAgent: define command received");
                     let terms = msg.terms();
                     if terms.len() < 4 {
                         if let Some(reply_chan) = msg.reply_to() {
@@ -112,7 +115,7 @@ impl AgentBehavior for RegistryAgent {
                         }
                         if let Some(reply_chan) = msg.reply_to() {
                             // We send a confirmation string on success.
-                            let reply = Message::new(vec![Value::String("defined".into())], None);
+                            let reply = Message::new(vec![Value::Word(agent_name)], None);
                             let _ = reply_chan.send(reply).await;
                         }
                     } else {
@@ -126,6 +129,7 @@ impl AgentBehavior for RegistryAgent {
                     }
                 }
                 "spawn" => {
+                    error!("RegistryAgent: spawn command received");
                     let terms = msg.terms();
                     if terms.len() < 3 {
                         if let Some(reply_chan) = msg.reply_to() {
@@ -222,7 +226,7 @@ mod tests {
         reg_chan.send(msg).await.unwrap();
 
         let reply = reply_listener.recv().await.unwrap();
-        assert_eq!(reply.terms(), &[Value::String("defined".into())]);
+        assert_eq!(reply.terms(), &[Value::Word("Alice".into())]);
 
         let reg_map = registry.registry.read().await;
         assert!(reg_map.contains_key("Alice"));

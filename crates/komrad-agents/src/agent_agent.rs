@@ -95,8 +95,8 @@ mod tests {
         agent_chan.send(msg).await.unwrap();
 
         let reply = reply_listener.recv().await.unwrap();
-        // On success, the registry replies with "defined"
-        assert_eq!(reply.terms(), &[Value::String("defined".into())]);
+        // On success, the registry replies with the Word("Alice")
+        assert_eq!(reply.terms(), &[Value::Word("Alice".into())]);
 
         let reg_map = registry.registry.read().await;
         assert!(reg_map.contains_key("Alice"));

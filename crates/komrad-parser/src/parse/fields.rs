@@ -2,11 +2,11 @@ use crate::parse::expressions::parse_expression;
 use crate::parse::identifier::parse_identifier;
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Statement, TypeExpr, ValueType};
+use nom::Parser;
 use nom::bytes::complete::tag;
 use nom::character::complete::space0;
 use nom::combinator::opt;
 use nom::sequence::{pair, preceded};
-use nom::Parser;
 
 pub fn parse_value_type(input: Span) -> KResult<ValueType> {
     let (remaining, typ) = parse_identifier.parse(input)?;

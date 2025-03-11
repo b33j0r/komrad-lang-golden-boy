@@ -1,7 +1,5 @@
-use komrad_ast::number::Number;
-use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr};
-use komrad_ast::value::Value;
-use komrad_vm::module::module_command::ModuleCommand;
+use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr, Number, Value};
+use komrad_vm::ModuleCommand;
 use tracing::info;
 
 #[tokio::main]
@@ -30,11 +28,12 @@ pub async fn main() {
         .await;
 
     // Get the module scope
-    let scope = module.get_scope().await;
-    // Retrieve the value of x
-    let x_value = scope.get("x").await.unwrap();
-    // Print the value of x
-    info!("Value of x: {:?}", x_value);
+    if let scope = module.get_scope().await {
+        // Print the scope
+        info!("Module scope: {:?}", scope);
+    } else {
+        info!("Failed to get module scope");
+    }
 
     // Set y to 3.0 manually
     module
@@ -45,11 +44,12 @@ pub async fn main() {
         .await;
 
     // Get the module scope again
-    let scope = module.get_scope().await;
-    // Retrieve the value of y
-    let y_value = scope.get("y").await.unwrap();
-    // Print the value of y
-    info!("Value of y: {:?}", y_value);
+    if let scope = module.get_scope().await {
+        // Print the scope
+        info!("Module scope: {:?}", scope);
+    } else {
+        info!("Failed to get module scope");
+    }
 
     // Send a multiply by 2 command
     let multiply_statement = komrad_ast::prelude::Statement::Assignment(
@@ -69,9 +69,16 @@ pub async fn main() {
     // Get the module scope
     let scope = module.get_scope().await;
     // Retrieve the updated value of x
-    let updated_x_value = scope.get("x").await.unwrap();
-    // Print the updated value of x
-    info!("Updated value of x: {:?}", updated_x_value);
+    // let updated_x_value = scope.get("x").await.unwrap();
+    // // Print the updated value of x
+    // info!("Updated value of x: {:?}", updated_x_value);
+
+    if let scope = module.get_scope().await {
+        // Print the scope
+        info!("Module scope: {:?}", scope);
+    } else {
+        info!("Failed to get module scope");
+    }
 
     // (Optional) Stop the module to cleanly end the actor task
     module.send_command(ModuleCommand::Stop).await;

@@ -1,10 +1,10 @@
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{ParserError, Value};
+use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_till1};
 use nom::combinator::map_res;
 use nom::multi::fold_many0;
-use nom::Parser;
 
 /// Parses a single, double, or triple quoted string.
 pub fn parse_string(input: Span) -> KResult<Value> {

@@ -43,7 +43,7 @@ mod tests {
     use komrad_agents::agent_agent::AgentAgent;
     use komrad_agents::registry_agent::RegistryAgent;
     use komrad_agents::spawn_agent::SpawnAgent;
-    use tokio::time::{sleep, Duration};
+    use tokio::time::{Duration, sleep};
 
     // Test 1: Basic channel message send/receive.
     #[tokio::test]

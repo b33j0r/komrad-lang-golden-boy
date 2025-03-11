@@ -1,6 +1,6 @@
+use crate::module::Module;
 use crate::module::module_api::ModuleApi;
 use crate::module::module_id::ModuleId;
-use crate::module::Module;
 use dashmap::DashMap;
 use std::sync::Arc;
 

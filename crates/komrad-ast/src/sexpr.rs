@@ -348,23 +348,52 @@ mod tests {
     use crate::prelude::Number;
 
     #[test]
+    fn test_expr_to_sexpr() {
+        let expr = Expr::Value(Value::Number(Number::UInt(42)));
+        assert_eq!(
+            expr.to_sexpr().format(0),
+            format!(
+                "{}{} 42{}",
+                "(".bright_red().bold(),
+                "number".bright_cyan(),
+                ")".bright_red().bold()
+            )
+        );
+    }
+
+    #[test]
     fn test_sexpr_format() {
         let sexpr = Sexpr::List(vec![
             Sexpr::Atom("foo".to_string()),
             Sexpr::List(vec![Sexpr::Atom("bar".to_string())]),
         ]);
-        assert_eq!(sexpr.format(0), "(foo (bar))");
+        // assert_eq!(sexpr.format(0), "(foo (bar))");
+        assert_eq!(
+            sexpr.format(0),
+            format!(
+                "{}{} {}{}{}{}",
+                "(".bright_red().bold(),
+                "foo".bright_cyan(),
+                "(".bright_red().bold(),
+                "bar".bright_cyan(),
+                ")".bright_red().bold(),
+                ")".bright_red().bold()
+            )
+        );
     }
 
     #[test]
     fn test_value_to_sexpr() {
         let value = Value::Number(Number::UInt(42));
-        assert_eq!(value.to_sexpr().format(0), "(number 42)");
-    }
-
-    #[test]
-    fn test_expr_to_sexpr() {
-        let expr = Expr::Value(Value::Number(Number::UInt(42)));
-        assert_eq!(expr.to_sexpr().format(0), "(number 42)");
+        // assert_eq!(value.to_sexpr().format(0), "(number 42)");
+        assert_eq!(
+            value.to_sexpr().format(0),
+            format!(
+                "{}{} 42{}",
+                "(".bright_red().bold(),
+                "number".bright_cyan(),
+                ")".bright_red().bold()
+            )
+        );
     }
 }

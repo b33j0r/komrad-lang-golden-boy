@@ -1,10 +1,10 @@
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{ErrorKind, ParserError};
 use miette::SourceSpan;
+use nom::Parser;
 use nom::bytes::complete::{take_while, take_while1};
 use nom::combinator::recognize;
 use nom::sequence::pair;
-use nom::Parser;
 
 /// Parse an identifier, e.g. `[a-zA-Z_][a-zA-Z0-9_]*`.
 pub(crate) fn parse_identifier(input: Span) -> KResult<String> {

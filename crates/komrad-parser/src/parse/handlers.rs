@@ -2,12 +2,12 @@ use crate::parse::fields::parse_value_type;
 use crate::parse::identifier::parse_identifier;
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Block, Handler, Pattern, Statement, TypeExpr};
+use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{space0, space1};
 use nom::multi::{many0, separated_list1};
 use nom::sequence::{delimited, preceded, separated_pair};
-use nom::Parser;
 use std::sync::Arc;
 
 /// Parse a handler block, e.g. `{ IO println "hello!" }` -> Block(statements)

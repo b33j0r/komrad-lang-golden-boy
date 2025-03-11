@@ -1,6 +1,6 @@
 use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr, Number, Statement, Value};
 use komrad_vm::{ModuleCommand, System};
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 
 #[tokio::test]
 async fn test_module_assignment_and_retrieval() {

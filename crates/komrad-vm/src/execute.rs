@@ -182,7 +182,6 @@ impl Execute for BinaryExpr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use komrad_ast::number::Number;
     use komrad_ast::prelude::*;
 
     #[tokio::test]
@@ -304,7 +303,7 @@ mod tests {
         // The argument is a single number value (e.g. 100).
         let call_expr = Expr::Call(CallExpr::new(
             Expr::Value(Value::Channel(channel.clone())),
-            vec![Expr::Value(Value::Number(Number::Int(100)))],
+            vec![Expr::Value(Value::Number(Number::Int(100))).into()],
         ));
 
         // Execute the call expression.

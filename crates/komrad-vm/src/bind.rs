@@ -89,7 +89,7 @@ impl TryBind for Pattern {
 mod tests {
     use super::*;
     use crate::scope::Scope;
-    use komrad_ast::number::Number;
+    use komrad_ast::prelude::Number;
     use tokio;
 
     /// Test binding a pattern composed entirely of holes.

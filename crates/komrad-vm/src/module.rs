@@ -1,3 +1,4 @@
+use crate::bind::TryBind;
 use crate::execute::Execute;
 use crate::scope::Scope;
 use komrad_agents::io_agent::IoAgent;
@@ -5,7 +6,7 @@ use komrad_ast::prelude::{Agent, Channel, ChannelListener, Message, Statement, V
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot, watch};
-use tracing::{debug, warn};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 pub struct Module;
@@ -151,21 +152,20 @@ impl ModuleActor {
     pub async fn run(mut self) {
         loop {
             tokio::select! {
-                message = self.channel_listener.recv() => {
-                    match message {
+                maybe_msg = self.channel_listener.recv() => {
+                    match maybe_msg {
                         Ok(message) => {
                             warn!("Module {} received message: {:?}", self.name, message);
-                            // Handle incoming messages.
-                            if let Some(reply_to) = message.reply_to() {
-                                let reply_message = Message::new(vec![Value::String("ack".into())], None);
-                                if let Err(e) = reply_to.send(reply_message).await {
-                                    warn!("Failed to send reply: {}", e);
-                                }
+
+                            // 2) Dispatch the message by matching all handlers
+                            let result = self.dispatch_message(message).await;
+                            if let Value::Error(e) = result {
+                                warn!("Failed to handle message in Module {}: {}", self.name, e);
                             }
                         },
                         Err(e) => {
                             warn!("Module {} failed to receive message: {}", self.name, e);
-                            break; // Exit the loop if the channel is closed.
+                            break;
                         }
                     }
                 },
@@ -217,5 +217,30 @@ impl ModuleActor {
                 },
             }
         }
+    }
+
+    /// Dispatches a single incoming message by matching all handlers in scope.
+    /// Returns whatever the matched handler’s block evaluates to, or Value::Empty if no match.
+    async fn dispatch_message(&mut self, message: Message) -> Value {
+        // 1) Grab the list of handlers from the scope
+        let handlers = self.scope.get_handlers().await;
+
+        // 2) Try each handler’s pattern
+        for handler in handlers {
+            debug!("Checking handler: {:?}", handler);
+            let pattern = handler.pattern();
+            if let Some(mut scope) = pattern.try_bind(message.clone(), &mut self.scope).await {
+                // 3) If the pattern matches, execute the block
+                let block = handler.block();
+                let result = block.execute(&mut scope).await;
+                debug!("Handler executed successfully, result: {:?}", result);
+                return result;
+            } else {
+                debug!("Pattern did not match: {:?}", pattern);
+            }
+        }
+
+        warn!("No handler matched for message: {:?}", message.terms());
+        Value::Empty
     }
 }

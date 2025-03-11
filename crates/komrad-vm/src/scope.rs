@@ -125,8 +125,7 @@ impl Display for Scope {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use komrad_ast::number::Number;
-    use komrad_ast::value::Value;
+    use komrad_ast::prelude::*;
 
     #[tokio::test]
     async fn test_scope() {

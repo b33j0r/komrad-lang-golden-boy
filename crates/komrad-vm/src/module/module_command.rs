@@ -1,5 +1,5 @@
 use crate::Scope;
-use komrad_ast::prelude::{Message, Statement, Value};
+use komrad_ast::prelude::{Message, Sexpr, Statement, ToSexpr, Value};
 use std::fmt::Debug;
 use tokio::sync::oneshot;
 
@@ -25,6 +25,26 @@ impl Debug for ModuleCommand {
             ModuleCommand::ModifyScope { key, value } => {
                 write!(f, "ModifyScope({:?}, {:?})", key, value)
             }
+        }
+    }
+}
+
+impl ToSexpr for ModuleCommand {
+    fn to_sexpr(&self) -> Sexpr {
+        match self {
+            ModuleCommand::Stop => Sexpr::Atom("stop".to_string()),
+            ModuleCommand::Send(msg) => msg.to_sexpr(),
+            ModuleCommand::ExecuteStatement(stmt) => stmt.to_sexpr(),
+            ModuleCommand::ExecuteStatements(stmts) => {
+                let sexprs: Vec<Sexpr> = stmts.iter().map(|s| s.to_sexpr()).collect();
+                Sexpr::List(sexprs)
+            }
+            ModuleCommand::QueryScope(_) => Sexpr::Atom("query_scope".to_string()),
+            ModuleCommand::ModifyScope { key, value } => Sexpr::List(vec![
+                Sexpr::Atom("modify_scope".to_string()),
+                Sexpr::Atom(key.clone()),
+                value.to_sexpr(),
+            ]),
         }
     }
 }

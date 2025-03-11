@@ -1,16 +1,16 @@
 use crate::scope::Scope;
 use async_trait::async_trait;
 use komrad_ast::prelude::{
-    BinaryExpr, BinaryOp, Block, CallExpr, Expr, Message, RuntimeError, Statement, TypeExpr, Typed,
-    Value,
+    BinaryExpr, BinaryOp, Block, CallExpr, Expr, Message, RuntimeError, Statement, Typed, Value,
 };
 use tracing::{error, info};
 
-pub enum ExecutionResult<T, E> {
-    Skip,
-    Ok(T),
-    Err(E),
-}
+// TODO
+// pub enum ExecutionResult<T, E> {
+//     Skip,
+//     Ok(T),
+//     Err(E),
+// }
 
 // Trait defining the execution behavior. Now it explicitly returns a pinned Future.
 #[async_trait]

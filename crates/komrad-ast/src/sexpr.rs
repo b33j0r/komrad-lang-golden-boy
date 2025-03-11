@@ -1,8 +1,16 @@
-use crate::prelude::{BinaryOp, Block, Expr, Handler, Pattern, Statement, UnaryOp, ValueType};
+use crate::channel::Channel;
+use crate::prelude::{
+    BinaryOp, Block, Expr, Handler, Message, Pattern, Statement, UnaryOp, ValueType,
+};
 use crate::type_expr::TypeExpr;
 use crate::value::Value;
 use owo_colors::OwoColorize;
 use std::fmt::Write;
+
+/// Trait for converting a value to an S-expression
+pub trait ToSexpr {
+    fn to_sexpr(&self) -> Sexpr;
+}
 
 /// Represents an S-expression, which is used for debugging and
 /// displaying the AST in a readable format.
@@ -21,7 +29,7 @@ impl Sexpr {
             Sexpr::List(items) if items.is_empty() => "()".to_owned(),
             Sexpr::List(items) => {
                 // Helper for indentation
-                let indent_str = " ".repeat(indent);
+                // let indent_str = " ".repeat(indent);
 
                 // For multi-line lists, we start with "(" on the same line
                 // and place each item, one per line, with proper indentation.
@@ -31,8 +39,8 @@ impl Sexpr {
                         // First item, just add a space
                         write!(result, "{}", item.format(indent + 2).bright_cyan()).ok();
                     } else {
-                        // Subsequent items go on their own line
-                        write!(result, "\n{}  {}", indent_str, item.format(indent + 2)).ok();
+                        // write!(result, "\n{}  {}", indent_str, item.format(indent + 2)).ok();
+                        write!(result, " {}", item).ok();
                     }
                 }
                 // Close the list
@@ -48,11 +56,6 @@ impl std::fmt::Display for Sexpr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.format(0))
     }
-}
-
-/// Trait for converting a value to an S-expression
-pub trait ToSexpr {
-    fn to_sexpr(&self) -> Sexpr;
 }
 
 impl ToSexpr for UnaryOp {
@@ -253,22 +256,24 @@ impl ToSexpr for TypeExpr {
     }
 }
 
-// #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-// pub enum ValueType {
-//     User(String),
-//     Empty,
-//     Error,
-//     Channel,
-//     Boolean,
-//     Word,
-//     String,
-//     Number,
-//     List,
-//     Block,
-//     Bytes,
-//     EmbeddedBlock,
-// }
+impl ToSexpr for Message {
+    fn to_sexpr(&self) -> Sexpr {
+        let mut items = vec![Sexpr::Atom("message".to_string())];
 
+        for term in self.terms() {
+            items.push(term.to_sexpr());
+        }
+
+        if let Some(reply_to) = self.reply_to() {
+            items.push(Sexpr::List(vec![
+                Sexpr::Atom("reply-to".to_string()),
+                reply_to.to_sexpr(),
+            ]));
+        }
+
+        Sexpr::List(items)
+    }
+}
 impl ToSexpr for ValueType {
     fn to_sexpr(&self) -> Sexpr {
         match self {
@@ -288,6 +293,15 @@ impl ToSexpr for ValueType {
             ValueType::Bytes => Sexpr::Atom("Bytes".to_string()),
             ValueType::EmbeddedBlock => Sexpr::Atom("EmbeddedBlock".to_string()),
         }
+    }
+}
+
+impl ToSexpr for Channel {
+    fn to_sexpr(&self) -> Sexpr {
+        Sexpr::List(vec![
+            Sexpr::Atom("channel".to_string()),
+            Sexpr::Atom(self.uuid().to_string()),
+        ])
     }
 }
 

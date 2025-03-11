@@ -24,6 +24,7 @@ pub mod prelude {
     pub use crate::message::*;
     pub use crate::number::*;
     pub use crate::operators::*;
+    pub use crate::sexpr::*;
     pub use crate::type_expr::*;
     pub use crate::typed::Typed;
     pub use crate::types::*;

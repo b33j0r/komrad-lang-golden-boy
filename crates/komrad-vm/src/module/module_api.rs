@@ -18,7 +18,7 @@ impl ModuleApi {
         warn!(
             "Sending command to Module {}: {:}",
             self.name,
-            command.to_sexpr()
+            command.to_sexpr().format(0)
         );
         if let Err(e) = self.command_tx.send(command).await {
             warn!("Failed to send command to Module {}: {}", self.name, e);

@@ -6,15 +6,13 @@ use crate::type_expr::TypeExpr;
 use crate::value::Value;
 use owo_colors::OwoColorize;
 use std::fmt::Write;
+use std::fmt::{self, Display, Formatter};
 
-/// Trait for converting a value to an S-expression
 pub trait ToSexpr {
     fn to_sexpr(&self) -> Sexpr;
 }
 
-/// Represents an S-expression, which is used for debugging and
-/// displaying the AST in a readable format.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Sexpr {
     Skip,
     Atom(String),
@@ -22,39 +20,67 @@ pub enum Sexpr {
 }
 
 impl Sexpr {
+    /// Format the S-expression using the specified `indent` level.
+    /// * `indent = 0` → single-line result, no newlines
+    /// * `indent > 0` → multi-line indentation
     pub fn format(&self, indent: usize) -> String {
+        self.format_with_level(indent, 0)
+    }
+
+    /// Internal helper that respects both indentation size and depth level.
+    fn format_with_level(&self, indent: usize, level: usize) -> String {
         match self {
             Sexpr::Skip => String::new(),
-            Sexpr::Atom(text) => text.clone(),
-            Sexpr::List(items) if items.is_empty() => "()".to_owned(),
+            Sexpr::Atom(s) => s.clone(),
             Sexpr::List(items) => {
-                // Helper for indentation
-                // let indent_str = " ".repeat(indent);
-
-                // For multi-line lists, we start with "(" on the same line
-                // and place each item, one per line, with proper indentation.
-                let mut result = "(".red().to_string();
-                for (i, item) in items.iter().enumerate() {
-                    if i == 0 {
-                        // First item, just add a space
-                        write!(result, "{}", item.format(indent + 2).bright_cyan()).ok();
-                    } else {
-                        // write!(result, "\n{}  {}", indent_str, item.format(indent + 2)).ok();
-                        write!(result, " {}", item).ok();
-                    }
+                if items.is_empty() {
+                    return "()".to_string();
                 }
-                // Close the list
-                let closing_parent = ")".red();
-                write!(result, "{}", closing_parent).ok();
+                let mut result = "(".bright_red().bold().to_string();
+                let mut first = true;
+                for item in items {
+                    // Skip "Skip"
+                    if matches!(item, Sexpr::Skip) {
+                        continue;
+                    }
+                    // Start a new line only if indent != 0
+                    if !first {
+                        if indent == 0 {
+                            result.push(' ');
+                        }
+                    }
+                    if indent > 0 {
+                        // Newline and indent for each element.
+                        result.push('\n');
+                        result.push_str(&" ".repeat(level.saturating_mul(indent) + indent));
+                    }
+                    let formatted_item = item.format_with_level(indent, level + 1);
+                    let formatted_line = if first {
+                        formatted_item.bright_cyan().to_string()
+                    } else {
+                        formatted_item
+                    };
+                    result.push_str(&formatted_line);
+                    first = false;
+                }
+
+                // If indent != 0, place a closing parenthesis on a new line aligned with the opening
+                if indent > 0 {
+                    result.push('\n');
+                    result.push_str(&" ".repeat(level.saturating_mul(indent)));
+                }
+
+                result.push_str(")".bright_red().bold().to_string().as_str());
                 result
             }
         }
     }
 }
 
-impl std::fmt::Display for Sexpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.format(0))
+impl Display for Sexpr {
+    /// By default, format with an indent of 2 spaces.
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.format(2))
     }
 }
 

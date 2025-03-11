@@ -28,7 +28,7 @@ pub async fn main() {
         .await;
 
     // Get the module scope
-    if let scope = module.get_scope().await {
+    if let Some(scope) = module.get_scope().await {
         // Print the scope
         info!("Module scope: {:?}", scope);
     } else {
@@ -44,7 +44,7 @@ pub async fn main() {
         .await;
 
     // Get the module scope again
-    if let scope = module.get_scope().await {
+    if let Some(scope) = module.get_scope().await {
         // Print the scope
         info!("Module scope: {:?}", scope);
     } else {
@@ -67,13 +67,7 @@ pub async fn main() {
         .await;
 
     // Get the module scope
-    let scope = module.get_scope().await;
-    // Retrieve the updated value of x
-    // let updated_x_value = scope.get("x").await.unwrap();
-    // // Print the updated value of x
-    // info!("Updated value of x: {:?}", updated_x_value);
-
-    if let scope = module.get_scope().await {
+    if let Some(scope) = module.get_scope().await {
         // Print the scope
         info!("Module scope: {:?}", scope);
     } else {

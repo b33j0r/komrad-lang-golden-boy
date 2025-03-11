@@ -55,7 +55,6 @@ mod tests {
     #[async_trait]
     impl Agent for TestAgent {
         fn spawn(self: Arc<Self>) -> Channel {
-            // Create a channel with a default capacity (assume Channel::new() exists without parameters)
             let (tx, mut rx) = Channel::new(32);
             let agent = self.clone();
             tokio::spawn(async move {

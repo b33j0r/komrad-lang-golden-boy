@@ -3,6 +3,7 @@ extern crate core;
 mod agent;
 mod ast;
 mod channel;
+mod convert;
 mod error;
 mod message;
 mod number;
@@ -14,6 +15,7 @@ pub mod prelude {
     pub use crate::agent::*;
     pub use crate::ast::*;
     pub use crate::channel::*;
+    pub use crate::convert::*;
     pub use crate::error::*;
     pub use crate::message::*;
     pub use crate::number::*;

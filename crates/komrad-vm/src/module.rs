@@ -1,12 +1,11 @@
 use crate::execute::Execute;
 use crate::scope::Scope;
 use crate::try_bind::TryBind;
-use komrad_agents::io_agent::IoAgent;
 use komrad_ast::prelude::{Agent, Channel, ChannelListener, Message, Statement, Value};
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot, watch};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 pub struct Module;
@@ -76,12 +75,39 @@ impl Module {
         let (exited_tx, exited_rx) = watch::channel(()); // exited confirmation channel
 
         let mut module_scope = Scope::new();
-        let io_actor = IoAgent::default();
-        let io_actor_spawned = io_actor.clone();
-        let io_actor_chan = io_actor_spawned.spawn();
+        // let io_actor = IoAgent::default();
+        // let io_actor_spawned = io_actor.clone();
+        // let io_actor_chan = io_actor_spawned.spawn();
+
+        let (default_agents, default_agent_channels) =
+            komrad_agents::default_agents::DefaultAgents::new();
 
         module_scope
-            .set("IO".to_string(), Value::Channel(io_actor_chan))
+            .set(
+                "IO".to_string(),
+                Value::Channel(default_agent_channels.io_agent),
+            )
+            .await;
+
+        module_scope
+            .set(
+                "Registry".to_string(),
+                Value::Channel(default_agent_channels.registry_agent),
+            )
+            .await;
+
+        module_scope
+            .set(
+                "agent".to_string(),
+                Value::Channel(default_agent_channels.agent_agent),
+            )
+            .await;
+
+        module_scope
+            .set(
+                "spawn".to_string(),
+                Value::Channel(default_agent_channels.spawn_agent),
+            )
             .await;
 
         let (channel, channel_listener) = Channel::new(capacity);

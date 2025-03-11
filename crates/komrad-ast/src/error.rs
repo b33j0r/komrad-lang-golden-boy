@@ -111,4 +111,8 @@ pub enum RuntimeError {
     ParseError(ParserError),
     #[error("Division by zero")]
     DivisionByZero,
+    #[error("Invalid agent definition")]
+    InvalidAgentDefinition,
+    #[error("Agent not found")]
+    AgentNotFound,
 }

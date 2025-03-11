@@ -1,36 +1,51 @@
+css = ```css
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 20px;
+}
+h1 {
+    color: #333;
+}
+p {
+    color: #666;
+}
+```
+
 html = ```
 <!DOCTYPE html>
 <html>
 <head>
-		<title>My Web Page</title>
-		<style>
-				body {
-						font-family: Arial, sans-serif;
-						background-color: #f0f0f0;
-						margin: 0;
-						padding: 20px;
-				}
-				h1 {
-						color: #333;
-				}
-				p {
-						color: #666;
-				}
-		</style>
+    <title>My Web Page</title>
+    <style>
+			{{ css }}
+    </style>
 </head>
 <body>
-		<h1>Welcome to My Web Page</h1>
-		<p>This is a simple web page created using HTML and CSS.</p>
-		<p>Feel free to explore and modify the code!</p>
-		<p>Here is a list of items:</p>
+    <h1>Welcome to My Web Page</h1>
+    <p>This is a simple web page created using HTML and CSS.</p>
+    <p>Feel free to explore and modify the code!</p>
+    <p>Here is a list of items:</p>
 
-		<ul>
-				<li>Item 1</li>
-				<li>Item 2</li>
-				<li>Item 3</li>
-		</ul>
+    <ul>
+        <li>Item 1</li>
+        <li>Item 2</li>
+        <li>Item 3</li>
+    </ul>
 </body>
 </html>
 ```
 
-IO println html
+[http request response "/"] {
+	// This block handles the HTTP request and response
+	html = template html {
+		css = css
+	}
+	response write html
+}
+
+[start] {
+	http = spawn HttpListener
+	http start with delegate me
+}

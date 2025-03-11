@@ -117,7 +117,6 @@ impl Execute for CallExpr {
                     return Value::Error(RuntimeError::SendError);
                 }
             }
-            Value::Empty
         } else {
             Value::Error(RuntimeError::SendError)
         }

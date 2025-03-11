@@ -1,0 +1,29 @@
+agent Alice {
+	bob: Bob
+
+	[start] {
+		IO println "Alice started"
+		bob tell
+	}
+}
+
+agent Bob {
+	[start] {
+		IO println "Bob started"
+	}
+
+	[tell _msg] {
+		IO println "Bob received message"
+	}
+}
+
+[main] {
+	bob = spawn Bob
+	bob start
+
+	alice = spawn Alice {
+		bob = bob
+	}
+
+	alice start
+}

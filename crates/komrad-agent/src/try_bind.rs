@@ -88,7 +88,7 @@ impl TryBind for Pattern {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scope::Scope;
+    use komrad_agent::scope::Scope;
     use komrad_ast::prelude::Number;
     use tokio;
 

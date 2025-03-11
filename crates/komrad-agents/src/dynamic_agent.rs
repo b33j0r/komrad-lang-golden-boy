@@ -1,12 +1,13 @@
-use crate::execute::Execute;
 // or wherever your `Execute` trait is
-use crate::scope::Scope;
-use crate::try_bind::TryBind;
+use komrad_agent::scope::Scope;
+use komrad_agent::try_bind::TryBind;
 use komrad_agent::{AgentBehavior, AgentLifecycle};
 
+use komrad_agent::execute::Execute;
 use komrad_ast::prelude::{Block, Channel, ChannelListener, Handler, Message, Statement};
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
+use tracing::error;
 
 /// DynamicAgent is a generic agent that holds a set of handlers
 /// extracted from an AST Block, and a runtime Scope for executing them.
@@ -22,7 +23,7 @@ impl DynamicAgent {
     /// Construct a DynamicAgent from a pre-parsed AST Block.
     /// We scan the block for Handler(...) statements, store them,
     /// and keep the rest of the statements in the scope if needed.
-    pub fn from_block(block: &Block) -> Arc<Self> {
+    pub async fn from_block(block: &Block) -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
 
         let mut scope = Scope::new();
@@ -36,12 +37,8 @@ impl DynamicAgent {
                 Statement::Handler(h) => {
                     collected_handlers.push((**h).clone());
                 }
-                // If you also want to run top-level statements once at startup,
-                // you can do so here by calling `stmt.execute(&mut scope).await`
-                // in a separate initialization pass.
                 _ => {
-                    // Possibly store in scope or evaluate at construction time
-                    // e.g. let _ = stmt.execute(&mut scope).await;
+                    let _ = stmt.execute(&mut scope).await;
                 }
             }
         }
@@ -97,12 +94,8 @@ impl AgentBehavior for DynamicAgent {
                 let block = handler.block();
                 let result = block.execute(&mut bound_scope).await;
 
-                // For debugging, you might log the result:
-                // tracing::debug!("Handler executed, result: {:?}", result);
-                // If you want to store changes back, do so:
-                // *self.scope.lock().await = bound_scope;
+                error!("DynamicAgent: handler result: {:?}", result);
 
-                // Return true -> we keep the agent running
                 return true;
             }
         }

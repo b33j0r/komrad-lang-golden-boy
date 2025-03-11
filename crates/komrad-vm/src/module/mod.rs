@@ -1,4 +1,4 @@
-use crate::scope::Scope;
+use komrad_agent::scope::Scope;
 use komrad_ast::prelude::{Channel, Value};
 use module_actor::ModuleActor;
 use module_api::ModuleApi;

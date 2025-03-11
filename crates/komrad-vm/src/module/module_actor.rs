@@ -1,8 +1,8 @@
-use crate::execute::Execute;
 use crate::module::ModuleCommand;
 use crate::module::ModuleId;
-use crate::scope::Scope;
-use crate::try_bind::TryBind;
+use komrad_agent::execute::Execute;
+use komrad_agent::scope::Scope;
+use komrad_agent::try_bind::TryBind;
 use komrad_ast::prelude::{ChannelListener, Message, ToSexpr, Value};
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};

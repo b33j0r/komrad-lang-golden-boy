@@ -1,6 +1,6 @@
 use crate::module::module_command::ModuleCommand;
 use crate::module::module_id::ModuleId;
-use crate::scope::Scope;
+use komrad_agent::scope::Scope;
 use komrad_ast::prelude::{Channel, ToSexpr};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, info, warn};

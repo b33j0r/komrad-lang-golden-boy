@@ -31,6 +31,23 @@ impl SpawnAgent {
 }
 
 #[async_trait::async_trait]
+impl AgentBehavior for SpawnAgent {
+    async fn handle_message(&self, msg: Message) -> bool {
+        // Transform a message like: [Bob, ...] into: [spawn, agent, Bob, ...]
+        let mut new_terms = Vec::new();
+        new_terms.push(Value::Word("spawn".into()));
+        new_terms.push(Value::Word("agent".into()));
+        for term in msg.terms() {
+            new_terms.push(term.clone());
+        }
+        let new_msg = Message::new(new_terms, msg.reply_to());
+        debug!("⏭️ SpawnAgent {:}", new_msg.to_sexpr().format(0));
+        let _ = self.registry.send(new_msg).await;
+        true
+    }
+}
+
+#[async_trait::async_trait]
 impl AgentLifecycle for SpawnAgent {
     async fn stop(&self) {
         let mut running = self.running.lock().await;
@@ -50,23 +67,6 @@ impl AgentLifecycle for SpawnAgent {
 
     fn listener(&self) -> &Mutex<ChannelListener> {
         &self.listener
-    }
-}
-
-#[async_trait::async_trait]
-impl AgentBehavior for SpawnAgent {
-    async fn handle_message(&self, msg: Message) -> bool {
-        // Transform a message like: [Bob, ...] into: [spawn, agent, Bob, ...]
-        let mut new_terms = Vec::new();
-        new_terms.push(Value::Word("spawn".into()));
-        new_terms.push(Value::Word("agent".into()));
-        for term in msg.terms() {
-            new_terms.push(term.clone());
-        }
-        let new_msg = Message::new(new_terms, msg.reply_to());
-        debug!("⏭️ SpawnAgent {:}", new_msg.to_sexpr().format(0));
-        let _ = self.registry.send(new_msg).await;
-        true
     }
 }
 

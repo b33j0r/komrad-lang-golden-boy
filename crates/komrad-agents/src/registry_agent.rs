@@ -179,12 +179,7 @@ impl AgentBehavior for RegistryAgent {
                     let reg = self.registry.read().await;
                     if reg.contains_key(&agent_name) {
                         // Spawn a new instance of the agent by creating a new channel.
-                        let (spawned_channel, _listener) = Channel::new(32);
-                        if let Some(reply_chan) = msg.reply_to() {
-                            let reply =
-                                Message::new(vec![Value::Channel(spawned_channel.clone())], None);
-                            let _ = reply_chan.send(reply).await;
-                        }
+                        panic!("Implement me!");
                     } else {
                         if let Some(reply_chan) = msg.reply_to() {
                             let reply =

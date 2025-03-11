@@ -1061,6 +1061,7 @@ dependencies = [
  "async-trait",
  "dashmap",
  "futures",
+ "komrad-agent",
  "komrad-agents",
  "komrad-ast",
  "thiserror 2.0.12",

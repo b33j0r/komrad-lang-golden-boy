@@ -1,5 +1,7 @@
+use crate::agent_agent::AgentAgent;
 use crate::registry_agent::RegistryAgent;
-use komrad_ast::prelude::{Agent, Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
+use komrad_agent::{AgentBehavior, AgentLifecycle};
+use komrad_ast::prelude::{Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::info;
@@ -30,30 +32,7 @@ impl SpawnAgent {
 }
 
 #[async_trait::async_trait]
-impl Agent for SpawnAgent {
-    fn spawn(self: Arc<Self>) -> Channel {
-        let chan = self.channel.clone();
-        let agent = self.clone();
-        tokio::spawn(async move {
-            while agent.is_running() {
-                let msg_result = {
-                    let mut listener = agent.listener.lock().await;
-                    listener.recv().await
-                };
-                if let Ok(msg) = msg_result {
-                    let _ = agent.handle_message(msg).await;
-                } else {
-                    break;
-                }
-            }
-        });
-        chan
-    }
-
-    async fn send(&self, msg: Message) -> Result<(), RuntimeError> {
-        self.channel.send(msg).await
-    }
-
+impl AgentLifecycle for SpawnAgent {
     async fn stop(&self) {
         let mut running = self.running.lock().await;
         *running = false;
@@ -61,11 +40,22 @@ impl Agent for SpawnAgent {
 
     fn is_running(&self) -> bool {
         match self.running.try_lock() {
-            Ok(lock) => *lock,
-            Err(_) => true,
+            Ok(guard) => *guard,
+            Err(_) => false,
         }
     }
 
+    fn channel(&self) -> &Channel {
+        &self.channel
+    }
+
+    fn listener(&self) -> &Mutex<ChannelListener> {
+        &self.listener
+    }
+}
+
+#[async_trait::async_trait]
+impl AgentBehavior for SpawnAgent {
     async fn handle_message(&self, msg: Message) -> bool {
         // Transform a message like: [Bob, ...] into: [spawn, agent, Bob, ...]
         let mut new_terms = Vec::new();
@@ -88,7 +78,7 @@ impl Agent for SpawnAgent {
 mod tests {
     use super::*;
     use crate::registry_agent::RegistryAgent;
-    use komrad_ast::prelude::{Agent, Channel, Message, Value};
+    use komrad_ast::prelude::{Channel, Message, Value};
 
     #[tokio::test]
     async fn test_spawn_agent_forwarding_defined() {

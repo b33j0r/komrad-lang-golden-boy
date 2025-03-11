@@ -1,5 +1,6 @@
+use crate::agent_agent::AgentAgent;
 use async_trait::async_trait;
-use komrad_ast::prelude::Agent;
+use komrad_agent::{AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::Message;
 use komrad_ast::prelude::RuntimeError;
 use komrad_ast::prelude::{Channel, ChannelListener, Value};
@@ -84,66 +85,32 @@ impl IoAgent {
     }
 }
 
-#[async_trait]
-impl Agent for IoAgent {
-    fn spawn(self: Arc<Self>) -> Channel {
-        // We'll clone ourselves so the task can own the Arc
-        let me = self.clone();
-
-        info!("Spawning IoAgent task...");
-        task::spawn(async move {
-            debug!("IoAgent task started.");
-
-            loop {
-                // Check if still running
-                if !me.is_running() {
-                    debug!("IoAgent says 'running=false', stopping loop.");
-                    break;
-                }
-
-                // Try receiving a message
-                let mut guard = me.listener.lock().await;
-                match guard.recv().await {
-                    Ok(msg) => {
-                        // Let `handle_message` decide if we keep going
-                        let keep_going = me.handle_message(msg).await;
-                        if !keep_going {
-                            debug!("Actor decided to stop after handle_message returned false.");
-                            break;
-                        }
-                    }
-                    Err(_) => {
-                        warn!("Channel closed, stopping actor.");
-                        break;
-                    }
-                }
-            }
-            debug!("IoAgent task exited.");
-        });
-
-        // Return the sending handle so others can do: agent.send(...)
-        self.channel.clone()
-    }
-
-    async fn send(&self, msg: Message) -> Result<(), RuntimeError> {
-        self.channel.send(msg).await
-    }
-
+#[async_trait::async_trait]
+impl AgentLifecycle for IoAgent {
     async fn stop(&self) {
         let mut running = self.running.lock().await;
         *running = false;
+        info!("IO agent stopped.");
     }
 
     fn is_running(&self) -> bool {
-        // It's non-async, so we do a "try_lock" or "blocking lock" carefully:
-        //   - If blocking, this is short & safe
-        //   - Or we can define `fn is_running_async(...) -> ...`
         match self.running.try_lock() {
-            Ok(r) => *r,
-            Err(_) => false, // If we can't lock, we assume "still running"
+            Ok(guard) => *guard,
+            Err(_) => false,
         }
     }
 
+    fn channel(&self) -> &Channel {
+        &self.channel
+    }
+
+    fn listener(&self) -> &Mutex<ChannelListener> {
+        &self.listener
+    }
+}
+
+#[async_trait::async_trait]
+impl AgentBehavior for IoAgent {
     /// The intelligence: decide how to handle each message.
     async fn handle_message(&self, msg: Message) -> bool {
         if let Some(cmd) = msg.first_word() {

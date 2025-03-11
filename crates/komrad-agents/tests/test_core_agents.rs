@@ -1,5 +1,5 @@
 use komrad_ast::prelude::{
-    Agent, Block, CallExpr, Channel, Expr, Message, Number, Statement, ToBlock, ToBoxedExpr, Value,
+    Block, CallExpr, Channel, Expr, Message, Number, Statement, ToBlock, ToBoxedExpr, Value,
 };
 use tokio::time::{sleep, Duration};
 
@@ -45,6 +45,7 @@ fn create_real_alice_agent_definition() -> Statement {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use komrad_agent::AgentBehavior;
     use komrad_agents::agent_agent::AgentAgent;
     use komrad_agents::registry_agent::RegistryAgent;
     use komrad_agents::spawn_agent::SpawnAgent;

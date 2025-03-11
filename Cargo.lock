@@ -986,6 +986,7 @@ name = "komrad-agents"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "komrad-agent",
  "komrad-ast",
  "tokio",
  "tracing",

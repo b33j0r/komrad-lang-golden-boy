@@ -1,7 +1,8 @@
 use crate::agent_agent::AgentAgent;
 use crate::io_agent::IoAgent;
 use crate::registry_agent::RegistryAgent;
-use komrad_ast::prelude::{Agent, Channel};
+use komrad_agent::AgentBehavior;
+use komrad_ast::prelude::Channel;
 use std::collections::HashMap;
 use std::sync::Arc;
 

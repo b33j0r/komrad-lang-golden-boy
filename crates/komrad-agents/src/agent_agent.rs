@@ -1,5 +1,6 @@
 use crate::registry_agent::RegistryAgent;
-use komrad_ast::prelude::{Agent, Channel, ChannelListener, Message, RuntimeError, Value};
+use komrad_agent::{AgentBehavior, AgentLifecycle};
+use komrad_ast::prelude::{Channel, ChannelListener, Message, Value};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -29,30 +30,7 @@ impl AgentAgent {
 }
 
 #[async_trait::async_trait]
-impl Agent for AgentAgent {
-    fn spawn(self: Arc<Self>) -> Channel {
-        let chan = self.channel.clone();
-        let agent = self.clone();
-        tokio::spawn(async move {
-            while agent.is_running() {
-                let msg_result = {
-                    let mut listener = agent.listener.lock().await;
-                    listener.recv().await
-                };
-                if let Ok(msg) = msg_result {
-                    let _ = agent.handle_message(msg).await;
-                } else {
-                    break;
-                }
-            }
-        });
-        chan
-    }
-
-    async fn send(&self, msg: Message) -> Result<(), RuntimeError> {
-        self.channel.send(msg).await
-    }
-
+impl AgentLifecycle for AgentAgent {
     async fn stop(&self) {
         let mut running = self.running.lock().await;
         *running = false;
@@ -60,11 +38,22 @@ impl Agent for AgentAgent {
 
     fn is_running(&self) -> bool {
         match self.running.try_lock() {
-            Ok(lock) => *lock,
-            Err(_) => true,
+            Ok(guard) => *guard,
+            Err(_) => false,
         }
     }
 
+    fn channel(&self) -> &Channel {
+        &self.channel
+    }
+
+    fn listener(&self) -> &Mutex<ChannelListener> {
+        &self.listener
+    }
+}
+
+#[async_trait::async_trait]
+impl AgentBehavior for AgentAgent {
     async fn handle_message(&self, msg: Message) -> bool {
         // Transform a message like: [Alice, <block>]
         // into: [define, agent, Alice, <block>]
@@ -84,7 +73,7 @@ impl Agent for AgentAgent {
 mod tests {
     use super::*;
     use crate::registry_agent::RegistryAgent;
-    use komrad_ast::prelude::{Agent, Block, Message, Statement, Value};
+    use komrad_ast::prelude::{Block, Message, Statement, Value};
 
     #[tokio::test]
     async fn test_agent_agent_define_forwarding() {

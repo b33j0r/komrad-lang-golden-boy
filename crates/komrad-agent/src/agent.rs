@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use komrad_ast::prelude::{Channel, ChannelListener, Message, RuntimeError};
+use std::sync::Arc;
 use tokio::sync::Mutex;
 
 /// Core trait: requires only the minimal methods.

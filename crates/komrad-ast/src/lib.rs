@@ -15,7 +15,6 @@ mod value;
 mod value_type;
 
 pub mod prelude {
-    pub use crate::agent::*;
     pub use crate::ast::*;
     pub use crate::channel::*;
     pub use crate::convert::*;

@@ -1,4 +1,5 @@
-use komrad_ast::prelude::{Agent, Block, Channel, ChannelListener, Message, RuntimeError, Value};
+use komrad_agent::{AgentBehavior, AgentLifecycle};
+use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, RuntimeError, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
@@ -28,34 +29,7 @@ impl RegistryAgent {
 }
 
 #[async_trait::async_trait]
-impl Agent for RegistryAgent {
-    fn spawn(self: Arc<Self>) -> Channel {
-        let chan = self.channel.clone();
-        let agent = self.clone();
-        tokio::spawn(async move {
-            while agent.is_running() {
-                let msg_result = {
-                    let mut listener = agent.listener.lock().await;
-                    listener.recv().await
-                };
-                match msg_result {
-                    Ok(msg) => {
-                        let keep = agent.handle_message(msg).await;
-                        if !keep {
-                            break;
-                        }
-                    }
-                    Err(_) => break,
-                }
-            }
-        });
-        chan
-    }
-
-    async fn send(&self, msg: Message) -> Result<(), RuntimeError> {
-        self.channel.send(msg).await
-    }
-
+impl AgentLifecycle for RegistryAgent {
     async fn stop(&self) {
         let mut running = self.running.lock().await;
         *running = false;
@@ -63,11 +37,22 @@ impl Agent for RegistryAgent {
 
     fn is_running(&self) -> bool {
         match self.running.try_lock() {
-            Ok(lock) => *lock,
-            Err(_) => true,
+            Ok(guard) => *guard,
+            Err(_) => false,
         }
     }
 
+    fn channel(&self) -> &Channel {
+        &self.channel
+    }
+
+    fn listener(&self) -> &Mutex<ChannelListener> {
+        &self.listener
+    }
+}
+
+#[async_trait::async_trait]
+impl AgentBehavior for RegistryAgent {
     async fn handle_message(&self, msg: Message) -> bool {
         if let Some(cmd) = msg.first_word() {
             match cmd.as_str() {
@@ -216,7 +201,7 @@ impl Agent for RegistryAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use komrad_ast::prelude::{Agent, Block, Message, Statement, Value};
+    use komrad_ast::prelude::{Block, Message, Statement, Value};
 
     #[tokio::test]
     async fn test_define_agent_valid() {

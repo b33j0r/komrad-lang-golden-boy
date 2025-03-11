@@ -1,7 +1,7 @@
 use crate::prelude::literal;
 use std::fmt::Display;
 use std::hash::Hash;
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Rem, Sub};
 
 #[derive(Debug, Clone)]
 pub enum Number {
@@ -96,6 +96,19 @@ impl Div for Number {
             (Number::UInt(u1), Number::UInt(u2)) => Number::UInt(u1 / u2),
             (Number::Float(f1), Number::Float(f2)) => Number::Float(f1 / f2),
             _ => panic!("Cannot divide different number types"),
+        }
+    }
+}
+
+impl Rem for Number {
+    type Output = Number;
+
+    fn rem(self, other: Number) -> Self::Output {
+        match (self, other) {
+            (Number::Int(i1), Number::Int(i2)) => Number::Int(i1 % i2),
+            (Number::UInt(u1), Number::UInt(u2)) => Number::UInt(u1 % u2),
+            (Number::Float(f1), Number::Float(f2)) => Number::Float(f1 % f2),
+            _ => panic!("Cannot calculate remainder of different number types"),
         }
     }
 }

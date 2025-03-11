@@ -17,7 +17,6 @@
 mod module_builder;
 pub mod parse;
 pub mod parser;
-pub mod sexpr;
 pub mod span;
 
 pub use parser::*;

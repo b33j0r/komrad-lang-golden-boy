@@ -1,7 +1,8 @@
 use crate::scope::Scope;
 use async_trait::async_trait;
 use komrad_ast::prelude::{
-    BinaryExpr, BinaryOp, Block, CallExpr, Expr, Message, RuntimeError, Statement, TypeExpr, Value,
+    BinaryExpr, BinaryOp, Block, CallExpr, Expr, Message, RuntimeError, Statement, TypeExpr, Typed,
+    Value,
 };
 use tracing::{error, info};
 
@@ -164,6 +165,18 @@ impl Execute for BinaryExpr {
                 (Value::Number(l), Value::Number(r)) => {
                     if !r.is_zero() {
                         Value::Number(l / r)
+                    } else {
+                        Value::Error(RuntimeError::DivisionByZero)
+                    }
+                }
+                _ => Value::Empty,
+            },
+
+            // Mod
+            BinaryOp::Mod => match (left, right) {
+                (Value::Number(l), Value::Number(r)) => {
+                    if !r.is_zero() {
+                        Value::Number(l % r)
                     } else {
                         Value::Error(RuntimeError::DivisionByZero)
                     }

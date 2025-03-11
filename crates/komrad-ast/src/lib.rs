@@ -8,6 +8,7 @@ mod error;
 mod message;
 mod number;
 mod operators;
+pub mod sexpr;
 mod type_expr;
 mod typed;
 mod types;
@@ -24,6 +25,7 @@ pub mod prelude {
     pub use crate::number::*;
     pub use crate::operators::*;
     pub use crate::type_expr::*;
+    pub use crate::typed::Typed;
     pub use crate::types::*;
     pub use crate::value::*;
     pub use crate::value_type::*;

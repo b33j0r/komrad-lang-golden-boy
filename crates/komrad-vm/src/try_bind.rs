@@ -1,6 +1,6 @@
 use crate::scope::Scope;
 use async_trait::async_trait;
-use komrad_ast::prelude::{Message, Pattern, TypeExpr, Value};
+use komrad_ast::prelude::{Message, Pattern, TypeExpr, Typed, Value};
 
 #[async_trait]
 pub trait TryBind {
@@ -47,7 +47,7 @@ impl TryBind for Pattern {
                 // For a type hole, check if the value is of the expected type.
                 TypeExpr::Type(typ) => {
                     // Check if the value is of the expected type.
-                    if !value.is_type(typ) {
+                    if !value.get_type().is_subtype_of(typ) {
                         return None;
                     }
                     // SUCCESS: just move on
@@ -55,7 +55,7 @@ impl TryBind for Pattern {
                 // Type check type holes
                 TypeExpr::TypeHole(name, typ) => {
                     // Check if the value is of the expected type.
-                    if !value.is_type(typ) {
+                    if !value.get_type().is_subtype_of(typ) {
                         return None;
                     }
                     // Bind the value to the name.

@@ -183,7 +183,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_channel_send_after_closure() {
-        let (channel, mut listener) = Channel::new(1);
+        let (channel, listener) = Channel::new(1);
 
         drop(listener); // Closing the receiver
 

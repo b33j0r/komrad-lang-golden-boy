@@ -991,6 +991,7 @@ dependencies = [
  "miette",
  "nom",
  "nom_locate",
+ "owo-colors",
  "thiserror 2.0.12",
  "tokio",
  "tracing",

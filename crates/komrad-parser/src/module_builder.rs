@@ -1,4 +1,5 @@
 use komrad_ast::prelude::Statement;
+use komrad_ast::sexpr::{Sexpr, ToSexpr};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
@@ -31,5 +32,31 @@ impl ModuleBuilder {
 
     pub fn statements(&self) -> &[Statement] {
         &self.statements
+    }
+}
+
+// pub enum Sexpr {
+//     Skip,
+//     Atom(String),
+//     List(Vec<Sexpr>),
+// }
+
+impl ToSexpr for ModuleBuilder {
+    fn to_sexpr(&self) -> Sexpr {
+        let mut sexpr = Vec::new();
+        if !self.name.is_empty() {
+            if let Some(source_file) = &self.source_file {
+                sexpr.push(Sexpr::Atom("module".to_string()));
+                sexpr.push(Sexpr::Atom(self.name.clone()));
+                sexpr.push(Sexpr::Atom(source_file.to_string_lossy().to_string()));
+            } else {
+                sexpr.push(Sexpr::Atom("module".to_string()));
+                sexpr.push(Sexpr::Atom(self.name.clone()));
+            }
+        }
+        for statement in &self.statements {
+            sexpr.push(statement.to_sexpr());
+        }
+        Sexpr::List(sexpr)
     }
 }

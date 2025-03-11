@@ -1,11 +1,10 @@
-use palette::{LinSrgb, Mix};
 use figlet_rs::FIGfont;
 use owo_colors::OwoColorize;
+use palette::{LinSrgb, Mix};
+use tracing::debug;
 
 pub fn gradient_banner(text: &str, stops: &[(f32, LinSrgb)]) -> String {
-    let standard_font = FIGfont::from_file(
-        "assets/fonts/Roman.flf"
-    ).unwrap();
+    let standard_font = FIGfont::from_file("assets/fonts/Roman.flf").unwrap();
     let figure = standard_font.convert(text).unwrap();
     let ascii_text = figure.to_string();
 
@@ -33,8 +32,14 @@ pub fn gradient_banner(text: &str, stops: &[(f32, LinSrgb)]) -> String {
 }
 
 fn trim_blank_lines_around<'a>(lines: &'a [&'a str]) -> &'a [&'a str] {
-    let start = lines.iter().position(|&line| !line.trim().is_empty()).unwrap_or(0);
-    let end = lines.iter().rposition(|&line| !line.trim().is_empty()).unwrap_or(lines.len() - 1);
+    let start = lines
+        .iter()
+        .position(|&line| !line.trim().is_empty())
+        .unwrap_or(0);
+    let end = lines
+        .iter()
+        .rposition(|&line| !line.trim().is_empty())
+        .unwrap_or(lines.len() - 1);
     &lines[start..=end]
 }
 
@@ -49,4 +54,18 @@ fn interpolate_color(t: f32, stops: &[(f32, LinSrgb)]) -> LinSrgb {
         }
     }
     stops.last().unwrap().1 // Fallback to last color if out of bounds
+}
+
+pub fn banner() {
+    let text = "Komrad";
+
+    let stops = vec![
+        (0.0, LinSrgb::new(1.0, 0.0, 0.5)),
+        (0.3, LinSrgb::new(0.85, 0.5, 0.9)),
+        (0.7, LinSrgb::new(0.8, 0.7, 0.0)),
+        (1.0, LinSrgb::new(0.3, 0.7, 0.9)),
+    ];
+
+    let banner = gradient_banner(text, &stops);
+    debug!("\n{}", banner);
 }

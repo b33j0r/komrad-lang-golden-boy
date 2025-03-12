@@ -51,8 +51,6 @@ pub async fn main() {
     tracing_subscriber::fmt()
         .with_max_level(args.verbose)
         .with_target(false)
-        // .with_line_number(true)
-        // .with_file(true)
         .without_time()
         .with_ansi(true)
         .with_level(true)
@@ -61,77 +59,76 @@ pub async fn main() {
     info!("{}", "Komrad CLI starting".bright_cyan());
     banner();
 
-    match args.subcommand {
-        Some(Subcommands::Parse { file, fmt }) => {
-            info!("Parsing file: {}", file.display());
-            let source = std::fs::read_to_string(&file).expect("Failed to read file");
-            match komrad_parser::parse_verbose(&source) {
-                Ok(module_builder) => {
-                    debug!("Parsed module: {:?}", module_builder);
-                    match fmt {
-                        None | Some(KomradOutputFormat::Komrad) => {
-                            let sexpr = module_builder.to_sexpr();
-                            println!("{}", sexpr);
-                        }
-                        Some(KomradOutputFormat::Sexpr) => {
-                            let sexpr = module_builder.to_sexpr();
-                            println!("{}", sexpr);
-                        }
-                    }
-                }
-                Err(err) => {
-                    info!("Failed to parse file: {}", err);
-                }
-            }
-        }
-        Some(Subcommands::Run { file }) => {
-            info!("Running file: {}", file.display());
-            let source = match std::fs::read_to_string(&file) {
-                Ok(source) => {
-                    debug!("Read source: {}", source);
-                    source
-                }
-                Err(err) => {
-                    info!("Failed to read file: {}", err);
-                    return;
-                }
-            };
-            match komrad_parser::parse_verbose(&source) {
-                Ok(module_builder) => {
-                    let block = module_builder.build_block();
-                    let system = komrad_vm::System::new();
-                    let agent = system.create_agent("main", &block).await;
-
-                    match agent
-                        .send(Message::new(vec![Value::Word("main".into())], None))
-                        .await
-                    {
-                        Ok(_) => {
-                            info!("Main sent to agent");
-                        }
-                        Err(err) => {
-                            info!("Failed to send main message: {}", err);
-                        }
-                    }
-
-                    if args.wait_100 {
-                        info!("Waiting for 100 ms...");
-                        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                    }
-                    if args.wait {
-                        info!("Waiting for ctrl+c...");
-                        tokio::signal::ctrl_c()
-                            .await
-                            .expect("Failed to wait for ctrl+c");
-                    }
-                }
-                Err(err) => {
-                    info!("Failed to parse file: {}", err);
-                }
-            }
-        }
+    match args.clone().subcommand {
+        Some(Subcommands::Parse { file, fmt }) => handle_parse(file, fmt),
+        Some(Subcommands::Run { file }) => handle_run(file, &args).await,
         None => {
             println!("Use `komrad --help` for more information.");
+        }
+    }
+}
+
+fn handle_parse(file: PathBuf, fmt: Option<KomradOutputFormat>) {
+    info!("Parsing file: {}", file.display());
+    let source = std::fs::read_to_string(&file).expect("Failed to read file");
+    match komrad_parser::parse_verbose(&source) {
+        Ok(module_builder) => {
+            debug!("Parsed module: {:?}", module_builder);
+            let sexpr = module_builder.to_sexpr();
+            match fmt {
+                None | Some(KomradOutputFormat::Komrad) => println!("{}", sexpr),
+                Some(KomradOutputFormat::Sexpr) => println!("{}", sexpr),
+            }
+        }
+        Err(err) => {
+            info!("Failed to parse file: {}", err);
+        }
+    }
+}
+
+async fn handle_run(file: PathBuf, args: &Args) {
+    info!("Running file: {}", file.display());
+    let source = match std::fs::read_to_string(&file) {
+        Ok(source) => {
+            debug!("Read source: {}", source);
+            source
+        }
+        Err(err) => {
+            info!("Failed to read file: {}", err);
+            return;
+        }
+    };
+    match komrad_parser::parse_verbose(&source) {
+        Ok(module_builder) => {
+            let block = module_builder.build_block();
+            let system = komrad_vm::System::new();
+            let agent = system.create_agent("main", &block).await;
+
+            match agent
+                .send(Message::new(vec![Value::Word("main".into())], None))
+                .await
+            {
+                Ok(_) => {
+                    info!("Main sent to agent");
+                }
+                Err(err) => {
+                    info!("Failed to send main message: {}", err);
+                }
+            }
+
+            if args.wait_100 {
+                info!("Waiting for 100 ms...");
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            }
+            if args.wait {
+                info!("Waiting for ctrl+c...");
+                tokio::signal::ctrl_c()
+                    .await
+                    .expect("Failed to wait for ctrl+c");
+            }
+        }
+        Err(err) => {
+            info!("Failed to parse file: {}", err);
         }
     }
 }

@@ -54,7 +54,10 @@ agent Server {
 			</head>
 			<body>
 			  <h1>Komrad</h1>
-			  <p>Concurrency for everyone</p>
+			  <p>
+			    Concurrency isn't hard,<br/>
+			    it happens all the time.
+			  </p>
 			</body>
 			</html>
 	  ```

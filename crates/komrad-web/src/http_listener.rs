@@ -109,7 +109,7 @@ impl HttpListenerServer for HttpListener {
                             let response_body = msg.terms().get(0).unwrap_or(&Value::Empty);
                             match response_body {
                                 Value::String(s) => s.clone(),
-                                Value::EmbeddedBlock(embedded_block) => {
+                                Value::Embedded(embedded_block) => {
                                     embedded_block.text().to_string()
                                 }
                                 Value::Empty => "<html><body>No response</body></html>".to_string(),

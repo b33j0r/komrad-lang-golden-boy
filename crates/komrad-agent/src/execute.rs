@@ -226,6 +226,21 @@ impl Execute for BinaryExpr {
             BinaryOp::Add => match (left, right) {
                 (Value::Number(l), Value::Number(r)) => Value::Number(l + r),
                 (Value::String(l), Value::String(r)) => Value::String(format!("{}{}", l, r)),
+                (Value::String(l), Value::Number(r)) => {
+                    let mut l = l.clone();
+                    l = format!("{}{}", l, r);
+                    Value::String(l)
+                }
+                (Value::Embedded(b), Value::String(r)) => {
+                    let mut b = b.clone();
+                    b.text = format!("{}{}", b.text(), r);
+                    Value::Embedded(b)
+                }
+                (Value::String(l), Value::Embedded(b)) => {
+                    let mut b = b.clone();
+                    b.text = format!("{}{}", l, b.text());
+                    Value::Embedded(b)
+                }
                 _ => Value::Empty,
             },
             BinaryOp::Sub => {

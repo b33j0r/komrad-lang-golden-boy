@@ -26,7 +26,7 @@ agent Server {
 					  display: flex;
 					  justify-content: center;
 					  align-items: center;
-					  font-size: 3dvw;
+					  font-size: 4dvw;
 					  background-color: #282c34;
 					  color: white;
 				  }
@@ -55,10 +55,9 @@ agent Server {
 			<body>
 			  <h1>Komrad</h1>
 			  <p>
-			    Concurrency isn't hard,<br/>
-			    it happens all the time.
+			    Concurrency happens all the time
 			  </p>
-			</body>
+	    </body>
 			</html>
 	  ```
 	  html

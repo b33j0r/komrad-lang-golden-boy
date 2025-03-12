@@ -2,11 +2,11 @@ use crate::parse::identifier::parse_identifier;
 use crate::parse::strings::parse_escape_sequence;
 use crate::span::KResult;
 use komrad_ast::prelude::{EmbeddedBlock, ErrorKind, ParserError, Span, Value};
-use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{anychar, space1};
 use nom::multi::separated_list0;
+use nom::Parser;
 
 /// Parse a fenced block with arguments optionally on the first line
 ///    e.g. ```<tag1> <tag2> ...\n<text>```
@@ -23,7 +23,7 @@ pub fn parse_embedded_block(input: Span) -> KResult<EmbeddedBlock> {
 ///    e.g. ```<tag1> <tag2> ...\n<text>```
 pub fn parse_embedded_block_value(input: Span) -> KResult<Value> {
     let (input, block) = parse_embedded_block(input)?;
-    Ok((input, Value::EmbeddedBlock(block)))
+    Ok((input, Value::Embedded(block)))
 }
 
 fn parse_embedded_block_body(input: Span) -> KResult<String> {
@@ -97,7 +97,7 @@ mod test_parse_embedded_block {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap().1,
-            Value::EmbeddedBlock(EmbeddedBlock {
+            Value::Embedded(EmbeddedBlock {
                 tags: vec![],
                 text: "foo bar\n".into()
             })

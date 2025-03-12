@@ -62,7 +62,7 @@ impl IoAgent {
                 Value::Number(n) => n.to_string(),
                 Value::Boolean(b) => b.to_string(),
                 Value::Channel(ch) => format!("Channel: {}", ch.uuid()),
-                Value::EmbeddedBlock(b) => b.text().to_string(),
+                Value::Embedded(b) => b.text().to_string(),
                 _ => format!("Unknown: {:?}", part),
             })
             .collect();

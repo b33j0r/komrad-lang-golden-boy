@@ -86,7 +86,16 @@ pub async fn main() {
         }
         Some(Subcommands::Run { file }) => {
             info!("Running file: {}", file.display());
-            let source = std::fs::read_to_string(&file).expect("Failed to read file");
+            let source = match std::fs::read_to_string(&file) {
+                Ok(source) => {
+                    debug!("Read source: {}", source);
+                    source
+                }
+                Err(err) => {
+                    info!("Failed to read file: {}", err);
+                    return;
+                }
+            };
             match komrad_parser::parse_verbose(&source) {
                 Ok(module_builder) => {
                     let block = module_builder.build_block();

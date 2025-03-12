@@ -139,7 +139,7 @@ impl ToSexpr for Value {
                 Sexpr::Atom("bytes".to_string()),
                 Sexpr::Atom(format!("{:?}", bytes)),
             ]),
-            Value::EmbeddedBlock(eb) => {
+            Value::Embedded(eb) => {
                 let mut tags = vec![Sexpr::Atom("tags".to_string())];
                 tags.extend(eb.tags().iter().map(|t| Sexpr::Atom(t.clone())));
 

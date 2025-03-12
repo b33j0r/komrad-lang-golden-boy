@@ -1,23 +1,29 @@
-
-html = ```html
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Komrad</title>
-</head>
-<body>
-	Komrad
-</body>
-</html>
-```
+agent Response {
+	[write _html] {
+		Io println "HTTP/1.1"
+		Io println html
+	}
+}
 
 agent Server {
-	[http _request GET "/"] {
-  	Io println "request"
+	[http _response GET "/"] {
+		html = ```html
+	  <!DOCTYPE html>
+	  <html>
+	  <head>
+	      <title>Komrad</title>
+	  </head>
+	  <body>
+	    Komrad
+	  </body>
+	  </html>
+	  ```
+	  response write html
   }
 }
 
 [main] {
 	server = spawn Server {}
-	server http 123 GET "/"
+	response = spawn Response {}
+	server http response GET "/"
 }

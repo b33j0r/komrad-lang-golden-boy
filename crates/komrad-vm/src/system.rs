@@ -17,7 +17,7 @@ impl System {
     }
 
     pub async fn create_agent(&self, name: &str, block: &Block) -> Channel {
-        let agent = DynamicAgent::from_block(name, block).await;
+        let agent = DynamicAgent::from_block(name, block, None).await;
         let chan = agent.clone().spawn();
         self.agents.insert(name.into(), agent);
         chan

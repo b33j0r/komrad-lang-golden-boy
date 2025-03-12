@@ -1,11 +1,13 @@
 agent Bob {
 	[start] {
-		IO println "Bob started"
+		IO println x
 	}
 }
 
 [main] {
 	IO println "Main started"
-	bob = spawn Bob {}
+	bob = spawn Bob {
+		x = 23
+	}
 	bob start
 }

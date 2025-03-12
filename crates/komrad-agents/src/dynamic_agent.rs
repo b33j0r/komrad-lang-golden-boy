@@ -22,7 +22,11 @@ pub struct DynamicAgent {
 impl DynamicAgent {
     /// Construct from an AST Block, collecting any Handler statements
     /// and optionally executing others in the scope.
-    pub async fn from_block(name: &str, block: &Block) -> Arc<Self> {
+    pub async fn from_block(
+        name: &str,
+        block: &Block,
+        initial_scope_block: Option<Block>,
+    ) -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
 
         let mut scope = Scope::new();
@@ -36,6 +40,14 @@ impl DynamicAgent {
                 .set(name.clone(), Value::Channel(channel.clone()))
                 .await;
         }
+
+        // If there is an initial scope block, execute it
+        if let Some(initial_scope_block) = initial_scope_block {
+            for stmt in initial_scope_block.statements() {
+                let _ = stmt.execute(&mut scope).await;
+            }
+        }
+
         let mut collected_handlers = Vec::new();
 
         // Build the scope by executing statements (and/or collecting handlers)

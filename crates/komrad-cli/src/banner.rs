@@ -1,7 +1,7 @@
 use figlet_rs::FIGfont;
 use owo_colors::OwoColorize;
 use palette::{LinSrgb, Mix};
-use tracing::debug;
+use tracing::{debug, warn};
 
 pub fn gradient_banner(text: &str, stops: &[(f32, LinSrgb)]) -> String {
     let standard_font = FIGfont::from_file("assets/fonts/Roman.flf").unwrap();
@@ -67,5 +67,5 @@ pub fn banner() {
     ];
 
     let banner = gradient_banner(text, &stops);
-    debug!("\n{}", banner);
+    warn!("\n{}", banner);
 }

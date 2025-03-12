@@ -1,4 +1,5 @@
 use crate::banner;
+use crate::banner::banner;
 use clap::{Parser, Subcommand};
 use komrad_ast::prelude::{CallExpr, Expr, Message, Statement, Value};
 use komrad_ast::sexpr::ToSexpr;
@@ -59,6 +60,7 @@ pub async fn main() {
         .init();
 
     info!("{}", "Komrad CLI starting".bright_cyan());
+    banner();
 
     match args.subcommand {
         Some(Subcommands::Parse { file, fmt }) => {
@@ -87,57 +89,6 @@ pub async fn main() {
             info!("Running file: {}", file.display());
             let source = std::fs::read_to_string(&file).expect("Failed to read file");
             match komrad_parser::parse_verbose(&source) {
-                // Ok(module_builder) => {
-                //     info!("Parsed module: {:?}", module_builder);
-                //
-                //     let system = komrad_vm::System::spawn();
-                //     let module = system.await.create_module("main").await;
-                //     let module_channel = module.get_channel();
-                //     if let Some(scope) = module.get_scope().await {
-                //         debug!("Module {} scope: {:}", module.name, scope);
-                //     } else {
-                //         info!("Failed to get module scope");
-                //     }
-                //
-                //     for statement in module_builder.statements() {
-                //         if statement.is_no_op() {
-                //             continue;
-                //         }
-                //         module
-                //             .send_command(ModuleCommand::ExecuteStatement(statement.clone()))
-                //             .await;
-                //     }
-                //
-                //     module
-                //         .send_command(ModuleCommand::ExecuteStatement(Statement::Expr(
-                //             Expr::Call(
-                //                 //
-                //                 CallExpr::new(
-                //                     Expr::Value(Value::Channel(module_channel)).into(),
-                //                     vec![Expr::Value(Value::Word("main".to_string())).into()],
-                //                 ),
-                //             ),
-                //         )))
-                //         .await;
-                //
-                //     if args.wait_100 {
-                //         info!("Waiting for 100 ms...");
-                //         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                //     }
-                //
-                //     if args.wait {
-                //         info!("Waiting for ctrl+c...");
-                //         tokio::signal::ctrl_c()
-                //             .await
-                //             .expect("Failed to wait for ctrl+c");
-                //     }
-                //
-                //     if let Some(scope) = module.get_scope().await {
-                //         info!("Module scope: {:}", scope);
-                //     } else {
-                //         info!("Failed to get module scope");
-                //     }
-                // }
                 Ok(module_builder) => {
                     let block = module_builder.build_block();
                     let system = komrad_vm::System::new();
@@ -166,7 +117,7 @@ pub async fn main() {
             }
         }
         None => {
-            banner::banner();
+            println!("Use `komrad --help` for more information.");
         }
     }
 }

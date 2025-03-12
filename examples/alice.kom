@@ -1,22 +1,22 @@
-IO println "Hello, world!"
+Io println "Hello, world!"
 
 agent Alice {
 	bob: Bob
 
 	[start] {
-		IO println "Alice messaged bob!"
+		Io println "Alice messaged bob!"
 		bob tell
 	}
 }
 
 agent Bob {
 	[tell _msg] {
-		IO println "Bob received message"
+		Io println "Bob received message"
 	}
 }
 
 [main] {
-	IO println "Main started"
+	Io println "Main started"
 	bob = spawn Bob
 	alice = spawn Alice {
 		bob = bob

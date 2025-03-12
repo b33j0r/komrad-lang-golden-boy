@@ -1,5 +1,5 @@
 [main] {
-	IO println "Hello, world!"
-	IO println "We can print two lines"
+	Io println "Hello, world!"
+	Io println "We can print two lines"
 	42
 }

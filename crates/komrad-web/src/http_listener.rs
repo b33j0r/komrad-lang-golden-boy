@@ -5,7 +5,7 @@ use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, Value};
 use std::sync::Arc;
 use tokio::select;
 use tokio::sync::Mutex;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 pub struct HttpListener {
     _name: String,
@@ -31,6 +31,7 @@ impl HttpListener {
 #[async_trait]
 impl AgentLifecycle for HttpListener {
     async fn init(self: Arc<Self>, scope: &mut Scope) {
+        println!("Scope: {}", scope.to_string());
         let address = scope
             .get("address")
             .await
@@ -76,7 +77,9 @@ impl AgentBehavior for HttpListener {
         {
             let scope = self.clone().get_scope().await;
             let mut scope = scope.lock().await;
+            error!("HTTP scope {:}", scope);
             self.clone().init(&mut scope).await;
+            error!("HTTP server started");
         }
         loop {
             select! {
@@ -90,7 +93,7 @@ impl AgentBehavior for HttpListener {
                         Err(_) => break,
                     }
                 }
-                _ = tokio::time::sleep(tokio::time::Duration::from_secs(1)) => {
+                _ = tokio::time::sleep(tokio::time::Duration::from_secs(5)) => {
                     info!("HTTP server is running");
                 }
                 else => {

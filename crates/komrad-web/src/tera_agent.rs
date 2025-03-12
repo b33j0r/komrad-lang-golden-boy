@@ -1,4 +1,3 @@
-use crate::HttpListener;
 use komrad_agent::execute::Execute;
 use komrad_agent::scope::Scope;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
@@ -6,12 +5,12 @@ use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tera::Tera;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::Mutex;
 use tracing::{error, info, warn};
 
 /// Interface to the Tera templating engine.
 pub struct TeraAgent {
-    name: String,
+    _name: String,
     base_dir: PathBuf,
     running: Arc<Mutex<bool>>,
     channel: Channel, // We'll store our sending handle
@@ -23,7 +22,7 @@ impl TeraAgent {
     pub fn new(base_dir: &Path, name: &str, scope: Scope) -> Arc<Self> {
         let (chan, listener) = Channel::new(32);
         Arc::new(Self {
-            name: name.to_string(),
+            _name: name.to_string(),
             base_dir: base_dir.to_path_buf(),
             running: Arc::new(Mutex::new(true)),
             channel: chan,
@@ -73,7 +72,8 @@ impl AgentBehavior for TeraAgent {
                     // Check that context is a block and get its scope
                     if let Value::Block(block) = context {
                         let mut block_scope = Scope::new();
-                        let result = block.execute(&mut block_scope).await;
+                        // TODO: what should the result mean? If anything
+                        let _result = block.execute(&mut block_scope).await;
                         info!("Rendering template: {}", template_name);
 
                         if let Some(reply_chan) = msg.reply_to() {

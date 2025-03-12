@@ -72,27 +72,12 @@ impl AgentLifecycle for HttpListener {
 
 #[async_trait]
 impl AgentBehavior for HttpListener {
-    async fn handle_message(&self, _msg: Message) -> bool {
-        true
-    }
-
     async fn actor_loop(self: Arc<Self>, _chan: Channel) {
         {
             let scope = self.clone().get_scope().await;
             let mut scope = scope.lock().await;
             self.clone().init(&mut scope).await;
         }
-        //
-        // while self.is_running() {
-        //     match Self::recv(&self).await {
-        //         Ok(msg) => {
-        //             if !Self::handle_message(&self, msg).await {
-        //                 break;
-        //             }
-        //         }
-        //         Err(_) => break,
-        //     }
-        // }
         loop {
             select! {
                 maybe_msg = Self::recv(&self) => {
@@ -113,6 +98,10 @@ impl AgentBehavior for HttpListener {
                 }
             }
         }
+    }
+
+    async fn handle_message(&self, _msg: Message) -> bool {
+        true
     }
 }
 

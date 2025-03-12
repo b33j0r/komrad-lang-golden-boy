@@ -990,6 +990,7 @@ dependencies = [
  "async-trait",
  "komrad-agent",
  "komrad-ast",
+ "komrad-web",
  "tokio",
  "tracing",
  "uuid",
@@ -1066,6 +1067,7 @@ dependencies = [
  "komrad-agent",
  "komrad-agents",
  "komrad-ast",
+ "komrad-web",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
@@ -1077,6 +1079,8 @@ dependencies = [
 name = "komrad-web"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "komrad-agent",
  "komrad-ast",
  "komrad-parser",
  "tera",

@@ -13,15 +13,15 @@ agent HttpListener {
 agent Server {
 	[http _response GET "/"] {
 		html = ```html
-	  <!DOCTYPE html>
-	  <html>
-	  <head>
-	      <title>Komrad</title>
-	  </head>
-	  <body>
-	    Komrad
-	  </body>
-	  </html>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Komrad</title>
+</head>
+<body>
+  Komrad
+</body>
+</html>
 	  ```
 	  response write html
   }
@@ -29,6 +29,7 @@ agent Server {
 
 [main] {
 	server = spawn Server
+	// HttpListener is komrad-lang/crates/komrad-web/src/http_listener.rs
 	listener = spawn HttpListener {
 		host = "0.0.0.0"
 		port = 9898

@@ -7,6 +7,7 @@ edition = "2024"
 komrad-ast = { path = "../komrad-ast" }
 komrad-agent = { path = "../komrad-agent" }
 komrad-agents = { path = "../komrad-agents" }
+komrad-web = { path = "../komrad-web" }
 
 async-trait.workspace = true
 uuid.workspace = true

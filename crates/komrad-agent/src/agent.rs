@@ -6,6 +6,9 @@ use tokio::sync::Mutex;
 /// Core trait: requires only the minimal methods.
 #[async_trait]
 pub trait AgentLifecycle: Send + Sync + 'static {
+    async fn init(self: Arc<Self>) {
+        // Default: do nothing
+    }
     async fn stop(&self);
     fn is_running(&self) -> bool;
     fn channel(&self) -> &Channel;
@@ -22,11 +25,12 @@ pub trait AgentBehavior: AgentLifecycle {
         chan
     }
 
-    async fn actor_loop(agent: Arc<Self>, _chan: Channel) {
-        while agent.is_running() {
-            match Self::recv(&agent).await {
+    async fn actor_loop(self: Arc<Self>, _chan: Channel) {
+        self.clone().init().await;
+        while self.is_running() {
+            match Self::recv(&self).await {
                 Ok(msg) => {
-                    if !Self::handle_message(&agent, msg).await {
+                    if !Self::handle_message(&self, msg).await {
                         break;
                     }
                 }
@@ -51,3 +55,7 @@ pub trait AgentBehavior: AgentLifecycle {
 }
 
 pub trait Agent: AgentLifecycle + AgentBehavior {}
+
+pub trait AgentFactory: Send + Sync + 'static {
+    fn create_agent(&self, name: String) -> Arc<dyn Agent>;
+}

@@ -6,7 +6,9 @@ edition = "2024"
 [dependencies]
 komrad-parser = { path = "../komrad-parser" }
 komrad-ast = { path = "../komrad-ast" }
+komrad-agent = { path = "../komrad-agent" }
 
+async-trait.workspace = true
 tokio.workspace = true
 tera = { version = "1.20.0", optional = true }
 warp = { version = "0.3", features = ["websocket", "multipart", "async-compression"], optional = true }

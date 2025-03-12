@@ -1,14 +1,19 @@
 use crate::dynamic_agent::DynamicAgent;
-use komrad_agent::{AgentBehavior, AgentLifecycle};
+use komrad_agent::{AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tracing::{debug, info};
 
+enum RegistryFactory {
+    FromBlock(Block),
+    FromFactory(Arc<dyn AgentFactory>),
+}
+
 /// RegistryAgent holds definitions of agents as AST Blocks.
 pub struct RegistryAgent {
-    pub registry: RwLock<HashMap<String, Block>>,
+    pub registry: RwLock<HashMap<String, RegistryFactory>>,
     channel: Channel,
     listener: Arc<Mutex<ChannelListener>>,
     running: Arc<Mutex<bool>>,
@@ -17,8 +22,10 @@ pub struct RegistryAgent {
 impl RegistryAgent {
     pub fn new() -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
+        let registry = RwLock::new(HashMap::new());
+
         Arc::new(Self {
-            registry: RwLock::new(HashMap::new()),
+            registry,
             channel,
             listener: Arc::new(Mutex::new(listener)),
             running: Arc::new(Mutex::new(true)),
@@ -112,7 +119,7 @@ impl AgentBehavior for RegistryAgent {
                         let block = *boxed_block.clone();
                         {
                             let mut reg = self.registry.write().await;
-                            reg.insert(agent_name.clone(), block);
+                            reg.insert(agent_name.clone(), RegistryFactory::FromBlock(block));
                         }
                         if let Some(reply_chan) = msg.reply_to() {
                             // We send a confirmation string on success.
@@ -191,11 +198,22 @@ impl AgentBehavior for RegistryAgent {
 
                     let reg = self.registry.read().await;
                     if reg.contains_key(&agent_name) {
-                        // Create a DynamicAgent and return its channel.
-                        let block = reg.get(&agent_name).unwrap();
-                        let agent =
-                            DynamicAgent::from_block(&agent_name, block, initial_scope_block).await;
-                        let agent_chan = agent.clone().spawn();
+                        // Invoke the correct factory method
+                        let agent_chan = match reg.get(&agent_name).unwrap() {
+                            RegistryFactory::FromBlock(block) => {
+                                let agent = DynamicAgent::from_block(
+                                    &agent_name,
+                                    block,
+                                    initial_scope_block,
+                                )
+                                .await;
+                                agent.clone().spawn()
+                            }
+                            RegistryFactory::FromFactory(factory) => {
+                                let agent = factory.create_agent(agent_name.clone());
+                                agent.clone().spawn()
+                            }
+                        };
                         if let Some(reply_chan) = msg.reply_to() {
                             let reply = Message::new(vec![Value::Channel(agent_chan)], None);
                             let _ = reply_chan.send(reply).await;

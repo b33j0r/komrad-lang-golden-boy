@@ -2,7 +2,7 @@ use crate::closure::Closure;
 use crate::scope::Scope;
 use async_trait::async_trait;
 use komrad_ast::prelude::{
-    BinaryExpr, BinaryOp, Block, CallExpr, Channel, Expr, Message, RuntimeError, Statement, ToExpr,
+    BinaryExpr, BinaryOp, Block, CallExpr, Channel, Expr, Message, RuntimeError, Statement,
     ToSexpr, Typed, Value,
 };
 use tracing::{error, info};
@@ -114,7 +114,9 @@ impl Execute for Expr {
             Expr::Binary(b) => b.execute(scope).await,
             Expr::Call(call) => call.execute(scope).await,
 
-            Expr::Block(block) => {
+            Expr::Block(_block) => {
+                // We're using the outer expression instead of the capture
+
                 // 1) closure transform
                 let closed_expr = self.closure(scope).await;
                 if let Expr::Block(new_block) = closed_expr {

@@ -19,14 +19,10 @@ impl Closure for Block {
     type Context = Scope;
 
     async fn closure(&self, context: &mut Self::Context) -> Self::Output {
-        // Create a new block with the same statements as the original block.
         let mut new_statements = self.statements().clone();
 
         for statement in &mut new_statements {
-            // For each statement, we need to create a closure.
-            // This is a placeholder for the actual closure logic.
-            // You can modify this to suit your needs.
-            statement.closure(context).await;
+            let _ = statement.closure(context).await;
         }
 
         Value::Block(Block::new(new_statements).into())

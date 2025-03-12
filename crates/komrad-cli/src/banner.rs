@@ -8,9 +8,9 @@ const FONT_NAME: &str = "ANSI Shadow";
 
 pub fn banner() {
     let stops = vec![
-        (0.0, LinSrgb::new(1.0, 0.0, 0.5)),
-        (0.3, LinSrgb::new(0.85, 0.5, 0.9)),
-        (0.7, LinSrgb::new(0.8, 0.7, 0.0)),
+        (0.0, LinSrgb::new(0.8, 0.0, 0.4)),
+        (0.3, LinSrgb::new(0.75, 0.4, 0.8)),
+        (0.7, LinSrgb::new(0.7, 0.6, 0.0)),
         (1.0, LinSrgb::new(0.3, 0.7, 0.9)),
     ];
 

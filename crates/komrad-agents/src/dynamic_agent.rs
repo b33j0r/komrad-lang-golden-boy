@@ -109,6 +109,17 @@ impl AgentBehavior for DynamicAgent {
             if let Some(mut bound) = h.pattern().try_bind(msg.clone(), &mut base_scope).await {
                 let block = h.block();
                 let result = block.execute(&mut bound).await;
+                if let Some(reply_to) = msg.reply_to() {
+                    let reply_msg = Message::new(vec![result.clone()], None);
+                    match reply_to.send(reply_msg).await {
+                        Ok(_) => {
+                            debug!("DynamicAgent {} -> reply sent", self.name);
+                        }
+                        Err(e) => {
+                            debug!("DynamicAgent {} -> reply error: {:?}", self.name, e);
+                        }
+                    }
+                }
                 debug!("DynamicAgent {} -> handler result: {:?}", self.name, result);
                 return true; // handled
             }

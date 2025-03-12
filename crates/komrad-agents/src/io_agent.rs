@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tracing::{info, warn};
 
-/// **IoInterface** trait for pluggable IO.
+/// **IoInterface** trait for pluggable Io.
 pub trait IoInterface: Send + Sync {
     fn print(&mut self, msg: &str);
     fn println(&mut self, msg: &str);
@@ -24,7 +24,7 @@ impl IoInterface for StdIo {
     }
 }
 
-/// **IoAgent** is an IO actor that implements `Agent`.
+/// **IoAgent** is an Io actor that implements `Agent`.
 /// - It listens for `"println"` or `"shutdown"` commands.
 /// - It uses an internal “running” flag to track state.
 /// - It uses a `ChannelListener` in the background to handle messages.
@@ -36,7 +36,7 @@ pub struct IoAgent {
 }
 
 impl IoAgent {
-    /// Creates a new IO Agent with the given IoInterface.
+    /// Creates a new Io Agent with the given IoInterface.
     pub fn new(io_interface: Arc<RwLock<dyn IoInterface>>) -> Arc<Self> {
         let (chan, listener) = Channel::new(32);
         Arc::new(Self {
@@ -86,7 +86,7 @@ impl AgentLifecycle for IoAgent {
     async fn stop(&self) {
         let mut running = self.running.lock().await;
         *running = false;
-        info!("IO agent stopped.");
+        info!("Io agent stopped.");
     }
 
     fn is_running(&self) -> bool {
@@ -116,13 +116,13 @@ impl AgentBehavior for IoAgent {
                     return true;
                 }
                 "shutdown" => {
-                    warn!("IO agent received shutdown command, stopping.");
+                    warn!("Io agent received shutdown command, stopping.");
                     // We'll set running=false and return false to break the loop:
                     self.stop().await;
                     return false;
                 }
                 other => {
-                    warn!("Unknown IO command: {:?}", other);
+                    warn!("Unknown Io command: {:?}", other);
                     return true; // Keep running
                 }
             }

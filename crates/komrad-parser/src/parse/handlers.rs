@@ -1,13 +1,14 @@
 use crate::parse::fields::parse_value_type;
 use crate::parse::identifier::parse_identifier;
+use crate::parse::strings::parse_string;
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Block, Handler, Pattern, Statement, TypeExpr};
-use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{space0, space1};
 use nom::multi::{many0, separated_list1};
 use nom::sequence::{delimited, preceded, separated_pair};
+use nom::Parser;
 use std::sync::Arc;
 
 /// Parse a handler block, e.g. `{ IO println "hello!" }` -> Block(statements)
@@ -68,6 +69,12 @@ pub fn parse_word(input: Span) -> KResult<TypeExpr> {
         .parse(input)
 }
 
+pub fn parse_string_type_expr(input: Span) -> KResult<TypeExpr> {
+    parse_string
+        .map(|string| TypeExpr::Value(string.into()))
+        .parse(input)
+}
+
 /// Parse a handler pattern's parts, e.g. `foo do` -> `((foo) (do))`.
 pub fn parse_handle_pattern_parts(input: Span) -> KResult<Vec<TypeExpr>> {
     separated_list1(
@@ -77,6 +84,7 @@ pub fn parse_handle_pattern_parts(input: Span) -> KResult<Vec<TypeExpr>> {
             parse_type_hole,
             parse_named_hole,
             parse_word,
+            parse_string_type_expr,
         )),
     )
     .parse(input)

@@ -1,13 +1,16 @@
 agent Bob {
 	[start] {
 		IO println x
+		IO println y
 	}
 }
 
 [main] {
 	IO println "Main started"
+	x = 45
 	bob = spawn Bob {
-		x = 23
+		x = x
+		y = 101
 	}
 	bob start
 }

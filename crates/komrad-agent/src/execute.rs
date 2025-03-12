@@ -1,11 +1,11 @@
+use crate::closure::Closure;
 use crate::scope::Scope;
 use async_trait::async_trait;
 use komrad_ast::prelude::{
-    BinaryExpr, BinaryOp, Block, CallExpr, Channel, Expr, Message, RuntimeError, Statement,
+    BinaryExpr, BinaryOp, Block, CallExpr, Channel, Expr, Message, RuntimeError, Statement, ToExpr,
     ToSexpr, Typed, Value,
 };
 use tracing::{error, info};
-
 // TODO
 // pub enum ExecutionResult<T, E> {
 //     Skip,
@@ -100,17 +100,30 @@ impl Execute for Expr {
 
     async fn execute(&self, scope: &mut Self::Context) -> Self::Output {
         match self {
-            Expr::Value(value) => value.clone(),
+            Expr::Value(val) => val.clone(),
+
             Expr::Variable(name) => {
                 if let Some(value) = scope.get(name).await {
                     value.clone()
                 } else {
+                    // If not found, produce Word("x") or so
                     Value::Word(name.clone())
                 }
             }
+
             Expr::Binary(b) => b.execute(scope).await,
             Expr::Call(call) => call.execute(scope).await,
-            Expr::Block(block) => Value::Block(block.clone()),
+
+            Expr::Block(block) => {
+                // 1) closure transform
+                let closed_expr = self.closure(scope).await;
+                if let Expr::Block(new_block) = closed_expr {
+                    // 2) Now actually run those statements
+                    Value::Block(new_block)
+                } else {
+                    unreachable!("Expected a block after closure transform")
+                }
+            }
         }
     }
 }

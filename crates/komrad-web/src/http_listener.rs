@@ -3,8 +3,9 @@ use komrad_agent::scope::Scope;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, Value};
 use std::sync::Arc;
+use tokio::select;
 use tokio::sync::Mutex;
-use tracing::warn;
+use tracing::{info, warn};
 
 pub struct HttpListener {
     _name: String,
@@ -73,6 +74,45 @@ impl AgentLifecycle for HttpListener {
 impl AgentBehavior for HttpListener {
     async fn handle_message(&self, _msg: Message) -> bool {
         true
+    }
+
+    async fn actor_loop(self: Arc<Self>, _chan: Channel) {
+        {
+            let scope = self.clone().get_scope().await;
+            let mut scope = scope.lock().await;
+            self.clone().init(&mut scope).await;
+        }
+        //
+        // while self.is_running() {
+        //     match Self::recv(&self).await {
+        //         Ok(msg) => {
+        //             if !Self::handle_message(&self, msg).await {
+        //                 break;
+        //             }
+        //         }
+        //         Err(_) => break,
+        //     }
+        // }
+        loop {
+            select! {
+                maybe_msg = Self::recv(&self) => {
+                    match maybe_msg {
+                        Ok(msg) => {
+                            if !self.handle_message(msg).await {
+                                break;
+                            }
+                        }
+                        Err(_) => break,
+                    }
+                }
+                _ = tokio::time::sleep(tokio::time::Duration::from_secs(1)) => {
+                    info!("HTTP server is running");
+                }
+                else => {
+                    break;
+                }
+            }
+        }
     }
 }
 

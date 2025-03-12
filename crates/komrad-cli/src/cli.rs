@@ -109,6 +109,12 @@ pub async fn main() {
                         info!("Waiting for 100 ms...");
                         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                     }
+                    if args.wait {
+                        info!("Waiting for ctrl+c...");
+                        tokio::signal::ctrl_c()
+                            .await
+                            .expect("Failed to wait for ctrl+c");
+                    }
                 }
                 Err(err) => {
                     info!("Failed to parse file: {}", err);

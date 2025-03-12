@@ -1,13 +1,14 @@
 use crate::dynamic_agent::DynamicAgent;
+use komrad_agent::scope::Scope;
 use komrad_agent::{AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
-use komrad_web::{HttpListener, HttpListenerFactory};
+use komrad_web::HttpListenerFactory;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tracing::{debug, info};
 
-enum RegistryFactory {
+pub enum RegistryFactory {
     FromBlock(Block),
     FromFactory(Arc<dyn AgentFactory>),
 }
@@ -45,6 +46,11 @@ impl RegistryAgent {
 
 #[async_trait::async_trait]
 impl AgentLifecycle for RegistryAgent {
+    async fn get_scope(&self) -> Arc<Mutex<Scope>> {
+        // We don't have a specific scope for this agent, but we can return a new one.
+        Arc::new(Mutex::new(Scope::new()))
+    }
+
     async fn stop(&self) {
         let mut running = self.running.lock().await;
         *running = false;

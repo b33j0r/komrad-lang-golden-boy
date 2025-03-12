@@ -2,7 +2,7 @@ use crate::ast::Block;
 use crate::channel::Channel;
 use crate::error::RuntimeError;
 use crate::number::Number;
-use crate::prelude::{EmbeddedBlock, TypeExpr, literal};
+use crate::prelude::{literal, EmbeddedBlock, TypeExpr};
 use crate::value_type::ValueType;
 use std::fmt::Display;
 use std::hash::Hash;
@@ -187,10 +187,10 @@ impl Display for Value {
             Value::Empty => write!(f, "Empty"),
             Value::Error(e) => write!(f, "Error: {}", e),
             Value::Channel(c) => write!(f, "Channel: {}", c.uuid()),
-            Value::Boolean(b) => write!(f, "Boolean: {}", b),
-            Value::Word(w) => write!(f, "Word: {}", w),
-            Value::String(s) => write!(f, "String: {}", s),
-            Value::Number(n) => write!(f, "Number: {}", n),
+            Value::Boolean(b) => write!(f, "{}", b),
+            Value::Word(w) => write!(f, "{}", w),
+            Value::String(s) => write!(f, "{}", s),
+            Value::Number(n) => write!(f, "{}", n),
             Value::List(l) => write!(f, "List: {:?}", l),
             Value::Block(b) => write!(f, "Block: {:?}", b),
             Value::Bytes(b) => write!(f, "Bytes: {:?}", b),

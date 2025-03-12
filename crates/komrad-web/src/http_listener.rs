@@ -1,13 +1,14 @@
 use async_trait::async_trait;
+use komrad_agent::scope::Scope;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
-use komrad_ast::prelude::{Channel, ChannelListener, Message};
+use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, Value};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::warn;
 
 pub struct HttpListener {
-    name: String,
-    address: String,
-    port: u16,
+    _name: String,
+    scope: Arc<Mutex<Scope>>,
     running: Mutex<bool>,
     channel: Channel,
     listener: Mutex<ChannelListener>,
@@ -17,9 +18,8 @@ impl HttpListener {
     pub fn new(name: &str) -> Self {
         let (chan, listener) = Channel::new(32);
         HttpListener {
-            name: name.to_string(),
-            address: "0.0.0.0".to_string(),
-            port: 8080,
+            _name: name.to_string(),
+            scope: Arc::new(Mutex::new(Scope::new())),
             running: Mutex::new(true),
             channel: chan,
             listener: Mutex::new(listener),
@@ -29,8 +29,20 @@ impl HttpListener {
 
 #[async_trait]
 impl AgentLifecycle for HttpListener {
-    async fn init(self: Arc<Self>) {
-        println!("HTTP server started at {}:{}", self.address, self.port);
+    async fn init(self: Arc<Self>, scope: &mut Scope) {
+        let address = scope
+            .get("address")
+            .await
+            .unwrap_or(Value::String("localhost".to_string()));
+        let port = scope
+            .get("port")
+            .await
+            .unwrap_or(Value::Number(Number::UInt(3033)));
+        warn!("HTTP server started at http://{}:{}", address, port);
+    }
+
+    async fn get_scope(&self) -> Arc<Mutex<Scope>> {
+        self.scope.clone()
     }
 
     async fn stop(&self) {
@@ -38,7 +50,7 @@ impl AgentLifecycle for HttpListener {
         *running = false;
         // Here you would also stop the HTTP server
         // For example, if using hyper, you would call server.shutdown().await
-        println!("HTTP server stopped");
+        warn!("HTTP server stopped");
     }
 
     fn is_running(&self) -> bool {
@@ -59,7 +71,7 @@ impl AgentLifecycle for HttpListener {
 
 #[async_trait]
 impl AgentBehavior for HttpListener {
-    async fn handle_message(&self, msg: Message) -> bool {
+    async fn handle_message(&self, _msg: Message) -> bool {
         true
     }
 }

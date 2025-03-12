@@ -1,3 +1,4 @@
+use crate::scope::Scope;
 use async_trait::async_trait;
 use komrad_ast::prelude::{Channel, ChannelListener, Message, RuntimeError};
 use std::sync::Arc;
@@ -6,9 +7,8 @@ use tokio::sync::Mutex;
 /// Core trait: requires only the minimal methods.
 #[async_trait]
 pub trait AgentLifecycle: Send + Sync + 'static {
-    async fn init(self: Arc<Self>) {
-        // Default: do nothing
-    }
+    async fn init(self: Arc<Self>, _scope: &mut Scope) {}
+    async fn get_scope(&self) -> Arc<Mutex<Scope>>;
     async fn stop(&self);
     fn is_running(&self) -> bool;
     fn channel(&self) -> &Channel;
@@ -26,7 +26,11 @@ pub trait AgentBehavior: AgentLifecycle {
     }
 
     async fn actor_loop(self: Arc<Self>, _chan: Channel) {
-        self.clone().init().await;
+        {
+            let scope = self.clone().get_scope().await;
+            let mut scope = scope.lock().await;
+            self.clone().init(&mut scope).await;
+        }
         while self.is_running() {
             match Self::recv(&self).await {
                 Ok(msg) => {

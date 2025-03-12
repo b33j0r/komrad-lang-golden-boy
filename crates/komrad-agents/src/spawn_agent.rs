@@ -1,4 +1,5 @@
 use crate::registry_agent::RegistryAgent;
+use komrad_agent::scope::Scope;
 use komrad_agent::{AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
 use std::sync::Arc;
@@ -49,6 +50,11 @@ impl AgentBehavior for SpawnAgent {
 
 #[async_trait::async_trait]
 impl AgentLifecycle for SpawnAgent {
+    async fn get_scope(&self) -> Arc<Mutex<Scope>> {
+        // We don't have a specific scope for this agent, but we can return a new one.
+        Arc::new(Mutex::new(Scope::new()))
+    }
+
     async fn stop(&self) {
         let mut running = self.running.lock().await;
         *running = false;

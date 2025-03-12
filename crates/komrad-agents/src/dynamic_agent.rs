@@ -78,6 +78,10 @@ impl DynamicAgent {
 
 #[async_trait::async_trait]
 impl AgentLifecycle for DynamicAgent {
+    async fn get_scope(&self) -> Arc<Mutex<Scope>> {
+        self.scope.clone()
+    }
+
     async fn stop(&self) {
         let mut running = self.running.lock().await;
         *running = false;

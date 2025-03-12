@@ -1,7 +1,7 @@
 use figlet_rs::FIGfont;
 use owo_colors::OwoColorize;
 use palette::{LinSrgb, Mix};
-use tracing::{debug, warn};
+use tracing::warn;
 
 const BANNER_TEXT: &str = "komrad";
 const FONT_NAME: &str = "ANSI Shadow";

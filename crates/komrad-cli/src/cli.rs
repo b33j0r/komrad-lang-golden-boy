@@ -1,7 +1,6 @@
-use crate::banner;
 use crate::banner::banner;
 use clap::{Parser, Subcommand};
-use komrad_ast::prelude::{CallExpr, Expr, Message, Statement, Value};
+use komrad_ast::prelude::{Message, Value};
 use komrad_ast::sexpr::ToSexpr;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;

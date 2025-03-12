@@ -1,4 +1,9 @@
-agent Response {
+agent HttpListener {
+	[simulate http] {
+		Io println "simulate http"
+		delegate http me GET "/"
+	}
+
 	[write _html] {
 		Io println "HTTP/1.1"
 		Io println html
@@ -23,7 +28,11 @@ agent Server {
 }
 
 [main] {
-	server = spawn Server {}
-	response = spawn Response {}
-	server http response GET "/"
+	server = spawn Server
+	listener = spawn HttpListener {
+		host = "0.0.0.0"
+		port = 9898
+		delegate = server
+	}
+	listener simulate http
 }

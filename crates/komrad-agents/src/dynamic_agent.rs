@@ -31,6 +31,9 @@ impl DynamicAgent {
 
         let mut scope = Scope::new();
         let (_default_agents, default_channels) = crate::default_agents::DefaultAgents::new();
+        scope
+            .set("me".to_string(), Value::Channel(channel.clone()))
+            .await;
         for (name, channel) in default_channels.get_channels() {
             debug!(
                 "DynamicAgent: adding default channel {} -> {:?}",

@@ -73,6 +73,14 @@ impl Scope {
         }
         handlers
     }
+
+    pub async fn iter(&self) -> impl Iterator<Item = (String, Value)> {
+        let guard = self.bindings.read().await;
+        let items: Vec<(String, Value)> =
+            guard.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+
+        items.into_iter()
+    }
 }
 
 impl Default for Scope {

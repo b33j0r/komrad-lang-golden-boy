@@ -17,6 +17,6 @@ tracing-subscriber.workspace = true
 thiserror.workspace = true
 
 [features]
-default = ["warp"]
+default = ["warp", "templates"]
 templates = ["dep:tera"]
 warp = ["dep:warp"]

@@ -1,0 +1,21 @@
+agent Server {
+	[http GET "/"] {
+		templates = spawn Tera
+		rendered = templates render "banner.html" {
+		  title = "Komrad"
+		}
+		rendered
+	}
+}
+
+[main] {
+
+	server = spawn Server {
+		templates = tera
+	}
+	listener = spawn HttpListener {
+		host = "0.0.0.0"
+		port = 9898
+		delegate = server
+	}
+}

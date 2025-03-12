@@ -1,16 +1,5 @@
-//agent HttpListener {
-//	[simulate http] {
-//		Io println "simulate http"
-//		delegate http me GET "/"
-//	}
-//
-//	[write _html] {
-//		Io println "HTTP/1.1"
-//		Io println html
-//	}
-//}
-
 agent Server {
+	templates: String = "./templates"
 	[http GET "/"] {
 		Io println "GET /"
 		html = ```html

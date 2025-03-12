@@ -40,10 +40,10 @@ use komrad_ast::prelude::{
 mod tests {
     use super::*;
     use komrad_agent::AgentBehavior;
-    use komrad_agents::agent_agent::AgentAgent;
-    use komrad_agents::registry_agent::RegistryAgent;
-    use komrad_agents::spawn_agent::SpawnAgent;
-    use tokio::time::{Duration, sleep};
+    use komrad_agents::prelude::AgentAgent;
+    use komrad_agents::prelude::RegistryAgent;
+    use komrad_agents::prelude::SpawnAgent;
+    use tokio::time::{sleep, Duration};
 
     // Test 1: Basic channel message send/receive.
     #[tokio::test]

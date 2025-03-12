@@ -1,6 +1,15 @@
-pub mod agent_agent;
-pub mod default_agents;
+mod agent_agent;
+mod default_agents;
 mod dynamic_agent;
-pub mod io_agent;
-pub mod registry_agent;
-pub mod spawn_agent;
+mod io_agent;
+mod registry_agent;
+mod spawn_agent;
+
+pub mod prelude {
+    pub use crate::agent_agent::AgentAgent;
+    pub use crate::default_agents::DefaultAgents;
+    pub use crate::dynamic_agent::DynamicAgent;
+    pub use crate::io_agent::IoAgent;
+    pub use crate::registry_agent::RegistryAgent;
+    pub use crate::spawn_agent::SpawnAgent;
+}

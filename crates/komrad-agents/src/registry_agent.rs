@@ -181,7 +181,7 @@ impl AgentBehavior for RegistryAgent {
                     if reg.contains_key(&agent_name) {
                         // Create a DynamicAgent and return its channel.
                         let block = reg.get(&agent_name).unwrap();
-                        let agent = DynamicAgent::from_block(block).await;
+                        let agent = DynamicAgent::from_block(&agent_name, block).await;
                         let agent_chan = agent.clone().spawn();
                         if let Some(reply_chan) = msg.reply_to() {
                             let reply = Message::new(vec![Value::Channel(agent_chan)], None);

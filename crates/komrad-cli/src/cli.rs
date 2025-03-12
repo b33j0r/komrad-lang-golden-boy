@@ -1,8 +1,7 @@
 use crate::banner;
 use clap::{Parser, Subcommand};
-use komrad_ast::prelude::{CallExpr, Expr, Statement, Value};
+use komrad_ast::prelude::{CallExpr, Expr, Message, Statement, Value};
 use komrad_ast::sexpr::ToSexpr;
-use komrad_vm::ModuleCommand;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
 use tracing::{debug, info};
@@ -88,55 +87,77 @@ pub async fn main() {
             info!("Running file: {}", file.display());
             let source = std::fs::read_to_string(&file).expect("Failed to read file");
             match komrad_parser::parse_verbose(&source) {
+                // Ok(module_builder) => {
+                //     info!("Parsed module: {:?}", module_builder);
+                //
+                //     let system = komrad_vm::System::spawn();
+                //     let module = system.await.create_module("main").await;
+                //     let module_channel = module.get_channel();
+                //     if let Some(scope) = module.get_scope().await {
+                //         debug!("Module {} scope: {:}", module.name, scope);
+                //     } else {
+                //         info!("Failed to get module scope");
+                //     }
+                //
+                //     for statement in module_builder.statements() {
+                //         if statement.is_no_op() {
+                //             continue;
+                //         }
+                //         module
+                //             .send_command(ModuleCommand::ExecuteStatement(statement.clone()))
+                //             .await;
+                //     }
+                //
+                //     module
+                //         .send_command(ModuleCommand::ExecuteStatement(Statement::Expr(
+                //             Expr::Call(
+                //                 //
+                //                 CallExpr::new(
+                //                     Expr::Value(Value::Channel(module_channel)).into(),
+                //                     vec![Expr::Value(Value::Word("main".to_string())).into()],
+                //                 ),
+                //             ),
+                //         )))
+                //         .await;
+                //
+                //     if args.wait_100 {
+                //         info!("Waiting for 100 ms...");
+                //         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                //     }
+                //
+                //     if args.wait {
+                //         info!("Waiting for ctrl+c...");
+                //         tokio::signal::ctrl_c()
+                //             .await
+                //             .expect("Failed to wait for ctrl+c");
+                //     }
+                //
+                //     if let Some(scope) = module.get_scope().await {
+                //         info!("Module scope: {:}", scope);
+                //     } else {
+                //         info!("Failed to get module scope");
+                //     }
+                // }
                 Ok(module_builder) => {
-                    info!("Parsed module: {:?}", module_builder);
+                    let block = module_builder.build_block();
+                    let system = komrad_vm::System::new();
+                    let agent = system.create_agent("main", &block).await;
 
-                    let system = komrad_vm::System::spawn();
-                    let module = system.await.create_module("main").await;
-                    let module_channel = module.get_channel();
-                    if let Some(scope) = module.get_scope().await {
-                        debug!("Module {} scope: {:}", module.name, scope);
-                    } else {
-                        info!("Failed to get module scope");
-                    }
-
-                    for statement in module_builder.statements() {
-                        if statement.is_no_op() {
-                            continue;
+                    match agent
+                        .send(Message::new(vec![Value::Word("main".into())], None))
+                        .await
+                    {
+                        Ok(_) => {
+                            info!("Main sent to agent");
                         }
-                        module
-                            .send_command(ModuleCommand::ExecuteStatement(statement.clone()))
-                            .await;
+                        Err(err) => {
+                            info!("Failed to send main message: {}", err);
+                        }
                     }
-
-                    module
-                        .send_command(ModuleCommand::ExecuteStatement(Statement::Expr(
-                            Expr::Call(
-                                //
-                                CallExpr::new(
-                                    Expr::Value(Value::Channel(module_channel)).into(),
-                                    vec![Expr::Value(Value::Word("main".to_string())).into()],
-                                ),
-                            ),
-                        )))
-                        .await;
 
                     if args.wait_100 {
                         info!("Waiting for 100 ms...");
                         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                    }
-
-                    if args.wait {
-                        info!("Waiting for ctrl+c...");
-                        tokio::signal::ctrl_c()
-                            .await
-                            .expect("Failed to wait for ctrl+c");
-                    }
-
-                    if let Some(scope) = module.get_scope().await {
-                        info!("Module scope: {:}", scope);
-                    } else {
-                        info!("Failed to get module scope");
                     }
                 }
                 Err(err) => {

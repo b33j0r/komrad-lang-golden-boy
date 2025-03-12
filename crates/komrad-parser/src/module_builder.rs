@@ -1,4 +1,4 @@
-use komrad_ast::prelude::Statement;
+use komrad_ast::prelude::{Block, Statement};
 use komrad_ast::sexpr::{Sexpr, ToSexpr};
 use std::path::PathBuf;
 
@@ -32,6 +32,10 @@ impl ModuleBuilder {
 
     pub fn statements(&self) -> &[Statement] {
         &self.statements
+    }
+
+    pub fn build_block(&self) -> Block {
+        Block::new(self.statements.clone())
     }
 }
 

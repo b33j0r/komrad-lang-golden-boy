@@ -1,37 +1,44 @@
-// or wherever your `Execute` trait is
+use komrad_agent::execute::Execute;
 use komrad_agent::scope::Scope;
 use komrad_agent::try_bind::TryBind;
 use komrad_agent::{AgentBehavior, AgentLifecycle};
-
-use komrad_agent::execute::Execute;
-use komrad_ast::prelude::{Block, Channel, ChannelListener, Handler, Message, Statement};
+use komrad_ast::prelude::{
+    Block, Channel, ChannelListener, Handler, Message, Statement, ToSexpr, Value,
+};
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
-use tracing::error;
+use tracing::debug;
 
-/// DynamicAgent is a generic agent that holds a set of handlers
-/// extracted from an AST Block, and a runtime Scope for executing them.
+/// A universal dynamic "module" or "agent" that handles an AST block.
 pub struct DynamicAgent {
-    scope: Arc<Mutex<Scope>>,
+    name: String,             // Possibly store a name for debugging
+    scope: Arc<Mutex<Scope>>, // All variables and data
     handlers: Arc<RwLock<Vec<Handler>>>,
     channel: Channel,
-    channel_listener: Arc<Mutex<ChannelListener>>,
+    listener: Arc<Mutex<ChannelListener>>,
     running: Arc<Mutex<bool>>,
 }
 
 impl DynamicAgent {
-    /// Construct a DynamicAgent from a pre-parsed AST Block.
-    /// We scan the block for Handler(...) statements, store them,
-    /// and keep the rest of the statements in the scope if needed.
-    pub async fn from_block(block: &Block) -> Arc<Self> {
+    /// Construct from an AST Block, collecting any Handler statements
+    /// and optionally executing others in the scope.
+    pub async fn from_block(name: &str, block: &Block) -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
 
         let mut scope = Scope::new();
+        let (_default_agents, default_channels) = crate::default_agents::DefaultAgents::new();
+        for (name, channel) in default_channels.get_channels() {
+            debug!(
+                "DynamicAgent: adding default channel {} -> {:?}",
+                name, channel
+            );
+            scope
+                .set(name.clone(), Value::Channel(channel.clone()))
+                .await;
+        }
         let mut collected_handlers = Vec::new();
 
-        // We interpret the block to gather all Handler statements, plus
-        // optionally run any "immediate" statements. For simplicity, let's
-        // just store the Handler statements.
+        // Build the scope by executing statements (and/or collecting handlers)
         for stmt in block.statements() {
             match stmt {
                 Statement::Handler(h) => {
@@ -44,10 +51,11 @@ impl DynamicAgent {
         }
 
         Arc::new(Self {
+            name: name.to_string(),
             scope: Arc::new(Mutex::new(scope)),
             handlers: Arc::new(RwLock::new(collected_handlers)),
             channel,
-            channel_listener: Arc::new(Mutex::new(listener)),
+            listener: Arc::new(Mutex::new(listener)),
             running: Arc::new(Mutex::new(true)),
         })
     }
@@ -62,8 +70,8 @@ impl AgentLifecycle for DynamicAgent {
 
     fn is_running(&self) -> bool {
         match self.running.try_lock() {
-            Ok(lock) => *lock,
-            Err(_) => true,
+            Ok(b) => *b,
+            Err(_) => true, // if we can’t lock, assume running
         }
     }
 
@@ -72,35 +80,32 @@ impl AgentLifecycle for DynamicAgent {
     }
 
     fn listener(&self) -> &Mutex<ChannelListener> {
-        &self.channel_listener
+        &self.listener
     }
 }
 
 #[async_trait::async_trait]
 impl AgentBehavior for DynamicAgent {
     async fn handle_message(&self, msg: Message) -> bool {
-        // 1) Clone the list of handlers so we can iterate without locking each time
-        let all_handlers = { self.handlers.read().await.clone() };
+        debug!("😎 {} handling {:}", self.name, msg.to_sexpr().format(0));
 
-        // 2) For each handler, try to pattern-match the incoming message
-        for handler in all_handlers {
-            let pattern = handler.pattern();
-            // We'll need a reference to the "base" scope
-            let mut base_scope = self.scope.lock().await.clone();
+        // Copy out the handlers once, to avoid repeated locking
+        let local_handlers = self.handlers.read().await.clone();
 
-            if let Some(mut bound_scope) = pattern.try_bind(msg.clone(), &mut base_scope).await {
-                // 3) If it matches, run the handler’s block in that bound scope
-                //    (merging in any global definitions if needed)
-                let block = handler.block();
-                let result = block.execute(&mut bound_scope).await;
+        // Lock the scope
+        let mut base_scope = self.scope.lock().await.clone();
 
-                error!("DynamicAgent: handler result: {:?}", result);
-
-                return true;
+        // Pattern match against each handler
+        for h in &local_handlers {
+            if let Some(mut bound) = h.pattern().try_bind(msg.clone(), &mut base_scope).await {
+                let block = h.block();
+                let result = block.execute(&mut bound).await;
+                debug!("DynamicAgent {} -> handler result: {:?}", self.name, result);
+                return true; // handled
             }
         }
 
-        // If no handler matched, do nothing special.
+        // No match -> do nothing
         true
     }
 }

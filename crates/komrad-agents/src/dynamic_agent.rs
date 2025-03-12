@@ -22,14 +22,9 @@ pub struct DynamicAgent {
 impl DynamicAgent {
     /// Construct from an AST Block, collecting any Handler statements
     /// and optionally executing others in the scope.
-    pub async fn from_block(
-        name: &str,
-        block: &Block,
-        initial_scope_block: Option<Block>,
-    ) -> Arc<Self> {
+    pub async fn from_block(name: &str, block: &Block, scope: Scope) -> Arc<Self> {
+        let mut scope = scope.clone();
         let (channel, listener) = Channel::new(32);
-
-        let mut scope = Scope::new();
         let (_default_agents, default_channels) = crate::default_agents::DefaultAgents::new();
         scope
             .set("me".to_string(), Value::Channel(channel.clone()))
@@ -44,16 +39,11 @@ impl DynamicAgent {
                 .await;
         }
 
-        // If there is an initial scope block, execute it
-        if let Some(initial_scope_block) = initial_scope_block {
-            for stmt in initial_scope_block.statements() {
-                let _ = stmt.execute(&mut scope).await;
-            }
-        }
-
         let mut collected_handlers = Vec::new();
 
-        // Build the scope by executing statements (and/or collecting handlers)
+        // We already have scope from any initial scope block, but now we need to
+        // extend this with the scope from the agent's definition block.
+        // This is also where HANDLERS are collected:
         for stmt in block.statements() {
             match stmt {
                 Statement::Handler(h) => {

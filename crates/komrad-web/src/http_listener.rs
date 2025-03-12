@@ -1,11 +1,13 @@
 use async_trait::async_trait;
+use komrad_agent::execute::Execute;
 use komrad_agent::scope::Scope;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
-use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, Value};
+use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, Number, Value};
 use std::sync::Arc;
 use tokio::select;
 use tokio::sync::Mutex;
 use tracing::{error, info, warn};
+use warp::Filter;
 
 pub struct HttpListener {
     _name: String,
@@ -16,11 +18,11 @@ pub struct HttpListener {
 }
 
 impl HttpListener {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, initial_scope: Scope) -> Self {
         let (chan, listener) = Channel::new(32);
         HttpListener {
             _name: name.to_string(),
-            scope: Arc::new(Mutex::new(Scope::new())),
+            scope: Arc::new(Mutex::new(initial_scope)),
             running: Mutex::new(true),
             channel: chan,
             listener: Mutex::new(listener),
@@ -31,16 +33,17 @@ impl HttpListener {
 #[async_trait]
 impl AgentLifecycle for HttpListener {
     async fn init(self: Arc<Self>, scope: &mut Scope) {
-        println!("Scope: {}", scope.to_string());
+        warn!("Initializing HTTP server");
         let address = scope
-            .get("address")
+            .get("host")
             .await
             .unwrap_or(Value::String("localhost".to_string()));
         let port = scope
             .get("port")
             .await
             .unwrap_or(Value::Number(Number::UInt(3033)));
-        warn!("HTTP server started at http://{}:{}", address, port);
+        let delegate = scope.get("delegate").await.unwrap_or(Value::Empty);
+        self.start_server(address, port, delegate).await;
     }
 
     async fn get_scope(&self) -> Arc<Mutex<Scope>> {
@@ -93,9 +96,6 @@ impl AgentBehavior for HttpListener {
                         Err(_) => break,
                     }
                 }
-                _ = tokio::time::sleep(tokio::time::Duration::from_secs(5)) => {
-                    info!("HTTP server is running");
-                }
                 else => {
                     break;
                 }
@@ -110,10 +110,54 @@ impl AgentBehavior for HttpListener {
 
 impl Agent for HttpListener {}
 
+impl HttpListener {
+    async fn start_server(&self, address: Value, port: Value, delegate: Value) {
+        let delegate = if let Value::Channel(chan) = delegate {
+            info!("Using delegate channel: {:?}", chan);
+            chan
+        } else {
+            error!("Invalid delegate value: {:?}", delegate);
+            warn!("Requests will go to a dead-letter channel");
+            Channel::new(32).0
+        };
+        let address = if let Value::String(addr) = address {
+            addr
+        } else {
+            "localhost".to_string()
+        };
+
+        let port = if let Value::Number(Number::UInt(p)) = port {
+            p
+        } else {
+            3033
+        };
+
+        let delegate = delegate; // You can process the 'delegate' value if needed
+
+        // Define a simple Warp filter
+        let route = warp::any().map(|| warp::reply::html("Hello, World!"));
+
+        // Combine the address and port
+        let socket_addr = format!("{}:{}", address, port);
+        info!("Starting HTTP server at {}", socket_addr);
+        let socket_addr = socket_addr.parse::<std::net::SocketAddr>();
+
+        match socket_addr {
+            Ok(addr) => {
+                // Start the Warp server
+                tokio::spawn(async move { warp::serve(route).run(addr).await });
+            }
+            Err(e) => {
+                error!("Invalid address or port: {:?}", e);
+            }
+        }
+    }
+}
+
 pub struct HttpListenerFactory;
 
 impl AgentFactory for HttpListenerFactory {
-    fn create_agent(&self, name: &str) -> Arc<dyn Agent> {
-        Arc::new(HttpListener::new(name))
+    fn create_agent(&self, name: &str, initial_scope: Scope) -> Arc<dyn Agent> {
+        Arc::new(HttpListener::new(name, initial_scope))
     }
 }

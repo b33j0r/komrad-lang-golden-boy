@@ -1,4 +1,5 @@
 use crate::dynamic_agent::DynamicAgent;
+use komrad_agent::execute::Execute;
 use komrad_agent::scope::Scope;
 use komrad_agent::{AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
@@ -210,19 +211,25 @@ impl AgentBehavior for RegistryAgent {
 
                     let reg = self.registry.read().await;
                     if reg.contains_key(&agent_name) {
+                        // Create the initial scope by executing the initial scope block
+                        let initial_scope_block = if let Some(block) = initial_scope_block {
+                            block
+                        } else {
+                            Block::new(vec![])
+                        };
+                        let mut initial_scope = Scope::new();
+                        initial_scope_block.execute(&mut initial_scope).await;
+
                         // Invoke the correct factory method
                         let agent_chan = match reg.get(&agent_name).unwrap() {
                             RegistryFactory::FromBlock(block) => {
-                                let agent = DynamicAgent::from_block(
-                                    &agent_name,
-                                    block,
-                                    initial_scope_block,
-                                )
-                                .await;
+                                let agent =
+                                    DynamicAgent::from_block(&agent_name, block, initial_scope)
+                                        .await;
                                 agent.clone().spawn()
                             }
                             RegistryFactory::FromFactory(factory) => {
-                                let agent = factory.create_agent(&agent_name);
+                                let agent = factory.create_agent(&agent_name, initial_scope);
                                 agent.clone().spawn()
                             }
                         };

@@ -1,4 +1,5 @@
 use dashmap::DashMap;
+use komrad_agent::scope::Scope;
 use komrad_agent::AgentBehavior;
 use komrad_agents::prelude::DynamicAgent;
 use komrad_ast::prelude::{Block, Channel};
@@ -17,7 +18,7 @@ impl System {
     }
 
     pub async fn create_agent(&self, name: &str, block: &Block) -> Channel {
-        let agent = DynamicAgent::from_block(name, block, None).await;
+        let agent = DynamicAgent::from_block(name, block, Scope::new()).await;
         let chan = agent.clone().spawn();
         self.agents.insert(name.into(), agent);
         chan

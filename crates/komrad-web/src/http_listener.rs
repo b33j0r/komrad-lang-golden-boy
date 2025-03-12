@@ -27,7 +27,7 @@ pub trait HttpListenerServer {
     /// Build a route that just returns "Hello, World!"
     fn build_route(
         delegate: Option<Channel>,
-    ) -> impl Filter<Extract = (String,), Error = warp::Rejection> + Clone;
+    ) -> impl Filter<Extract = (warp::reply::Html<String>,), Error = warp::Rejection> + Clone;
 }
 
 impl HttpListener {
@@ -80,8 +80,7 @@ impl HttpListenerServer for HttpListener {
     // Minimal route returning "Hello, World!" — no `&self` usage
     fn build_route(
         delegate: Option<Channel>,
-    ) -> impl Filter<Extract = (String,), Error = warp::Rejection> + Clone {
-        // Always use `and_then` to unify filter types in both arms
+    ) -> impl Filter<Extract = (warp::reply::Html<String>,), Error = warp::Rejection> + Clone {
         warp::any().and_then(move || {
             let delegate = delegate.clone();
             async move {
@@ -102,7 +101,7 @@ impl HttpListenerServer for HttpListener {
                     );
                     if let Err(e) = delegate.send(message).await {
                         error!("Failed to send message to delegate: {:?}", e);
-                        return Ok::<_, warp::Rejection>("Error".to_string());
+                        return Ok::<_, warp::Rejection>(warp::reply::html("Error".to_string()));
                     }
                     let response = reply_rx.recv().await;
                     let response_html = match response {
@@ -126,10 +125,12 @@ impl HttpListenerServer for HttpListener {
                         }
                     };
 
-                    Ok::<_, warp::Rejection>(response_html)
+                    Ok::<_, warp::Rejection>(warp::reply::html(response_html))
                 } else {
                     info!("Received request, no delegate channel");
-                    Ok::<_, warp::Rejection>("<html><body>No delegate</body></html>".to_string())
+                    Ok::<_, warp::Rejection>(warp::reply::html(
+                        "<html><body>No delegate</body></html>".to_string(),
+                    ))
                 }
             }
         })

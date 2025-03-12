@@ -14,15 +14,18 @@ agent Server {
 	[http GET "/"] {
 		Io println "GET /"
 		html = ```html
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Komrad</title>
-</head>
-<body>
-  Komrad
-</body>
-</html>
+			<!DOCTYPE html>
+			<html lang="en">
+			<head>
+			  <meta charset="UTF-8">
+			  <meta name="viewport" content="width=device-width, initial-scale=1">
+			  <title>komrad-lang</title>
+			</head>
+			<body>
+			  <h1>Welcome to Komrad!</h1>
+			  <p>This is a test page served by the Komrad programming language.</p>
+			</body>
+			</html>
 	  ```
 	  html
   }

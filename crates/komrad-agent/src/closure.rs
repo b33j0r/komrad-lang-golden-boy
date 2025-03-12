@@ -69,7 +69,7 @@ impl Closure for Expr {
         match self {
             // When we see a variable, try to look it up in the closure environment.
             Expr::Variable(name) => {
-                if let Some(val) = context.get(name).await {
+                if let Some(val) = context.get(name) {
                     Expr::Value(val)
                 } else {
                     self.clone()

@@ -1,14 +1,13 @@
+use dashmap::DashMap;
 use komrad_ast::prelude::{Handler, Value};
-use std::collections::HashMap;
 use std::fmt::{Debug, Display};
-use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
 #[derive(Clone)]
 pub struct Scope {
     parent: Option<Box<Scope>>,
-    bindings: Arc<RwLock<HashMap<String, Value>>>,
+    bindings: Arc<DashMap<String, Value>>,
     handlers: Arc<RwLock<Vec<Arc<Handler>>>>,
     dirty: bool,
 }
@@ -17,7 +16,7 @@ impl Scope {
     pub fn new() -> Self {
         Scope {
             parent: None,
-            bindings: Arc::new(RwLock::new(HashMap::new())),
+            bindings: Arc::new(DashMap::new()),
             handlers: Arc::new(RwLock::new(Vec::new())),
             dirty: false,
         }
@@ -26,7 +25,7 @@ impl Scope {
     pub fn with_parent(parent: Scope) -> Self {
         Scope {
             parent: Some(Box::new(parent)),
-            bindings: Arc::new(RwLock::new(HashMap::new())),
+            bindings: Arc::new(DashMap::new()),
             handlers: Arc::new(RwLock::new(Vec::new())),
             dirty: false,
         }
@@ -36,25 +35,18 @@ impl Scope {
         self.dirty
     }
 
-    pub fn get<'a>(
-        &'a self,
-        name: &'a str,
-    ) -> Pin<Box<dyn std::future::Future<Output = Option<Value>> + Send + 'a>> {
-        Box::pin(async move {
-            let bindings = self.bindings.read().await;
-            if let Some(value) = bindings.get(name) {
-                return Some(value.clone());
-            }
-            if let Some(parent) = &self.parent {
-                return parent.get(name).await;
-            }
-            None
-        })
+    pub fn get(&self, name: &str) -> Option<Value> {
+        if let Some(value) = self.bindings.get(name) {
+            return Some(value.clone());
+        }
+        if let Some(parent) = &self.parent {
+            return parent.get(name);
+        }
+        None
     }
 
     pub async fn set(&mut self, name: String, value: Value) {
-        let mut bindings = self.bindings.write().await;
-        bindings.insert(name, value);
+        self.bindings.insert(name, value);
         self.dirty = true;
     }
 
@@ -74,12 +66,11 @@ impl Scope {
         handlers
     }
 
-    pub async fn iter(&self) -> impl Iterator<Item = (String, Value)> {
-        let guard = self.bindings.read().await;
-        let items: Vec<(String, Value)> =
-            guard.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
-
-        items.into_iter()
+    pub fn iter(&self) -> impl Iterator<Item = (String, Value)> {
+        self.bindings.iter().map(|entry| {
+            let (key, value) = entry.pair();
+            (key.clone(), value.clone())
+        })
     }
 }
 
@@ -99,35 +90,13 @@ impl Debug for Scope {
     }
 }
 
-impl Scope {
-    // Add this method to your Scope implementation
-    pub fn debug_str<'a>(
-        &'a self,
-    ) -> Pin<Box<dyn std::future::Future<Output = String> + Send + 'a>> {
-        Box::pin(async move {
-            let mut result = String::new();
-
-            // Access the bindings safely in an async context
-            let bindings = self.bindings.read().await;
-            for (name, value) in bindings.iter() {
-                result.push_str(&format!("{}: {} = {}\n", name, value.get_type(), value));
-            }
-
-            // Access parent if it exists
-            if let Some(parent) = &self.parent {
-                let parent_str = parent.debug_str().await;
-                result.push_str(&format!("Parent: {}", parent_str));
-            }
-
-            result
-        })
-    }
-}
-
 impl Display for Scope {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let debug_str = futures::executor::block_on(self.debug_str());
-        write!(f, "\n{}", debug_str.trim())
+        f.debug_struct("Scope")
+            .field("parent", &self.parent)
+            .field("bindings", &self.bindings)
+            .field("dirty", &self.dirty)
+            .finish()
     }
 }
 
@@ -145,10 +114,7 @@ mod tests {
         scope
             .set("y".to_string(), Value::Number(Number::Float(2.0)))
             .await;
-        assert_eq!(
-            scope.get("x").await,
-            Some(Value::Number(Number::Float(1.0))),
-        );
+        assert_eq!(scope.get("x"), Some(Value::Number(Number::Float(1.0))),);
     }
 
     #[tokio::test]
@@ -164,11 +130,11 @@ mod tests {
             .await;
 
         assert_eq!(
-            child_scope.get("x").await,
+            child_scope.get("x"),
             Some(Value::Number(Number::Float(1.0))),
         );
         assert_eq!(
-            child_scope.get("y").await,
+            child_scope.get("y"),
             Some(Value::Number(Number::Float(2.0))),
         );
     }

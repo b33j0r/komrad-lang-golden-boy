@@ -977,6 +977,7 @@ name = "komrad-agent"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "dashmap",
  "futures",
  "komrad-ast",
  "tokio",

@@ -146,13 +146,11 @@ impl AgentLifecycle for HttpListener {
 
         let address = scope
             .get("host")
-            .await
             .unwrap_or(Value::String("127.0.0.1".to_string()));
         let port = scope
             .get("port")
-            .await
             .unwrap_or(Value::Number(Number::UInt(3033)));
-        let delegate = scope.get("delegate").await.unwrap_or(Value::Empty);
+        let delegate = scope.get("delegate").unwrap_or(Value::Empty);
 
         // Just start the server (non-async).
         self.start_server(address, port, delegate);

@@ -110,8 +110,8 @@ mod tests {
         assert!(bound_scope.is_some(), "Expected successful binding");
 
         let bound_scope = bound_scope.unwrap();
-        let a_val = bound_scope.get("a").await;
-        let b_val = bound_scope.get("b").await;
+        let a_val = bound_scope.get("a");
+        let b_val = bound_scope.get("b");
         assert_eq!(a_val, Some(Value::Number(Number::Int(10))));
         assert_eq!(b_val, Some(Value::Boolean(true)));
     }

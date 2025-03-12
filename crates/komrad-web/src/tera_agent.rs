@@ -42,7 +42,7 @@ impl TeraAgent {
 
         // Make context from scope
         let mut context = tera::Context::new();
-        for (name, value) in scope.iter().await {
+        for (name, value) in scope.iter() {
             context.insert(name, value.to_string().as_str());
         }
 
@@ -161,6 +161,17 @@ pub struct TeraAgentFactory {
 #[async_trait::async_trait]
 impl AgentFactory for TeraAgentFactory {
     fn create_agent(&self, name: &str, initial_scope: Scope) -> Arc<dyn Agent> {
-        TeraAgent::new(&self.base_dir, name, initial_scope)
+        // get base dir from the scope if it exists
+        let base_dir = if let Some(base_dir) = initial_scope.get("base_dir") {
+            if let Value::String(base_dir) = base_dir {
+                PathBuf::from(base_dir)
+            } else {
+                error!("base_dir is not a string");
+                self.base_dir.clone()
+            }
+        } else {
+            self.base_dir.clone()
+        };
+        TeraAgent::new(&base_dir, name, initial_scope)
     }
 }

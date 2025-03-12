@@ -103,7 +103,7 @@ impl Execute for Expr {
             Expr::Value(val) => val.clone(),
 
             Expr::Variable(name) => {
-                if let Some(value) = scope.get(name).await {
+                if let Some(value) = scope.get(name) {
                     value.clone()
                 } else {
                     // If not found, produce Word("x") or so

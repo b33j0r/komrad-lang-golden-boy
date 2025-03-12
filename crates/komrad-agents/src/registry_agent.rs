@@ -34,7 +34,7 @@ impl RegistryAgent {
         initial_registry.insert(
             "Tera".to_string(),
             RegistryFactory::FromFactory(Arc::new(TeraAgentFactory {
-                base_dir: PathBuf::from("./templates"),
+                base_dir: PathBuf::from("templates"),
             })),
         );
         let registry = RwLock::new(initial_registry);

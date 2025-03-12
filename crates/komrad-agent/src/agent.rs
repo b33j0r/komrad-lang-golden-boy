@@ -57,5 +57,5 @@ pub trait AgentBehavior: AgentLifecycle {
 pub trait Agent: AgentLifecycle + AgentBehavior {}
 
 pub trait AgentFactory: Send + Sync + 'static {
-    fn create_agent(&self, name: String) -> Arc<dyn Agent>;
+    fn create_agent(&self, name: &str) -> Arc<dyn Agent>;
 }

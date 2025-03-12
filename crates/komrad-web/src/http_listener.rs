@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub struct HttpListener {
+    name: String,
     address: String,
     port: u16,
     running: Mutex<bool>,
@@ -13,9 +14,10 @@ pub struct HttpListener {
 }
 
 impl HttpListener {
-    pub fn new() -> Self {
+    pub fn new(name: &str) -> Self {
         let (chan, listener) = Channel::new(32);
         HttpListener {
+            name: name.to_string(),
             address: "0.0.0.0".to_string(),
             port: 8080,
             running: Mutex::new(true),
@@ -67,7 +69,7 @@ impl Agent for HttpListener {}
 pub struct HttpListenerFactory;
 
 impl AgentFactory for HttpListenerFactory {
-    fn create_agent(&self, name: String) -> Arc<dyn Agent> {
-        Arc::new(HttpListener::new())
+    fn create_agent(&self, name: &str) -> Arc<dyn Agent> {
+        Arc::new(HttpListener::new(name))
     }
 }

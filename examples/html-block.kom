@@ -1,14 +1,14 @@
-agent HttpListener {
-	[simulate http] {
-		Io println "simulate http"
-		delegate http me GET "/"
-	}
-
-	[write _html] {
-		Io println "HTTP/1.1"
-		Io println html
-	}
-}
+//agent HttpListener {
+//	[simulate http] {
+//		Io println "simulate http"
+//		delegate http me GET "/"
+//	}
+//
+//	[write _html] {
+//		Io println "HTTP/1.1"
+//		Io println html
+//	}
+//}
 
 agent Server {
 	[http _response GET "/"] {

@@ -1,6 +1,7 @@
 use crate::dynamic_agent::DynamicAgent;
 use komrad_agent::{AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
+use komrad_web::{HttpListener, HttpListenerFactory};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
@@ -22,7 +23,12 @@ pub struct RegistryAgent {
 impl RegistryAgent {
     pub fn new() -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
-        let registry = RwLock::new(HashMap::new());
+        let mut initial_registry: HashMap<String, RegistryFactory> = HashMap::new();
+        initial_registry.insert(
+            "HttpListener".to_string(),
+            RegistryFactory::FromFactory(Arc::new(HttpListenerFactory)),
+        );
+        let registry = RwLock::new(initial_registry);
 
         Arc::new(Self {
             registry,
@@ -210,7 +216,7 @@ impl AgentBehavior for RegistryAgent {
                                 agent.clone().spawn()
                             }
                             RegistryFactory::FromFactory(factory) => {
-                                let agent = factory.create_agent(agent_name.clone());
+                                let agent = factory.create_agent(&agent_name);
                                 agent.clone().spawn()
                             }
                         };
@@ -263,7 +269,12 @@ mod tests {
 
         let reg_map = registry.registry.read().await;
         assert!(reg_map.contains_key("Alice"));
-        assert_eq!(reg_map.get("Alice").unwrap(), &block);
+        match reg_map.get("Alice").unwrap() {
+            RegistryFactory::FromBlock(block) => {
+                assert_eq!(block, &block);
+            }
+            _ => panic!("Expected a block, got something else"),
+        }
     }
 
     #[tokio::test]
@@ -299,7 +310,10 @@ mod tests {
         let block = Block::new(vec![Statement::NoOp]);
         {
             let mut reg_map = registry.registry.write().await;
-            reg_map.insert("Alice".to_string(), block);
+            reg_map.insert(
+                "Alice".to_string(),
+                RegistryFactory::FromBlock(block.clone()),
+            );
         }
 
         let (reply_chan, mut reply_listener) = Channel::new(10);

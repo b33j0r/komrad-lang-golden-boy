@@ -2,7 +2,7 @@ use crate::ast::Block;
 use crate::channel::Channel;
 use crate::error::RuntimeError;
 use crate::number::Number;
-use crate::prelude::{literal, EmbeddedBlock, TypeExpr};
+use crate::prelude::{EmbeddedBlock, TypeExpr, literal};
 use crate::value_type::ValueType;
 use std::fmt::Display;
 use std::hash::Hash;

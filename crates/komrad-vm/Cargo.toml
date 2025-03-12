@@ -12,6 +12,7 @@ komrad-web = { path = "../komrad-web" }
 async-trait.workspace = true
 uuid.workspace = true
 tokio.workspace = true
+tokio-util.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 dashmap.workspace = true

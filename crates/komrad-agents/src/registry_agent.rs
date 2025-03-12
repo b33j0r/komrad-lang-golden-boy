@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, info};
 
 pub enum RegistryFactory {
@@ -21,10 +22,12 @@ pub struct RegistryAgent {
     channel: Channel,
     listener: Arc<Mutex<ChannelListener>>,
     running: Arc<Mutex<bool>>,
+    local_cancellation_token: CancellationToken,
+    global_cancellation_token: CancellationToken,
 }
 
 impl RegistryAgent {
-    pub fn new() -> Arc<Self> {
+    pub fn new(global_cancellation_token: CancellationToken) -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
         let mut initial_registry: HashMap<String, RegistryFactory> = HashMap::new();
         initial_registry.insert(
@@ -44,11 +47,9 @@ impl RegistryAgent {
             channel,
             listener: Arc::new(Mutex::new(listener)),
             running: Arc::new(Mutex::new(true)),
+            local_cancellation_token: CancellationToken::new(),
+            global_cancellation_token,
         })
-    }
-
-    pub fn default() -> Arc<Self> {
-        Self::new()
     }
 }
 
@@ -64,11 +65,12 @@ impl AgentLifecycle for RegistryAgent {
         *running = false;
     }
 
-    fn is_running(&self) -> bool {
-        match self.running.try_lock() {
-            Ok(guard) => *guard,
-            Err(_) => false,
-        }
+    fn local_cancellation_token(&self) -> CancellationToken {
+        self.local_cancellation_token.clone()
+    }
+
+    fn global_cancellation_token(&self) -> CancellationToken {
+        self.global_cancellation_token.clone()
     }
 
     fn channel(&self) -> &Channel {
@@ -230,13 +232,21 @@ impl AgentBehavior for RegistryAgent {
                         // Invoke the correct factory method
                         let agent_chan = match reg.get(&agent_name).unwrap() {
                             RegistryFactory::FromBlock(block) => {
-                                let agent =
-                                    DynamicAgent::from_block(&agent_name, block, initial_scope)
-                                        .await;
+                                let agent = DynamicAgent::from_block(
+                                    &agent_name,
+                                    block,
+                                    initial_scope,
+                                    self.global_cancellation_token.clone(),
+                                )
+                                .await;
                                 agent.clone().spawn()
                             }
                             RegistryFactory::FromFactory(factory) => {
-                                let agent = factory.create_agent(&agent_name, initial_scope);
+                                let agent = factory.create_agent(
+                                    &agent_name,
+                                    initial_scope,
+                                    self.global_cancellation_token.clone(),
+                                );
                                 agent.clone().spawn()
                             }
                         };

@@ -7,6 +7,7 @@ use komrad_ast::prelude::{
 };
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
+use tokio_util::sync::CancellationToken;
 use tracing::debug;
 
 /// A universal dynamic "module" or "agent" that handles an AST block.
@@ -16,16 +17,23 @@ pub struct DynamicAgent {
     handlers: Arc<RwLock<Vec<Handler>>>,
     channel: Channel,
     listener: Arc<Mutex<ChannelListener>>,
-    running: Arc<Mutex<bool>>,
+    local_cancellation_token: CancellationToken,
+    global_cancellation_token: CancellationToken,
 }
 
 impl DynamicAgent {
     /// Construct from an AST Block, collecting any Handler statements
     /// and optionally executing others in the scope.
-    pub async fn from_block(name: &str, block: &Block, scope: Scope) -> Arc<Self> {
+    pub async fn from_block(
+        name: &str,
+        block: &Block,
+        scope: Scope,
+        global_cancellation_token: CancellationToken,
+    ) -> Arc<Self> {
         let mut scope = scope.clone();
         let (channel, listener) = Channel::new(32);
-        let (_default_agents, default_channels) = crate::default_agents::DefaultAgents::new();
+        let (_default_agents, default_channels) =
+            crate::default_agents::DefaultAgents::new(global_cancellation_token.clone());
         scope
             .set("me".to_string(), Value::Channel(channel.clone()))
             .await;
@@ -61,7 +69,8 @@ impl DynamicAgent {
             handlers: Arc::new(RwLock::new(collected_handlers)),
             channel,
             listener: Arc::new(Mutex::new(listener)),
-            running: Arc::new(Mutex::new(true)),
+            local_cancellation_token: CancellationToken::new(),
+            global_cancellation_token,
         })
     }
 }
@@ -72,16 +81,12 @@ impl AgentLifecycle for DynamicAgent {
         self.scope.clone()
     }
 
-    async fn stop(&self) {
-        let mut running = self.running.lock().await;
-        *running = false;
+    fn local_cancellation_token(&self) -> CancellationToken {
+        self.local_cancellation_token.clone()
     }
 
-    fn is_running(&self) -> bool {
-        match self.running.try_lock() {
-            Ok(b) => *b,
-            Err(_) => true, // if we can’t lock, assume running
-        }
+    fn global_cancellation_token(&self) -> CancellationToken {
+        self.global_cancellation_token.clone()
     }
 
     fn channel(&self) -> &Channel {

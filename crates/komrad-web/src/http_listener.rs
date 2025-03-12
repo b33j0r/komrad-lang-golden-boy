@@ -5,6 +5,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::select;
 use tokio::sync::Mutex;
+use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 use warp::Filter;
 
@@ -15,6 +16,8 @@ pub struct HttpListener {
     running: Mutex<bool>,
     channel: Channel,
     listener: Mutex<ChannelListener>,
+    local_cancellation_token: CancellationToken,
+    global_cancellation_token: CancellationToken,
 }
 
 /// This trait holds the minimal server logic needed:
@@ -32,7 +35,11 @@ pub trait HttpListenerServer {
 
 impl HttpListener {
     /// Constructor. Accepts `initial_scope` if you want variables (like port, host).
-    pub fn new(name: &str, initial_scope: Scope) -> Self {
+    pub fn new(
+        name: &str,
+        initial_scope: Scope,
+        global_cancellation_token: CancellationToken,
+    ) -> Self {
         let (chan, lsn) = Channel::new(32);
         Self {
             _name: name.to_string(),
@@ -40,6 +47,8 @@ impl HttpListener {
             running: Mutex::new(true),
             channel: chan,
             listener: Mutex::new(lsn),
+            local_cancellation_token: CancellationToken::new(),
+            global_cancellation_token,
         }
     }
 }
@@ -161,15 +170,12 @@ impl AgentLifecycle for HttpListener {
         self.scope.clone()
     }
 
-    /// Called if you want to stop the server gracefully.
-    async fn stop(&self) {
-        let mut running = self.running.lock().await;
-        *running = false;
-        warn!("HttpListener stopping (TODO: graceful Warp shutdown).");
+    fn local_cancellation_token(&self) -> CancellationToken {
+        self.local_cancellation_token.clone()
     }
 
-    fn is_running(&self) -> bool {
-        self.running.try_lock().map(|g| *g).unwrap_or(false)
+    fn global_cancellation_token(&self) -> CancellationToken {
+        self.global_cancellation_token.clone()
     }
 
     fn channel(&self) -> &Channel {
@@ -183,40 +189,6 @@ impl AgentLifecycle for HttpListener {
 
 #[async_trait::async_trait]
 impl AgentBehavior for HttpListener {
-    /// The main loop. Runs after `init()` completes.
-    async fn actor_loop(self: Arc<Self>, _chan: Channel) {
-        {
-            let scope = self.get_scope().await;
-            let mut scope = scope.lock().await;
-            self.clone().init(&mut scope).await;
-            info!("HttpListener: Warp server started in background.");
-        }
-
-        // Just loop until `stop()` is called or an error occurs.
-        loop {
-            select! {
-                maybe_msg = Self::recv(&self) => {
-                    match maybe_msg {
-                        Ok(msg) => {
-                            if !self.handle_message(msg).await {
-                                break;
-                            }
-                        }
-                        Err(_) => break,
-                    }
-                }
-                else => {
-                    break;
-                }
-            }
-            if !self.is_running() {
-                break;
-            }
-        }
-
-        warn!("HttpListener main loop exited.");
-    }
-
     /// If you want special commands like "[shutdown]" => self.stop(), handle them here.
     async fn handle_message(&self, _msg: Message) -> bool {
         true
@@ -230,7 +202,16 @@ impl Agent for HttpListener {}
 pub struct HttpListenerFactory;
 
 impl AgentFactory for HttpListenerFactory {
-    fn create_agent(&self, name: &str, initial_scope: Scope) -> Arc<dyn Agent> {
-        Arc::new(HttpListener::new(name, initial_scope))
+    fn create_agent(
+        &self,
+        name: &str,
+        initial_scope: Scope,
+        global_cancellation_token: CancellationToken,
+    ) -> Arc<dyn Agent> {
+        Arc::new(HttpListener::new(
+            name,
+            initial_scope,
+            global_cancellation_token,
+        ))
     }
 }

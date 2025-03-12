@@ -2,15 +2,31 @@ use crate::scope::Scope;
 use async_trait::async_trait;
 use komrad_ast::prelude::{Channel, ChannelListener, Message, RuntimeError};
 use std::sync::Arc;
+use tokio::select;
 use tokio::sync::Mutex;
+use tokio_util::sync::CancellationToken;
+use tracing::warn;
 
 /// Core trait: requires only the minimal methods.
 #[async_trait]
 pub trait AgentLifecycle: Send + Sync + 'static {
     async fn init(self: Arc<Self>, _scope: &mut Scope) {}
     async fn get_scope(&self) -> Arc<Mutex<Scope>>;
-    async fn stop(&self);
-    fn is_running(&self) -> bool;
+
+    // we still need this for when the agent is dropped.
+    // maybe it has a global cancellation token AND
+    // a local cancellation token.
+    async fn stop(&self) {
+        warn!("Agent stopped");
+        self.local_cancellation_token().cancel();
+    }
+
+    /// Returns a global cancellation token for this agent to select! on.
+    fn global_cancellation_token(&self) -> CancellationToken;
+
+    /// Returns a local cancellation token for this agent to select! on.
+    fn local_cancellation_token(&self) -> CancellationToken;
+
     fn channel(&self) -> &Channel;
     fn listener(&self) -> &Mutex<ChannelListener>;
 }
@@ -31,14 +47,27 @@ pub trait AgentBehavior: AgentLifecycle {
             let mut scope = scope.lock().await;
             self.clone().init(&mut scope).await;
         }
-        while self.is_running() {
-            match Self::recv(&self).await {
-                Ok(msg) => {
-                    if !Self::handle_message(&self, msg).await {
-                        break;
+
+        let global_cancel = self.global_cancellation_token();
+        let local_cancel = self.local_cancellation_token();
+
+        loop {
+            let recv_on_channel = self.recv();
+            select! {
+                msg = recv_on_channel => match msg {
+                    Ok(msg) => {
+                        if !Self::handle_message(&self, msg).await {
+                            break;
+                        }
                     }
+                    Err(_) => break,
+                },
+                _ = global_cancel.cancelled() => {
+                    self.stop().await;
                 }
-                Err(_) => break,
+                _ = local_cancel.cancelled() => {
+                    break;
+                }
             }
         }
     }
@@ -61,5 +90,10 @@ pub trait AgentBehavior: AgentLifecycle {
 pub trait Agent: AgentLifecycle + AgentBehavior {}
 
 pub trait AgentFactory: Send + Sync + 'static {
-    fn create_agent(&self, name: &str, initial_scope: Scope) -> Arc<dyn Agent>;
+    fn create_agent(
+        &self,
+        name: &str,
+        initial_scope: Scope,
+        global_cancellation_token: CancellationToken,
+    ) -> Arc<dyn Agent>;
 }

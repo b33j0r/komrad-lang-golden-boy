@@ -4,6 +4,7 @@ use komrad_agent::{AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tokio_util::sync::CancellationToken;
 use tracing::debug;
 
 /// AgentAgent is a syntax proxy bound as `agent`.
@@ -16,17 +17,22 @@ pub struct AgentAgent {
     registry: Arc<RegistryAgent>,
     channel: Channel,
     listener: Arc<Mutex<ChannelListener>>,
-    running: Arc<Mutex<bool>>,
+    local_cancellation_token: CancellationToken,
+    global_cancellation_token: CancellationToken,
 }
 
 impl AgentAgent {
-    pub fn new(registry: Arc<RegistryAgent>) -> Arc<Self> {
+    pub fn new(
+        registry: Arc<RegistryAgent>,
+        global_cancellation_token: CancellationToken,
+    ) -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
         Arc::new(Self {
             registry,
             channel,
             listener: Arc::new(Mutex::new(listener)),
-            running: Arc::new(Mutex::new(true)),
+            local_cancellation_token: CancellationToken::new(),
+            global_cancellation_token,
         })
     }
 }
@@ -37,16 +43,13 @@ impl AgentLifecycle for AgentAgent {
         // We don't have a specific scope for this agent, but we can return a new one.
         Arc::new(Mutex::new(Scope::new()))
     }
-    async fn stop(&self) {
-        let mut running = self.running.lock().await;
-        *running = false;
+
+    fn local_cancellation_token(&self) -> CancellationToken {
+        self.local_cancellation_token.clone()
     }
 
-    fn is_running(&self) -> bool {
-        match self.running.try_lock() {
-            Ok(guard) => *guard,
-            Err(_) => false,
-        }
+    fn global_cancellation_token(&self) -> CancellationToken {
+        self.global_cancellation_token.clone()
     }
 
     fn channel(&self) -> &Channel {

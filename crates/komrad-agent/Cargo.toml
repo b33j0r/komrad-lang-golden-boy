@@ -9,5 +9,6 @@ komrad-ast = { path = "../komrad-ast" }
 async-trait.workspace = true
 dashmap.workspace = true
 tokio.workspace = true
+tokio-util.workspace = true
 tracing.workspace = true
 futures.workspace = true

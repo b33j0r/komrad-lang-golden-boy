@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tera::Tera;
 use tokio::sync::Mutex;
+use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
 /// Interface to the Tera templating engine.
@@ -16,10 +17,17 @@ pub struct TeraAgent {
     channel: Channel, // We'll store our sending handle
     listener: Arc<Mutex<ChannelListener>>,
     scope: Arc<Mutex<Scope>>,
+    local_cancellation_token: CancellationToken,
+    global_cancellation_token: CancellationToken,
 }
 
 impl TeraAgent {
-    pub fn new(base_dir: &Path, name: &str, scope: Scope) -> Arc<Self> {
+    pub fn new(
+        base_dir: &Path,
+        name: &str,
+        scope: Scope,
+        global_cancellation_token: CancellationToken,
+    ) -> Arc<Self> {
         let (chan, listener) = Channel::new(32);
         Arc::new(Self {
             _name: name.to_string(),
@@ -28,6 +36,8 @@ impl TeraAgent {
             channel: chan,
             listener: Arc::new(Mutex::new(listener)),
             scope: Arc::new(Mutex::new(scope)),
+            local_cancellation_token: CancellationToken::new(),
+            global_cancellation_token,
         })
     }
 
@@ -136,11 +146,12 @@ impl AgentLifecycle for TeraAgent {
         }
     }
 
-    fn is_running(&self) -> bool {
-        match self.running.try_lock() {
-            Ok(running) => *running,
-            Err(_) => false,
-        }
+    fn local_cancellation_token(&self) -> CancellationToken {
+        self.local_cancellation_token.clone()
+    }
+
+    fn global_cancellation_token(&self) -> CancellationToken {
+        self.global_cancellation_token.clone()
     }
 
     fn channel(&self) -> &Channel {
@@ -160,7 +171,12 @@ pub struct TeraAgentFactory {
 
 #[async_trait::async_trait]
 impl AgentFactory for TeraAgentFactory {
-    fn create_agent(&self, name: &str, initial_scope: Scope) -> Arc<dyn Agent> {
+    fn create_agent(
+        &self,
+        name: &str,
+        initial_scope: Scope,
+        global_cancellation_token: CancellationToken,
+    ) -> Arc<dyn Agent> {
         // get base dir from the scope if it exists
         let base_dir = if let Some(base_dir) = initial_scope.get("base_dir") {
             if let Value::String(base_dir) = base_dir {
@@ -172,6 +188,6 @@ impl AgentFactory for TeraAgentFactory {
         } else {
             self.base_dir.clone()
         };
-        TeraAgent::new(&base_dir, name, initial_scope)
+        TeraAgent::new(&base_dir, name, initial_scope, global_cancellation_token)
     }
 }

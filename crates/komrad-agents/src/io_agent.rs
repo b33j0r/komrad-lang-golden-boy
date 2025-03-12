@@ -4,6 +4,7 @@ use komrad_ast::prelude::Message;
 use komrad_ast::prelude::{Channel, ChannelListener, Value};
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
+use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
 
 /// **IoInterface** trait for pluggable Io.
@@ -31,26 +32,26 @@ impl IoInterface for StdIo {
 /// - It uses a `ChannelListener` in the background to handle messages.
 pub struct IoAgent {
     io_interface: Arc<RwLock<dyn IoInterface>>,
-    running: Arc<Mutex<bool>>,
     channel: Channel, // We'll store our sending handle
     listener: Arc<Mutex<ChannelListener>>,
+    local_cancellation_token: CancellationToken,
+    global_cancellation_token: CancellationToken,
 }
 
 impl IoAgent {
     /// Creates a new Io Agent with the given IoInterface.
-    pub fn new(io_interface: Arc<RwLock<dyn IoInterface>>) -> Arc<Self> {
+    pub fn new(
+        io_interface: Arc<RwLock<dyn IoInterface>>,
+        global_cancellation_token: CancellationToken,
+    ) -> Arc<Self> {
         let (chan, listener) = Channel::new(32);
         Arc::new(Self {
             io_interface,
-            running: Arc::new(Mutex::new(true)),
             channel: chan,
             listener: Arc::new(Mutex::new(listener)),
+            local_cancellation_token: CancellationToken::new(),
+            global_cancellation_token,
         })
-    }
-
-    /// Convenience constructor that uses `StdIo`.
-    pub fn default() -> Arc<Self> {
-        Self::new(Arc::new(RwLock::new(StdIo)))
     }
 
     /// **Helper**: actual logic for "println" commands.
@@ -89,17 +90,12 @@ impl AgentLifecycle for IoAgent {
         Arc::new(Mutex::new(Scope::new()))
     }
 
-    async fn stop(&self) {
-        let mut running = self.running.lock().await;
-        *running = false;
-        info!("Io agent stopped.");
+    fn local_cancellation_token(&self) -> CancellationToken {
+        self.local_cancellation_token.clone()
     }
 
-    fn is_running(&self) -> bool {
-        match self.running.try_lock() {
-            Ok(guard) => *guard,
-            Err(_) => false,
-        }
+    fn global_cancellation_token(&self) -> CancellationToken {
+        self.global_cancellation_token.clone()
     }
 
     fn channel(&self) -> &Channel {

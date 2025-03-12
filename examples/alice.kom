@@ -4,16 +4,12 @@ agent Alice {
 	bob: Bob
 
 	[start] {
-		IO println "Alice started"
+		IO println "Alice messaged bob!"
 		bob tell
 	}
 }
 
 agent Bob {
-	[start] {
-		IO println "Bob started"
-	}
-
 	[tell _msg] {
 		IO println "Bob received message"
 	}
@@ -22,8 +18,6 @@ agent Bob {
 [main] {
 	IO println "Main started"
 	bob = spawn Bob
-	bob start
-
 	alice = spawn Alice {
 		bob = bob
 	}

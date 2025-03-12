@@ -64,6 +64,13 @@ impl ChannelListener {
         self.receiver.recv().await.ok_or(RuntimeError::ReceiveError)
     }
 
+    pub fn recv_blocking(&mut self) -> Result<Message, RuntimeError> {
+        match self.receiver.try_recv() {
+            Ok(msg) => Ok(msg),
+            Err(_) => Err(RuntimeError::ReceiveError),
+        }
+    }
+
     pub fn uuid(&self) -> Uuid {
         self.uuid
     }

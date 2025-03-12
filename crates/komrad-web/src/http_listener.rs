@@ -1,14 +1,14 @@
-use async_trait::async_trait;
-use komrad_agent::execute::Execute;
 use komrad_agent::scope::Scope;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
-use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, Number, Value};
+use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, Value};
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::select;
 use tokio::sync::Mutex;
 use tracing::{error, info, warn};
 use warp::Filter;
 
+/// A simple agent that can start a Warp server.
 pub struct HttpListener {
     _name: String,
     scope: Arc<Mutex<Scope>>,
@@ -17,52 +17,153 @@ pub struct HttpListener {
     listener: Mutex<ChannelListener>,
 }
 
+/// This trait holds the minimal server logic needed:
+/// - Start the Warp server
+/// - Build a route / filter
+pub trait HttpListenerServer {
+    /// Launch the server by spawning a Warp task.
+    fn start_server(&self, address: Value, port: Value, delegate: Value);
+
+    /// Build a route that just returns "Hello, World!"
+    fn build_route(
+        delegate: Option<Channel>,
+    ) -> impl Filter<Extract = (String,), Error = warp::Rejection> + Clone;
+}
+
 impl HttpListener {
+    /// Constructor. Accepts `initial_scope` if you want variables (like port, host).
     pub fn new(name: &str, initial_scope: Scope) -> Self {
-        let (chan, listener) = Channel::new(32);
-        HttpListener {
+        let (chan, lsn) = Channel::new(32);
+        Self {
             _name: name.to_string(),
             scope: Arc::new(Mutex::new(initial_scope)),
             running: Mutex::new(true),
             channel: chan,
-            listener: Mutex::new(listener),
+            listener: Mutex::new(lsn),
         }
     }
 }
 
-#[async_trait]
+impl HttpListenerServer for HttpListener {
+    fn start_server(&self, address: Value, port: Value, delegate: Value) {
+        // Convert Komrad `Value` to concrete address, port
+        let addr_str = match address {
+            Value::String(s) => s,
+            _ => "127.0.0.1".to_string(),
+        };
+        let port_num = match port {
+            Value::Number(Number::UInt(n)) => n,
+            _ => 3033,
+        };
+
+        // Get delegate channel if provided
+        let delegate_channel = match delegate {
+            Value::Channel(c) => Some(c),
+            _ => None,
+        };
+
+        let socket_str = format!("{}:{}", addr_str, port_num);
+        let Ok(socket_addr) = socket_str.parse::<SocketAddr>() else {
+            error!("Invalid socket address: {socket_str}");
+            return;
+        };
+
+        warn!("Starting Warp HTTP server at {socket_addr}");
+
+        let route = Self::build_route(delegate_channel);
+        // Spawn the Warp server in background without capturing `&self`
+        tokio::spawn(async move {
+            warp::serve(route).run(socket_addr).await;
+        });
+    }
+
+    // Minimal route returning "Hello, World!" — no `&self` usage
+    fn build_route(
+        delegate: Option<Channel>,
+    ) -> impl Filter<Extract = (String,), Error = warp::Rejection> + Clone {
+        // Always use `and_then` to unify filter types in both arms
+        warp::any().and_then(move || {
+            let delegate = delegate.clone();
+            async move {
+                if let Some(delegate) = &delegate {
+                    info!(
+                        "Received request, sending to delegate channel {}",
+                        delegate.uuid()
+                    );
+
+                    let (reply_to, mut reply_rx) = Channel::new(1);
+                    let message = Message::new(
+                        vec![
+                            Value::Word("http".to_string()),
+                            Value::Word("GET".to_string()),
+                            Value::String("/".to_string()),
+                        ],
+                        Some(reply_to),
+                    );
+                    if let Err(e) = delegate.send(message).await {
+                        error!("Failed to send message to delegate: {:?}", e);
+                        return Ok::<_, warp::Rejection>("Error".to_string());
+                    }
+                    let response = reply_rx.recv().await;
+                    let response_html = match response {
+                        Ok(msg) => {
+                            if let Some(Value::String(s)) = msg.terms().get(0) {
+                                s.clone()
+                            } else {
+                                "<html><body>Invalid response</body></html>".to_string()
+                            }
+                        }
+                        Err(e) => {
+                            error!("Failed to receive message from delegate: {:?}", e);
+                            "<html><body>Error</body></html>".to_string()
+                        }
+                    };
+
+                    Ok::<_, warp::Rejection>(response_html)
+                } else {
+                    info!("Received request, no delegate channel");
+                    Ok::<_, warp::Rejection>("<html><body>No delegate</body></html>".to_string())
+                }
+            }
+        })
+    }
+}
+
+#[async_trait::async_trait]
 impl AgentLifecycle for HttpListener {
+    /// Called once before the main loop. We read `host`, `port`, and `delegate` from the scope,
+    /// then start our Warp server.
     async fn init(self: Arc<Self>, scope: &mut Scope) {
-        warn!("Initializing HTTP server");
+        warn!("HttpListener init: reading scope & starting server...");
+
         let address = scope
             .get("host")
             .await
-            .unwrap_or(Value::String("localhost".to_string()));
+            .unwrap_or(Value::String("127.0.0.1".to_string()));
         let port = scope
             .get("port")
             .await
             .unwrap_or(Value::Number(Number::UInt(3033)));
         let delegate = scope.get("delegate").await.unwrap_or(Value::Empty);
-        self.start_server(address, port, delegate).await;
+
+        // Just start the server (non-async).
+        self.start_server(address, port, delegate);
     }
 
+    /// Return the scope so Komrad can store or retrieve variables later.
     async fn get_scope(&self) -> Arc<Mutex<Scope>> {
         self.scope.clone()
     }
 
+    /// Called if you want to stop the server gracefully.
     async fn stop(&self) {
         let mut running = self.running.lock().await;
         *running = false;
-        // Here you would also stop the HTTP server
-        // For example, if using hyper, you would call server.shutdown().await
-        warn!("HTTP server stopped");
+        warn!("HttpListener stopping (TODO: graceful Warp shutdown).");
     }
 
     fn is_running(&self) -> bool {
-        match self.running.try_lock() {
-            Ok(guard) => *guard,
-            Err(_) => false,
-        }
+        self.running.try_lock().map(|g| *g).unwrap_or(false)
     }
 
     fn channel(&self) -> &Channel {
@@ -74,16 +175,18 @@ impl AgentLifecycle for HttpListener {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl AgentBehavior for HttpListener {
+    /// The main loop. Runs after `init()` completes.
     async fn actor_loop(self: Arc<Self>, _chan: Channel) {
         {
-            let scope = self.clone().get_scope().await;
+            let scope = self.get_scope().await;
             let mut scope = scope.lock().await;
-            error!("HTTP scope {:}", scope);
             self.clone().init(&mut scope).await;
-            error!("HTTP server started");
+            info!("HttpListener: Warp server started in background.");
         }
+
+        // Just loop until `stop()` is called or an error occurs.
         loop {
             select! {
                 maybe_msg = Self::recv(&self) => {
@@ -100,60 +203,24 @@ impl AgentBehavior for HttpListener {
                     break;
                 }
             }
+            if !self.is_running() {
+                break;
+            }
         }
+
+        warn!("HttpListener main loop exited.");
     }
 
+    /// If you want special commands like "[shutdown]" => self.stop(), handle them here.
     async fn handle_message(&self, _msg: Message) -> bool {
         true
     }
 }
 
+/// This ensures we satisfy both Lifecycle + Behavior for Komrad
 impl Agent for HttpListener {}
 
-impl HttpListener {
-    async fn start_server(&self, address: Value, port: Value, delegate: Value) {
-        let delegate = if let Value::Channel(chan) = delegate {
-            info!("Using delegate channel: {:?}", chan);
-            chan
-        } else {
-            error!("Invalid delegate value: {:?}", delegate);
-            warn!("Requests will go to a dead-letter channel");
-            Channel::new(32).0
-        };
-        let address = if let Value::String(addr) = address {
-            addr
-        } else {
-            "localhost".to_string()
-        };
-
-        let port = if let Value::Number(Number::UInt(p)) = port {
-            p
-        } else {
-            3033
-        };
-
-        let delegate = delegate; // You can process the 'delegate' value if needed
-
-        // Define a simple Warp filter
-        let route = warp::any().map(|| warp::reply::html("Hello, World!"));
-
-        // Combine the address and port
-        let socket_addr = format!("{}:{}", address, port);
-        info!("Starting HTTP server at {}", socket_addr);
-        let socket_addr = socket_addr.parse::<std::net::SocketAddr>();
-
-        match socket_addr {
-            Ok(addr) => {
-                // Start the Warp server
-                tokio::spawn(async move { warp::serve(route).run(addr).await });
-            }
-            Err(e) => {
-                error!("Invalid address or port: {:?}", e);
-            }
-        }
-    }
-}
-
+/// Factory so Komrad can create it dynamically with a scope
 pub struct HttpListenerFactory;
 
 impl AgentFactory for HttpListenerFactory {

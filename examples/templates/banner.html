@@ -4,8 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
+    <style>
+      div, span, p, a, li, ul, ol, h1, h2, h3, h4, h5, h6 {
+        font-family: sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+
+      html, body {
+        margin: 0;
+      }
+
+      html {
+        background: linear-gradient(to bottom, #f84071, #f7fc6a);
+        height: 100dvh;
+      }
+
+      body {
+        height: 100%;
+        display: flex;
+        place-content: center;
+        place-items: center;
+        flex-direction: column;
+      }
+
+      .banner {
+        padding: 0.5em;
+        background: #5a57de;
+        border-radius: 1em;
+
+        p {
+          padding: 1em;
+          border-radius: 0.75em;
+          background: #fff;
+        }
+      }
+    </style>
 </head>
 <body>
-<div class="banner">Komrad with Tera</div>
+<div class="banner">
+    <p>Komrad with Tera</p>
+</div>
 </body>
 </html>

@@ -107,10 +107,17 @@ impl HttpListenerServer for HttpListener {
                     let response = reply_rx.recv().await;
                     let response_html = match response {
                         Ok(msg) => {
-                            if let Some(Value::String(s)) = msg.terms().get(0) {
-                                s.clone()
-                            } else {
-                                "<html><body>Invalid response</body></html>".to_string()
+                            let response_body = msg.terms().get(0).unwrap_or(&Value::Empty);
+                            match response_body {
+                                Value::String(s) => s.clone(),
+                                Value::EmbeddedBlock(embedded_block) => {
+                                    embedded_block.text().to_string()
+                                }
+                                Value::Empty => "<html><body>No response</body></html>".to_string(),
+                                _ => {
+                                    error!("Unexpected response type: {:?}", response_body);
+                                    "<html><body>Error</body></html>".to_string()
+                                }
                             }
                         }
                         Err(e) => {

@@ -34,27 +34,17 @@ impl IoInterface for StdIo {
 pub struct IoAgent {
     io_interface: Arc<RwLock<dyn IoInterface>>,
     channel: Channel, // We'll store our sending handle
-    listener: Arc<Mutex<ChannelListener>>,
-    control_tx: mpsc::Sender<AgentControl>,
-    control_rx: Mutex<mpsc::Receiver<AgentControl>>,
-    state_tx: tokio::sync::watch::Sender<AgentState>,
-    state_rx: tokio::sync::watch::Receiver<AgentState>,
+    listener: Arc<ChannelListener>,
 }
 
 impl IoAgent {
     /// Creates a new Io Agent with the given IoInterface.
     pub fn new(io_interface: Arc<RwLock<dyn IoInterface>>) -> Arc<Self> {
         let (chan, listener) = Channel::new(32);
-        let (control_tx, control_rx) = mpsc::channel(8);
-        let (state_tx, state_rx) = tokio::sync::watch::channel(AgentState::Started);
         Arc::new(Self {
             io_interface,
             channel: chan,
-            listener: Arc::new(Mutex::new(listener)),
-            control_tx,
-            control_rx: Mutex::new(control_rx),
-            state_tx,
-            state_rx,
+            listener: Arc::new(listener),
         })
     }
 
@@ -98,23 +88,8 @@ impl AgentLifecycle for IoAgent {
         &self.channel
     }
 
-    fn listener(&self) -> &Mutex<ChannelListener> {
-        &self.listener
-    }
-
-    async fn recv_control(&self) -> Result<AgentControl, komrad_ast::prelude::RuntimeError> {
-        let mut rx = self.control_rx.lock().await;
-        rx.recv()
-            .await
-            .ok_or(komrad_ast::prelude::RuntimeError::ReceiveControlError)
-    }
-
-    async fn stop(&self) {
-        let _ = self.control_tx.send(AgentControl::Stop).await;
-    }
-
-    async fn notify_stopped(&self) {
-        let _ = self.state_tx.send(AgentState::Stopped);
+    fn listener(&self) -> Arc<ChannelListener> {
+        self.listener.clone()
     }
 }
 

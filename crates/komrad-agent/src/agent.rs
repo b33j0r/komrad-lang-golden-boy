@@ -1,12 +1,14 @@
 use crate::scope::Scope;
 use async_trait::async_trait;
-use komrad_ast::prelude::{Channel, ChannelListener, Message, RuntimeError, ToSexpr};
+use komrad_ast::prelude::{
+    Channel, ChannelListener, ControlMessage, Message, RuntimeError, ToSexpr, Value,
+};
 use std::sync::{mpsc, Arc};
 use tokio::select;
 use tokio::sync::{watch, Mutex};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-use tracing::{info, warn};
+use tracing::{debug, error, info, warn};
 
 pub enum AgentControl {
     Stop,
@@ -34,17 +36,30 @@ pub trait AgentLifecycle: Send + Sync + 'static {
     }
     async fn get_scope(&self) -> Arc<Mutex<Scope>>;
 
-    // we still need this for when the agent is dropped.
-    // maybe it has a global cancellation token AND
-    // a local cancellation token.
-    async fn stop(&self) {}
+    async fn stop(&self) {
+        self.stop_in_scope().await;
+    }
+
+    async fn stop_in_scope(&self) {
+        // send stop message to all channels in scope
+        let scope = self.get_scope().await;
+        for (_, channel) in scope.lock().await.iter() {
+            match channel {
+                Value::Channel(chan) => {
+                    debug!(
+                        "Sending ControlMessage::Stop over channel: {}",
+                        chan.to_sexpr().format(0)
+                    );
+                    let _ = chan.control(ControlMessage::Stop);
+                }
+                _ => {}
+            }
+        }
+        let _ = self.channel().control(ControlMessage::Stop);
+    }
 
     fn channel(&self) -> &Channel;
-    fn listener(&self) -> &Mutex<ChannelListener>;
-
-    async fn recv_control(&self) -> Result<AgentControl, RuntimeError>;
-
-    async fn notify_stopped(&self);
+    fn listener(&self) -> Arc<ChannelListener>;
 }
 
 /// Extension trait providing default implementations.
@@ -65,13 +80,14 @@ pub trait AgentBehavior: AgentLifecycle {
         let join_handle = {
             let scope = self.clone().get_scope().await;
             let mut scope = scope.lock().await;
+            info!("Initializing agent");
             self.clone().init(&mut scope).await
         };
 
         loop {
-            let recv_on_channel = self.recv();
+            let listener = self.listener().clone();
             select! {
-                msg = recv_on_channel => match msg {
+                msg = listener.recv() => match msg {
                     Ok(msg) => {
                         if !Self::handle_message(&self, msg).await {
                             break;
@@ -79,26 +95,28 @@ pub trait AgentBehavior: AgentLifecycle {
                     }
                     Err(_) => break,
                 },
-                _ = self.recv_control() => {
-                    info!("Received control message");
-                    if let Some(ref handle) = join_handle {
-                        info!("Stopping join handle as part of cancellation");
-                        handle.abort();
+                msg = listener.recv_control() => match msg {
+                    Ok(msg) => {
+                        match msg {
+                            ControlMessage::Stop => {
+                                info!("Received Stop message");
+                                self.stop().await;
+                                break;
+                            }
+                        }
                     }
-                    self.notify_stopped();
-                    break;
+                    Err(e) => {
+                        error!("Error receiving control message: {:?}", e);
+                        break
+                    },
                 }
             }
         }
+        error!("Agent loop exited");
     }
 
     async fn send(&self, msg: Message) -> Result<(), RuntimeError> {
         self.channel().send(msg).await
-    }
-
-    async fn recv(&self) -> Result<Message, RuntimeError> {
-        let mut listener = self.listener().lock().await;
-        listener.recv().await
     }
 
     async fn handle_message(&self, msg: Message) -> bool {

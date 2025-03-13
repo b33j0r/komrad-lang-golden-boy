@@ -17,26 +17,16 @@ use tracing::debug;
 pub struct AgentAgent {
     registry: Arc<RegistryAgent>,
     channel: Channel,
-    listener: Arc<Mutex<ChannelListener>>,
-    control_rx: Mutex<mpsc::Receiver<AgentControl>>,
-    control_tx: mpsc::Sender<AgentControl>,
-    state_tx: tokio::sync::watch::Sender<AgentState>,
-    state_rx: tokio::sync::watch::Receiver<AgentState>,
+    listener: Arc<ChannelListener>,
 }
 
 impl AgentAgent {
     pub fn new(registry: Arc<RegistryAgent>) -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
-        let (control_tx, control_rx) = tokio::sync::mpsc::channel(8);
-        let (state_tx, state_rx) = tokio::sync::watch::channel(AgentState::Started);
         Arc::new(Self {
             registry,
             channel,
-            listener: Arc::new(Mutex::new(listener)),
-            control_tx,
-            control_rx: Mutex::new(control_rx),
-            state_tx,
-            state_rx,
+            listener: Arc::new(listener),
         })
     }
 }
@@ -52,21 +42,8 @@ impl AgentLifecycle for AgentAgent {
         &self.channel
     }
 
-    fn listener(&self) -> &Mutex<ChannelListener> {
-        &self.listener
-    }
-
-    async fn recv_control(&self) -> Result<AgentControl, komrad_ast::prelude::RuntimeError> {
-        let mut control = self.control_rx.lock().await;
-        match control.recv().await {
-            Some(control) => Ok(control),
-            None => Err(komrad_ast::prelude::RuntimeError::ReceiveControlError),
-        }
-    }
-
-    async fn notify_stopped(&self) {
-        // Notify the agent that it has stopped
-        let _ = self.state_tx.send(AgentState::Stopped);
+    fn listener(&self) -> Arc<ChannelListener> {
+        self.listener.clone()
     }
 }
 

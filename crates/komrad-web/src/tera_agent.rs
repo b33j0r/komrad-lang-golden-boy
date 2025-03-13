@@ -16,31 +16,20 @@ pub struct TeraAgent {
     name: String,
     base_dir: PathBuf,
     channel: Channel, // We'll store our sending handle
-    listener: Arc<Mutex<ChannelListener>>,
+    listener: Arc<ChannelListener>,
     scope: Arc<Mutex<Scope>>,
-
-    control_tx: mpsc::Sender<AgentControl>,
-    control_rx: Mutex<mpsc::Receiver<AgentControl>>,
-    state_tx: watch::Sender<AgentState>,
-    state_rx: watch::Receiver<AgentState>,
 }
 
 impl TeraAgent {
     pub fn new(base_dir: &Path, name: &str, scope: Scope) -> Arc<Self> {
         let (chan, listener) = Channel::new(32);
-        let (control_tx, control_rx) = mpsc::channel(8);
-        let (state_tx, state_rx) = watch::channel(AgentState::Started);
         let scope = Arc::new(Mutex::new(scope));
         Arc::new(Self {
             name: name.to_string(),
             base_dir: base_dir.to_path_buf(),
             channel: chan,
-            listener: Arc::new(Mutex::new(listener)),
+            listener: Arc::new(listener),
             scope,
-            control_tx,
-            control_rx: Mutex::new(control_rx),
-            state_tx,
-            state_rx,
         })
     }
 
@@ -138,36 +127,12 @@ impl AgentLifecycle for TeraAgent {
         return self.scope.clone();
     }
 
-    async fn stop(&self) {
-        match self.control_tx.send(AgentControl::Stop).await {
-            Ok(_) => {
-                info!("Control message sent to stop agent");
-            }
-            Err(e) => {
-                error!("Failed to send control message: {:?}", e);
-            }
-        }
-    }
-
     fn channel(&self) -> &Channel {
         &self.channel
     }
 
-    fn listener(&self) -> &Mutex<ChannelListener> {
-        &self.listener
-    }
-
-    async fn recv_control(&self) -> Result<AgentControl, RuntimeError> {
-        let mut rx = self.control_rx.lock().await;
-        match rx.recv().await {
-            Some(control) => Ok(control),
-            None => Err(RuntimeError::ReceiveError),
-        }
-    }
-
-    async fn notify_stopped(&self) {
-        // Notify the agent that it has stopped
-        let _ = self.state_tx.send(AgentState::Stopped);
+    fn listener(&self) -> Arc<ChannelListener> {
+        self.listener.clone()
     }
 }
 

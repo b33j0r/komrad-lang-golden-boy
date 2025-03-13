@@ -119,4 +119,6 @@ pub enum RuntimeError {
     AgentNotFound,
     #[error("Type mismatch: {0}")]
     TypeMismatch(String),
+    #[error("Failed to send control message")]
+    SendControlError,
 }

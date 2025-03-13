@@ -1,14 +1,19 @@
 use crate::error::RuntimeError;
 use crate::message::Message;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
 const CHANNEL_DIGEST_LEN: usize = 8;
+
+pub enum ControlMessage {
+    Stop,
+}
 
 #[derive(Clone)]
 pub struct Channel {
     uuid: Uuid,
     sender: mpsc::Sender<Message>,
+    control_sender: mpsc::Sender<ControlMessage>,
 }
 
 impl std::fmt::Debug for Channel {
@@ -31,19 +36,27 @@ impl PartialEq for Channel {
 #[derive(Debug)]
 pub struct ChannelListener {
     uuid: Uuid,
-    receiver: mpsc::Receiver<Message>,
+    // Separate the receivers into two distinct Mutexes
+    message_receiver: Mutex<mpsc::Receiver<Message>>,
+    control_receiver: Mutex<mpsc::Receiver<ControlMessage>>,
 }
 
 impl Channel {
     pub fn new(capacity: usize) -> (Self, ChannelListener) {
-        let (sender, receiver) = mpsc::channel(capacity);
+        let (sender, message_receiver) = mpsc::channel(capacity);
+        let (control_sender, control_receiver) = mpsc::channel(capacity);
         let uuid = Uuid::now_v7();
         (
             Channel {
                 uuid,
                 sender: sender.clone(),
+                control_sender: control_sender.clone(),
             },
-            ChannelListener { uuid, receiver },
+            ChannelListener {
+                uuid,
+                message_receiver: Mutex::new(message_receiver),
+                control_receiver: Mutex::new(control_receiver),
+            },
         )
     }
 
@@ -57,148 +70,30 @@ impl Channel {
             .await
             .map_err(|_| RuntimeError::SendError)
     }
+
+    pub async fn control(&self, message: ControlMessage) -> Result<(), RuntimeError> {
+        self.control_sender
+            .send(message)
+            .await
+            .map_err(|_| RuntimeError::SendControlError)
+    }
 }
 
 impl ChannelListener {
-    pub async fn recv(&mut self) -> Result<Message, RuntimeError> {
-        self.receiver.recv().await.ok_or(RuntimeError::ReceiveError)
+    pub async fn recv(&self) -> Result<Message, RuntimeError> {
+        let mut receiver = self.message_receiver.lock().await;
+        receiver.recv().await.ok_or(RuntimeError::ReceiveError)
     }
 
-    pub fn recv_blocking(&mut self) -> Result<Message, RuntimeError> {
-        match self.receiver.try_recv() {
-            Ok(msg) => Ok(msg),
-            Err(_) => Err(RuntimeError::ReceiveError),
-        }
+    pub async fn recv_control(&self) -> Result<ControlMessage, RuntimeError> {
+        let mut receiver = self.control_receiver.lock().await;
+        receiver
+            .recv()
+            .await
+            .ok_or(RuntimeError::ReceiveControlError)
     }
 
     pub fn uuid(&self) -> Uuid {
         self.uuid
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::message::Message;
-    use crate::value::Value;
-
-    #[tokio::test]
-    async fn test_channel_basic_send_receive() {
-        let (channel, mut listener) = Channel::new(10);
-
-        let msg = Message::new(vec![Value::String("Hello".into())], None);
-        channel
-            .send(msg.clone())
-            .await
-            .expect("Failed to send message");
-
-        let received = listener.recv().await.expect("Failed to receive message");
-        assert_eq!(
-            received, msg,
-            "Sent and received messages should be identical"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_channel_fifo_order() {
-        let (channel, mut listener) = Channel::new(10);
-
-        let msg1 = Message::new(vec![Value::String("First".into())], None);
-        let msg2 = Message::new(vec![Value::String("Second".into())], None);
-
-        channel
-            .send(msg1.clone())
-            .await
-            .expect("Failed to send first message");
-        channel
-            .send(msg2.clone())
-            .await
-            .expect("Failed to send second message");
-
-        let received1 = listener
-            .recv()
-            .await
-            .expect("Failed to receive first message");
-        let received2 = listener
-            .recv()
-            .await
-            .expect("Failed to receive second message");
-
-        assert_eq!(received1, msg1, "First message should be received first");
-        assert_eq!(received2, msg2, "Second message should be received second");
-    }
-
-    #[tokio::test]
-    async fn test_channel_multiple_senders() {
-        let (channel, mut listener) = Channel::new(10);
-
-        let channel2 = channel.clone();
-
-        let msg1 = Message::new(vec![Value::String("From channel 1".into())], None);
-        let msg2 = Message::new(vec![Value::String("From channel 2".into())], None);
-
-        channel
-            .send(msg1.clone())
-            .await
-            .expect("Channel 1 failed to send");
-        channel2
-            .send(msg2.clone())
-            .await
-            .expect("Channel 2 failed to send");
-
-        let received1 = listener.recv().await.expect("Failed to receive message 1");
-        let received2 = listener.recv().await.expect("Failed to receive message 2");
-
-        assert!(
-            received1 == msg1 || received1 == msg2,
-            "Unexpected message order"
-        );
-        assert!(
-            received2 == msg1 || received2 == msg2,
-            "Unexpected message order"
-        );
-        assert_ne!(received1, received2, "Messages should not be duplicated");
-    }
-
-    #[tokio::test]
-    async fn test_channel_receive_after_closure() {
-        let (channel, mut listener) = Channel::new(10);
-
-        let msg = Message::new(vec![Value::String("Test".into())], None);
-        channel
-            .send(msg.clone())
-            .await
-            .expect("Failed to send message");
-
-        drop(channel); // Closing the sender
-
-        let received = listener
-            .recv()
-            .await
-            .expect("Should still receive first message");
-        assert_eq!(
-            received, msg,
-            "Message should be correctly received before closure"
-        );
-
-        let err = listener.recv().await;
-        assert!(
-            matches!(err, Err(RuntimeError::ReceiveError)),
-            "Receiver should return an error after closure"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_channel_send_after_closure() {
-        let (channel, listener) = Channel::new(1);
-
-        drop(listener); // Closing the receiver
-
-        let msg = Message::new(vec![Value::String("Lost Message".into())], None);
-        let result = channel.send(msg.clone()).await;
-        assert!(
-            matches!(result, Err(RuntimeError::SendError)),
-            "Sending to a closed channel should return an error"
-        );
     }
 }

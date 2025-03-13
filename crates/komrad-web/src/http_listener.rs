@@ -14,12 +14,7 @@ pub struct HttpListenerAgent {
     name: String,
     scope: Arc<Mutex<Scope>>,
     channel: Channel,
-    listener: Mutex<ChannelListener>,
-
-    control_tx: mpsc::Sender<AgentControl>,
-    control_rx: Mutex<mpsc::Receiver<AgentControl>>,
-    state_tx: watch::Sender<AgentState>,
-    state_rx: watch::Receiver<AgentState>,
+    listener: Arc<ChannelListener>,
 
     warp_handle: Mutex<Option<JoinHandle<()>>>,
 }
@@ -27,26 +22,21 @@ pub struct HttpListenerAgent {
 impl HttpListenerAgent {
     /// Creates a new HTTP Listener Agent.
     pub fn new(name: &str, initial_scope: Scope) -> Arc<Self> {
+        error!("Creating HttpListenerAgent");
         let (channel, listener) = Channel::new(32);
-        let (control_tx, control_rx) = mpsc::channel(8);
-        let (state_tx, state_rx) = watch::channel(AgentState::Started);
 
         Arc::new(Self {
             name: name.to_string(),
             scope: Arc::new(Mutex::new(initial_scope)),
             channel,
-            listener: Mutex::new(listener),
-            control_tx,
-            control_rx: Mutex::new(control_rx),
-            state_tx,
-            state_rx,
+            listener: Arc::new(listener),
             warp_handle: Mutex::new(None),
         })
     }
 
     /// Starts the Warp server in a background task.
     fn start_server(&self, address: Value, port: Value, delegate: Value) -> JoinHandle<()> {
-        info!("Starting Warp HTTP server");
+        error!("Starting Warp HTTP server");
         let addr_str = match address {
             Value::String(s) => s,
             _ => "127.0.0.1".to_string(),
@@ -160,24 +150,15 @@ impl AgentLifecycle for HttpListenerAgent {
                 error!("Error stopping Warp server: {:?}", e);
             }
         }
-        let _ = self.control_tx.send(AgentControl::Stop).await;
+        self.stop_in_scope().await;
     }
 
     fn channel(&self) -> &Channel {
         &self.channel
     }
 
-    fn listener(&self) -> &Mutex<ChannelListener> {
-        &self.listener
-    }
-
-    async fn recv_control(&self) -> Result<AgentControl, RuntimeError> {
-        let mut rx = self.control_rx.lock().await;
-        rx.recv().await.ok_or(RuntimeError::ReceiveControlError)
-    }
-
-    async fn notify_stopped(&self) {
-        let _ = self.state_tx.send(AgentState::Stopped);
+    fn listener(&self) -> Arc<ChannelListener> {
+        self.listener.clone()
     }
 }
 

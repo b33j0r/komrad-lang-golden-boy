@@ -21,11 +21,7 @@ pub enum RegistryFactory {
 pub struct RegistryAgent {
     pub registry: RwLock<HashMap<String, RegistryFactory>>,
     channel: Channel,
-    listener: Arc<Mutex<ChannelListener>>,
-    control_tx: tokio::sync::mpsc::Sender<AgentControl>,
-    control_rx: Mutex<tokio::sync::mpsc::Receiver<AgentControl>>,
-    state_tx: tokio::sync::watch::Sender<AgentState>,
-    state_rx: tokio::sync::watch::Receiver<AgentState>,
+    listener: Arc<ChannelListener>,
 }
 
 impl RegistryAgent {
@@ -43,17 +39,11 @@ impl RegistryAgent {
             })),
         );
         let registry = RwLock::new(initial_registry);
-        let (control_tx, control_rx) = tokio::sync::mpsc::channel(8);
-        let (state_tx, state_rx) = tokio::sync::watch::channel(AgentState::Started);
 
         Arc::new(Self {
             registry,
             channel,
-            listener: Arc::new(Mutex::new(listener)),
-            control_tx,
-            control_rx: Mutex::new(control_rx),
-            state_tx,
-            state_rx,
+            listener: Arc::new(listener),
         })
     }
 }
@@ -65,29 +55,12 @@ impl AgentLifecycle for RegistryAgent {
         Arc::new(Mutex::new(Scope::new()))
     }
 
-    async fn stop(&self) {
-        self.control_tx.send(AgentControl::Stop).await.unwrap();
-    }
-
     fn channel(&self) -> &Channel {
         &self.channel
     }
 
-    fn listener(&self) -> &Mutex<ChannelListener> {
-        &self.listener
-    }
-
-    async fn recv_control(&self) -> Result<AgentControl, komrad_ast::prelude::RuntimeError> {
-        let mut control = self.control_rx.lock().await;
-        match control.recv().await {
-            Some(control) => Ok(control),
-            None => Err(komrad_ast::prelude::RuntimeError::ReceiveControlError),
-        }
-    }
-
-    async fn notify_stopped(&self) {
-        // Notify the agent that it has stopped
-        let _ = self.state_tx.send(AgentState::Stopped);
+    fn listener(&self) -> Arc<ChannelListener> {
+        self.listener.clone()
     }
 }
 

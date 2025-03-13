@@ -11,9 +11,7 @@ agent Server {
 	}
 }
 
-
 [main] {
-
 	server = spawn Server {
 		templates = tera
 	}

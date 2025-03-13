@@ -1,6 +1,6 @@
 use dashmap::DashMap;
 use komrad_agent::scope::Scope;
-use komrad_agent::AgentBehavior;
+use komrad_agent::{AgentBehavior, AgentLifecycle};
 use komrad_agents::prelude::DynamicAgent;
 use komrad_ast::prelude::{Block, Channel};
 use std::sync::Arc;
@@ -27,7 +27,10 @@ impl System {
     }
 
     pub async fn shutdown(&self) {
-        self.shutdown_token.cancel();
+        for agent in self.agents.clone().iter() {
+            agent.value().stop().await;
+            self.agents.remove(agent.key());
+        }
     }
 }
 

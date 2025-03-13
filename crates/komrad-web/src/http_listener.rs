@@ -161,6 +161,12 @@ impl AgentLifecycle for HttpListenerAgent {
     }
 
     async fn stop(&self) {
+        if let Some(handle) = self.warp_handle.lock().await.take() {
+            info!("Stopping warp server");
+            if let Err(e) = handle.await {
+                error!("Error stopping Warp server: {:?}", e);
+            }
+        }
         let _ = self.control_tx.send(AgentControl::Stop).await;
     }
 

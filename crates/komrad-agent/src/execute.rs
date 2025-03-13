@@ -40,7 +40,15 @@ impl Execute for Block {
         let mut last_value = Value::Empty;
 
         for statement in self.statements() {
-            last_value = statement.execute(scope).await;
+            match statement {
+                Statement::NoOp | Statement::Comment(_) => {
+                    // Skip no-op and comment statements
+                    continue;
+                }
+                _ => {
+                    last_value = statement.execute(scope).await;
+                }
+            }
         }
 
         last_value

@@ -6,7 +6,7 @@ use notify::Watcher;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 #[derive(Clone, Debug, Parser)]
 #[command(name = "komrad", version, about = "Komrad CLI")]
@@ -183,11 +183,12 @@ async fn handle_run_watch(file: PathBuf) {
             }) => {
                 match event {
                     Ok(Ok(ev)) => {
-                        info!("File change detected: {:?}", ev);
+                        warn!("\n\nFile change detected: {:?}\n\n", ev);
                         // Shutdown the previously running system if any
                         if let Some(system) = active_system.take() {
                             info!("Shutting down previous system instance.");
                             system.shutdown().await;
+                            drop(system);
                         }
                         // Re-run the file and store the new system instance
                         active_system = run_file_once(&file).await;

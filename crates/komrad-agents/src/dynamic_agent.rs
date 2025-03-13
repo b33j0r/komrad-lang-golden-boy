@@ -8,7 +8,7 @@ use komrad_ast::prelude::{
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tokio_util::sync::CancellationToken;
-use tracing::debug;
+use tracing::{debug, trace};
 
 /// A universal dynamic "module" or "agent" that handles an AST block.
 pub struct DynamicAgent {
@@ -138,7 +138,7 @@ impl AgentBehavior for DynamicAgent {
                         }
                     }
                 }
-                debug!("DynamicAgent {} -> handler result: {:?}", self.name, result);
+                trace!("DynamicAgent {} -> handler result: {:?}", self.name, result);
                 return true; // handled
             }
         }

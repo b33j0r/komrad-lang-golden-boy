@@ -107,6 +107,8 @@ pub enum RuntimeError {
     SendError,
     #[error("Failed to receive message")]
     ReceiveError,
+    #[error("Failed to receive control message")]
+    ReceiveControlError,
     #[error("Failed to parse message")]
     ParseError(ParserError),
     #[error("Division by zero")]

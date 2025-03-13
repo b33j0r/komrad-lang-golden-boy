@@ -1,11 +1,12 @@
+use crate::agent_agent::AgentAgent;
 use komrad_agent::scope::Scope;
-use komrad_agent::{AgentBehavior, AgentLifecycle};
+use komrad_agent::{AgentBehavior, AgentControl, AgentLifecycle, AgentState};
 use komrad_ast::prelude::Message;
 use komrad_ast::prelude::{Channel, ChannelListener, Value};
 use std::sync::Arc;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::{mpsc, Mutex, RwLock};
 use tokio_util::sync::CancellationToken;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 /// **IoInterface** trait for pluggable Io.
 pub trait IoInterface: Send + Sync {
@@ -34,23 +35,33 @@ pub struct IoAgent {
     io_interface: Arc<RwLock<dyn IoInterface>>,
     channel: Channel, // We'll store our sending handle
     listener: Arc<Mutex<ChannelListener>>,
-    local_cancellation_token: CancellationToken,
-    global_cancellation_token: CancellationToken,
+    control_tx: mpsc::Sender<AgentControl>,
+    control_rx: Mutex<mpsc::Receiver<AgentControl>>,
+    state_tx: tokio::sync::watch::Sender<AgentState>,
+    state_rx: tokio::sync::watch::Receiver<AgentState>,
+}
+
+impl Drop for IoAgent {
+    fn drop(&mut self) {
+        debug!("IoAgent is being dropped");
+        self.control_tx.send(AgentControl::Stop);
+    }
 }
 
 impl IoAgent {
     /// Creates a new Io Agent with the given IoInterface.
-    pub fn new(
-        io_interface: Arc<RwLock<dyn IoInterface>>,
-        global_cancellation_token: CancellationToken,
-    ) -> Arc<Self> {
+    pub fn new(io_interface: Arc<RwLock<dyn IoInterface>>) -> Arc<Self> {
         let (chan, listener) = Channel::new(32);
+        let (control_tx, control_rx) = mpsc::channel(8);
+        let (state_tx, state_rx) = tokio::sync::watch::channel(AgentState::Started);
         Arc::new(Self {
             io_interface,
             channel: chan,
             listener: Arc::new(Mutex::new(listener)),
-            local_cancellation_token: CancellationToken::new(),
-            global_cancellation_token,
+            control_tx,
+            control_rx: Mutex::new(control_rx),
+            state_tx,
+            state_rx,
         })
     }
 
@@ -90,20 +101,27 @@ impl AgentLifecycle for IoAgent {
         Arc::new(Mutex::new(Scope::new()))
     }
 
-    fn local_cancellation_token(&self) -> CancellationToken {
-        self.local_cancellation_token.clone()
-    }
-
-    fn global_cancellation_token(&self) -> CancellationToken {
-        self.global_cancellation_token.clone()
-    }
-
     fn channel(&self) -> &Channel {
         &self.channel
     }
 
     fn listener(&self) -> &Mutex<ChannelListener> {
         &self.listener
+    }
+
+    async fn recv_control(&self) -> Result<AgentControl, komrad_ast::prelude::RuntimeError> {
+        let mut rx = self.control_rx.lock().await;
+        rx.recv()
+            .await
+            .ok_or(komrad_ast::prelude::RuntimeError::ReceiveControlError)
+    }
+
+    async fn stop(&self) {
+        let _ = self.control_tx.send(AgentControl::Stop).await;
+    }
+
+    async fn notify_stopped(&self) {
+        let _ = self.state_tx.send(AgentState::Stopped);
     }
 }
 

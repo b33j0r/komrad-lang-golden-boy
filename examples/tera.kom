@@ -1,5 +1,6 @@
 agent Server {
 	[http GET "/"] {
+		Io println "GET /"
 		templates = spawn Tera {
 			base_dir = "./examples/templates"
 		}

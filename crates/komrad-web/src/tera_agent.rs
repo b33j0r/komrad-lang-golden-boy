@@ -1,43 +1,53 @@
+use crate::HttpListenerAgent;
+use async_trait::async_trait;
 use komrad_agent::execute::Execute;
 use komrad_agent::scope::Scope;
-use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
-use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
+use komrad_agent::{Agent, AgentBehavior, AgentControl, AgentFactory, AgentLifecycle, AgentState};
+use komrad_ast::prelude::{Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tera::Tera;
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, watch, Mutex};
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 /// Interface to the Tera templating engine.
 pub struct TeraAgent {
-    _name: String,
+    name: String,
     base_dir: PathBuf,
-    running: Arc<Mutex<bool>>,
     channel: Channel, // We'll store our sending handle
     listener: Arc<Mutex<ChannelListener>>,
     scope: Arc<Mutex<Scope>>,
-    local_cancellation_token: CancellationToken,
-    global_cancellation_token: CancellationToken,
+
+    control_tx: mpsc::Sender<AgentControl>,
+    control_rx: Mutex<mpsc::Receiver<AgentControl>>,
+    state_tx: watch::Sender<AgentState>,
+    state_rx: watch::Receiver<AgentState>,
+}
+
+impl Drop for TeraAgent {
+    fn drop(&mut self) {
+        debug!("TeraAgent {} is being dropped", self.name);
+        self.control_tx.send(AgentControl::Stop);
+    }
 }
 
 impl TeraAgent {
-    pub fn new(
-        base_dir: &Path,
-        name: &str,
-        scope: Scope,
-        global_cancellation_token: CancellationToken,
-    ) -> Arc<Self> {
+    pub fn new(base_dir: &Path, name: &str, scope: Scope) -> Arc<Self> {
         let (chan, listener) = Channel::new(32);
+        let (control_tx, control_rx) = mpsc::channel(8);
+        let (state_tx, state_rx) = watch::channel(AgentState::Started);
+        let scope = Arc::new(Mutex::new(scope));
         Arc::new(Self {
-            _name: name.to_string(),
+            name: name.to_string(),
             base_dir: base_dir.to_path_buf(),
-            running: Arc::new(Mutex::new(true)),
             channel: chan,
             listener: Arc::new(Mutex::new(listener)),
-            scope: Arc::new(Mutex::new(scope)),
-            local_cancellation_token: CancellationToken::new(),
-            global_cancellation_token,
+            scope,
+            control_tx,
+            control_rx: Mutex::new(control_rx),
+            state_tx,
+            state_rx,
         })
     }
 
@@ -65,7 +75,7 @@ impl TeraAgent {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl AgentBehavior for TeraAgent {
     async fn handle_message(&self, msg: Message) -> bool {
         match msg.first_word() {
@@ -136,22 +146,14 @@ impl AgentLifecycle for TeraAgent {
     }
 
     async fn stop(&self) {
-        match self.running.try_lock() {
-            Ok(mut running) => {
-                *running = false;
+        match self.control_tx.send(AgentControl::Stop).await {
+            Ok(_) => {
+                info!("Control message sent to stop agent");
             }
-            Err(_) => {
-                warn!("TeraAgent is already stopped");
+            Err(e) => {
+                error!("Failed to send control message: {:?}", e);
             }
         }
-    }
-
-    fn local_cancellation_token(&self) -> CancellationToken {
-        self.local_cancellation_token.clone()
-    }
-
-    fn global_cancellation_token(&self) -> CancellationToken {
-        self.global_cancellation_token.clone()
     }
 
     fn channel(&self) -> &Channel {
@@ -160,6 +162,19 @@ impl AgentLifecycle for TeraAgent {
 
     fn listener(&self) -> &Mutex<ChannelListener> {
         &self.listener
+    }
+
+    async fn recv_control(&self) -> Result<AgentControl, RuntimeError> {
+        let mut rx = self.control_rx.lock().await;
+        match rx.recv().await {
+            Some(control) => Ok(control),
+            None => Err(RuntimeError::ReceiveError),
+        }
+    }
+
+    async fn notify_stopped(&self) {
+        // Notify the agent that it has stopped
+        let _ = self.state_tx.send(AgentState::Stopped);
     }
 }
 
@@ -171,12 +186,7 @@ pub struct TeraAgentFactory {
 
 #[async_trait::async_trait]
 impl AgentFactory for TeraAgentFactory {
-    fn create_agent(
-        &self,
-        name: &str,
-        initial_scope: Scope,
-        global_cancellation_token: CancellationToken,
-    ) -> Arc<dyn Agent> {
+    fn create_agent(&self, name: &str, initial_scope: Scope) -> Arc<dyn Agent> {
         // get base dir from the scope if it exists
         let base_dir = if let Some(base_dir) = initial_scope.get("base_dir") {
             if let Value::String(base_dir) = base_dir {
@@ -188,6 +198,6 @@ impl AgentFactory for TeraAgentFactory {
         } else {
             self.base_dir.clone()
         };
-        TeraAgent::new(&base_dir, name, initial_scope, global_cancellation_token)
+        TeraAgent::new(&base_dir, name, initial_scope)
     }
 }

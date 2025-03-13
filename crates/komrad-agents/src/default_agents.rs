@@ -7,7 +7,6 @@ use komrad_agent::AgentBehavior;
 use komrad_ast::prelude::Channel;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio_util::sync::CancellationToken;
 
 pub struct DefaultAgents {
     pub io_agent: Arc<IoAgent>,
@@ -24,16 +23,11 @@ pub struct DefaultAgentChannels {
 }
 
 impl DefaultAgents {
-    pub fn new(global_cancellation_token: CancellationToken) -> (Self, DefaultAgentChannels) {
-        let io_agent = IoAgent::new(
-            Arc::new(tokio::sync::RwLock::new(StdIo)),
-            global_cancellation_token.clone(),
-        );
-        let registry_agent = RegistryAgent::new(global_cancellation_token.clone());
-        let agent_agent =
-            AgentAgent::new(registry_agent.clone(), global_cancellation_token.clone());
-        let spawn_agent =
-            SpawnAgent::new(registry_agent.clone(), global_cancellation_token.clone());
+    pub fn new() -> (Self, DefaultAgentChannels) {
+        let io_agent = IoAgent::new(Arc::new(tokio::sync::RwLock::new(StdIo)));
+        let registry_agent = RegistryAgent::new();
+        let agent_agent = AgentAgent::new(registry_agent.clone());
+        let spawn_agent = SpawnAgent::new(registry_agent.clone());
 
         let io_agent_channel = io_agent.clone().spawn();
         let registry_agent_channel = registry_agent.clone().spawn();

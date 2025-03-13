@@ -1,12 +1,30 @@
 use crate::scope::Scope;
 use async_trait::async_trait;
-use komrad_ast::prelude::{Channel, ChannelListener, Message, RuntimeError};
-use std::sync::Arc;
+use komrad_ast::prelude::{Channel, ChannelListener, Message, RuntimeError, ToSexpr};
+use std::sync::{mpsc, Arc};
 use tokio::select;
-use tokio::sync::Mutex;
+use tokio::sync::{watch, Mutex};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
+
+pub enum AgentControl {
+    Stop,
+}
+
+pub enum AgentState {
+    Started,
+    Stopped,
+}
+
+pub struct AgentData {
+    pub name: String,
+    pub scope: Arc<Mutex<Scope>>,
+    pub channel: Channel,
+    pub listener: Mutex<ChannelListener>,
+    pub control_rx: mpsc::Receiver<AgentControl>,
+    pub state_tx: watch::Sender<AgentState>,
+}
 
 /// Core trait: requires only the minimal methods.
 #[async_trait]
@@ -19,18 +37,14 @@ pub trait AgentLifecycle: Send + Sync + 'static {
     // we still need this for when the agent is dropped.
     // maybe it has a global cancellation token AND
     // a local cancellation token.
-    async fn stop(&self) {
-        self.local_cancellation_token().cancel();
-    }
-
-    /// Returns a global cancellation token for this agent to select! on.
-    fn global_cancellation_token(&self) -> CancellationToken;
-
-    /// Returns a local cancellation token for this agent to select! on.
-    fn local_cancellation_token(&self) -> CancellationToken;
+    async fn stop(&self) {}
 
     fn channel(&self) -> &Channel;
     fn listener(&self) -> &Mutex<ChannelListener>;
+
+    async fn recv_control(&self) -> Result<AgentControl, RuntimeError>;
+
+    async fn notify_stopped(&self);
 }
 
 /// Extension trait providing default implementations.
@@ -44,14 +58,15 @@ pub trait AgentBehavior: AgentLifecycle {
     }
 
     async fn actor_loop(self: Arc<Self>, _chan: Channel) {
+        info!(
+            "Starting actor loop for agent {}",
+            self.channel().to_sexpr().format(0)
+        );
         let join_handle = {
             let scope = self.clone().get_scope().await;
             let mut scope = scope.lock().await;
             self.clone().init(&mut scope).await
         };
-
-        let global_cancel = self.global_cancellation_token();
-        let local_cancel = self.local_cancellation_token();
 
         loop {
             let recv_on_channel = self.recv();
@@ -64,15 +79,13 @@ pub trait AgentBehavior: AgentLifecycle {
                     }
                     Err(_) => break,
                 },
-                _ = global_cancel.cancelled() => {
-                    self.local_cancellation_token().cancel();
-                    warn!("Agent stopped");
-                }
-                _ = local_cancel.cancelled() => {
+                _ = self.recv_control() => {
+                    info!("Received control message");
                     if let Some(ref handle) = join_handle {
                         info!("Stopping join handle as part of cancellation");
                         handle.abort();
                     }
+                    self.notify_stopped();
                     break;
                 }
             }
@@ -97,10 +110,5 @@ pub trait AgentBehavior: AgentLifecycle {
 pub trait Agent: AgentLifecycle + AgentBehavior {}
 
 pub trait AgentFactory: Send + Sync + 'static {
-    fn create_agent(
-        &self,
-        name: &str,
-        initial_scope: Scope,
-        global_cancellation_token: CancellationToken,
-    ) -> Arc<dyn Agent>;
+    fn create_agent(&self, name: &str, initial_scope: Scope) -> Arc<dyn Agent>;
 }

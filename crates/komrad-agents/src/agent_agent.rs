@@ -1,9 +1,10 @@
+use crate::dynamic_agent::DynamicAgent;
 use crate::registry_agent::RegistryAgent;
 use komrad_agent::scope::Scope;
-use komrad_agent::{AgentBehavior, AgentLifecycle};
+use komrad_agent::{AgentBehavior, AgentControl, AgentLifecycle, AgentState};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, Mutex};
 use tokio_util::sync::CancellationToken;
 use tracing::debug;
 
@@ -17,22 +18,32 @@ pub struct AgentAgent {
     registry: Arc<RegistryAgent>,
     channel: Channel,
     listener: Arc<Mutex<ChannelListener>>,
-    local_cancellation_token: CancellationToken,
-    global_cancellation_token: CancellationToken,
+    control_rx: Mutex<mpsc::Receiver<AgentControl>>,
+    control_tx: mpsc::Sender<AgentControl>,
+    state_tx: tokio::sync::watch::Sender<AgentState>,
+    state_rx: tokio::sync::watch::Receiver<AgentState>,
+}
+
+impl Drop for AgentAgent {
+    fn drop(&mut self) {
+        debug!("AgentAgent is being dropped");
+        self.control_tx.send(AgentControl::Stop);
+    }
 }
 
 impl AgentAgent {
-    pub fn new(
-        registry: Arc<RegistryAgent>,
-        global_cancellation_token: CancellationToken,
-    ) -> Arc<Self> {
+    pub fn new(registry: Arc<RegistryAgent>) -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
+        let (control_tx, control_rx) = tokio::sync::mpsc::channel(8);
+        let (state_tx, state_rx) = tokio::sync::watch::channel(AgentState::Started);
         Arc::new(Self {
             registry,
             channel,
             listener: Arc::new(Mutex::new(listener)),
-            local_cancellation_token: CancellationToken::new(),
-            global_cancellation_token,
+            control_tx,
+            control_rx: Mutex::new(control_rx),
+            state_tx,
+            state_rx,
         })
     }
 }
@@ -44,20 +55,25 @@ impl AgentLifecycle for AgentAgent {
         Arc::new(Mutex::new(Scope::new()))
     }
 
-    fn local_cancellation_token(&self) -> CancellationToken {
-        self.local_cancellation_token.clone()
-    }
-
-    fn global_cancellation_token(&self) -> CancellationToken {
-        self.global_cancellation_token.clone()
-    }
-
     fn channel(&self) -> &Channel {
         &self.channel
     }
 
     fn listener(&self) -> &Mutex<ChannelListener> {
         &self.listener
+    }
+
+    async fn recv_control(&self) -> Result<AgentControl, komrad_ast::prelude::RuntimeError> {
+        let mut control = self.control_rx.lock().await;
+        match control.recv().await {
+            Some(control) => Ok(control),
+            None => Err(komrad_ast::prelude::RuntimeError::ReceiveControlError),
+        }
+    }
+
+    async fn notify_stopped(&self) {
+        // Notify the agent that it has stopped
+        let _ = self.state_tx.send(AgentState::Stopped);
     }
 }
 

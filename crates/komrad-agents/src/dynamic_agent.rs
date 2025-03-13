@@ -1,7 +1,7 @@
 use komrad_agent::execute::Execute;
 use komrad_agent::scope::Scope;
 use komrad_agent::try_bind::TryBind;
-use komrad_agent::{AgentBehavior, AgentLifecycle};
+use komrad_agent::{AgentBehavior, AgentControl, AgentLifecycle, AgentState};
 use komrad_ast::prelude::{
     Block, Channel, ChannelListener, Handler, Message, Statement, ToSexpr, Value,
 };
@@ -17,23 +17,29 @@ pub struct DynamicAgent {
     handlers: Arc<RwLock<Vec<Handler>>>,
     channel: Channel,
     listener: Arc<Mutex<ChannelListener>>,
-    local_cancellation_token: CancellationToken,
-    global_cancellation_token: CancellationToken,
+    control_tx: tokio::sync::mpsc::Sender<AgentControl>,
+    control_rx: Mutex<tokio::sync::mpsc::Receiver<AgentControl>>,
+    state_tx: tokio::sync::watch::Sender<AgentState>,
+    state_rx: tokio::sync::watch::Receiver<AgentState>,
+}
+
+impl Drop for DynamicAgent {
+    fn drop(&mut self) {
+        debug!("DynamicAgent {} is being dropped", self.name);
+        self.control_tx.send(AgentControl::Stop);
+    }
 }
 
 impl DynamicAgent {
     /// Construct from an AST Block, collecting any Handler statements
     /// and optionally executing others in the scope.
-    pub async fn from_block(
-        name: &str,
-        block: &Block,
-        scope: Scope,
-        global_cancellation_token: CancellationToken,
-    ) -> Arc<Self> {
+    pub async fn from_block(name: &str, block: &Block, scope: Scope) -> Arc<Self> {
         let mut scope = scope.clone();
         let (channel, listener) = Channel::new(32);
-        let (_default_agents, default_channels) =
-            crate::default_agents::DefaultAgents::new(global_cancellation_token.clone());
+        let (_default_agents, default_channels) = crate::default_agents::DefaultAgents::new();
+        let (control_tx, control_rx) = tokio::sync::mpsc::channel(8);
+        let (state_tx, state_rx) = tokio::sync::watch::channel(AgentState::Started);
+
         scope
             .set("me".to_string(), Value::Channel(channel.clone()))
             .await;
@@ -69,8 +75,10 @@ impl DynamicAgent {
             handlers: Arc::new(RwLock::new(collected_handlers)),
             channel,
             listener: Arc::new(Mutex::new(listener)),
-            local_cancellation_token: CancellationToken::new(),
-            global_cancellation_token,
+            control_tx,
+            control_rx: Mutex::new(control_rx),
+            state_tx,
+            state_rx,
         })
     }
 }
@@ -81,20 +89,25 @@ impl AgentLifecycle for DynamicAgent {
         self.scope.clone()
     }
 
-    fn local_cancellation_token(&self) -> CancellationToken {
-        self.local_cancellation_token.clone()
-    }
-
-    fn global_cancellation_token(&self) -> CancellationToken {
-        self.global_cancellation_token.clone()
-    }
-
     fn channel(&self) -> &Channel {
         &self.channel
     }
 
     fn listener(&self) -> &Mutex<ChannelListener> {
         &self.listener
+    }
+
+    async fn recv_control(&self) -> Result<AgentControl, komrad_ast::prelude::RuntimeError> {
+        let mut control = self.control_rx.lock().await;
+        match control.recv().await {
+            Some(control) => Ok(control),
+            None => Err(komrad_ast::prelude::RuntimeError::ReceiveControlError),
+        }
+    }
+
+    async fn notify_stopped(&self) {
+        // Notify the agent that it has stopped
+        let _ = self.state_tx.send(AgentState::Stopped);
     }
 }
 

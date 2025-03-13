@@ -1,7 +1,8 @@
+use crate::agent_agent::AgentAgent;
 use crate::dynamic_agent::DynamicAgent;
 use komrad_agent::execute::Execute;
 use komrad_agent::scope::Scope;
-use komrad_agent::{AgentBehavior, AgentFactory, AgentLifecycle};
+use komrad_agent::{AgentBehavior, AgentControl, AgentFactory, AgentLifecycle, AgentState};
 use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
 use komrad_web::{HttpListenerFactory, TeraAgentFactory};
 use std::collections::HashMap;
@@ -21,13 +22,21 @@ pub struct RegistryAgent {
     pub registry: RwLock<HashMap<String, RegistryFactory>>,
     channel: Channel,
     listener: Arc<Mutex<ChannelListener>>,
-    running: Arc<Mutex<bool>>,
-    local_cancellation_token: CancellationToken,
-    global_cancellation_token: CancellationToken,
+    control_tx: tokio::sync::mpsc::Sender<AgentControl>,
+    control_rx: Mutex<tokio::sync::mpsc::Receiver<AgentControl>>,
+    state_tx: tokio::sync::watch::Sender<AgentState>,
+    state_rx: tokio::sync::watch::Receiver<AgentState>,
+}
+
+impl Drop for RegistryAgent {
+    fn drop(&mut self) {
+        debug!("RegistryAgent is being dropped");
+        self.control_tx.send(AgentControl::Stop);
+    }
 }
 
 impl RegistryAgent {
-    pub fn new(global_cancellation_token: CancellationToken) -> Arc<Self> {
+    pub fn new() -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
         let mut initial_registry: HashMap<String, RegistryFactory> = HashMap::new();
         initial_registry.insert(
@@ -37,18 +46,21 @@ impl RegistryAgent {
         initial_registry.insert(
             "Tera".to_string(),
             RegistryFactory::FromFactory(Arc::new(TeraAgentFactory {
-                base_dir: PathBuf::from("templates"),
+                base_dir: PathBuf::from("."),
             })),
         );
         let registry = RwLock::new(initial_registry);
+        let (control_tx, control_rx) = tokio::sync::mpsc::channel(8);
+        let (state_tx, state_rx) = tokio::sync::watch::channel(AgentState::Started);
 
         Arc::new(Self {
             registry,
             channel,
             listener: Arc::new(Mutex::new(listener)),
-            running: Arc::new(Mutex::new(true)),
-            local_cancellation_token: CancellationToken::new(),
-            global_cancellation_token,
+            control_tx,
+            control_rx: Mutex::new(control_rx),
+            state_tx,
+            state_rx,
         })
     }
 }
@@ -61,16 +73,7 @@ impl AgentLifecycle for RegistryAgent {
     }
 
     async fn stop(&self) {
-        let mut running = self.running.lock().await;
-        *running = false;
-    }
-
-    fn local_cancellation_token(&self) -> CancellationToken {
-        self.local_cancellation_token.clone()
-    }
-
-    fn global_cancellation_token(&self) -> CancellationToken {
-        self.global_cancellation_token.clone()
+        self.control_tx.send(AgentControl::Stop).await.unwrap();
     }
 
     fn channel(&self) -> &Channel {
@@ -79,6 +82,19 @@ impl AgentLifecycle for RegistryAgent {
 
     fn listener(&self) -> &Mutex<ChannelListener> {
         &self.listener
+    }
+
+    async fn recv_control(&self) -> Result<AgentControl, komrad_ast::prelude::RuntimeError> {
+        let mut control = self.control_rx.lock().await;
+        match control.recv().await {
+            Some(control) => Ok(control),
+            None => Err(komrad_ast::prelude::RuntimeError::ReceiveControlError),
+        }
+    }
+
+    async fn notify_stopped(&self) {
+        // Notify the agent that it has stopped
+        let _ = self.state_tx.send(AgentState::Stopped);
     }
 }
 
@@ -232,21 +248,15 @@ impl AgentBehavior for RegistryAgent {
                         // Invoke the correct factory method
                         let agent_chan = match reg.get(&agent_name).unwrap() {
                             RegistryFactory::FromBlock(block) => {
-                                let agent = DynamicAgent::from_block(
-                                    &agent_name,
-                                    block,
-                                    initial_scope,
-                                    self.global_cancellation_token.clone(),
-                                )
-                                .await;
+                                let agent =
+                                    DynamicAgent::from_block(&agent_name, block, initial_scope)
+                                        .await;
+                                info!("RegistryAgent: spawning agent {} from block", agent_name);
                                 agent.clone().spawn()
                             }
                             RegistryFactory::FromFactory(factory) => {
-                                let agent = factory.create_agent(
-                                    &agent_name,
-                                    initial_scope,
-                                    self.global_cancellation_token.clone(),
-                                );
+                                let agent = factory.create_agent(&agent_name, initial_scope);
+                                info!("RegistryAgent: spawning agent {} from factory", agent_name);
                                 agent.clone().spawn()
                             }
                         };

@@ -148,7 +148,7 @@ impl ToSexpr for Value {
                     Sexpr::List(tags),
                     Sexpr::List(vec![
                         Sexpr::Atom("text".to_string()),
-                        Sexpr::Atom(format!("\"{}\"", eb.text())),
+                        Sexpr::Atom("...".to_string()),
                     ]),
                 ])
             }

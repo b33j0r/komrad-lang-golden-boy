@@ -4,6 +4,7 @@ use komrad_ast::prelude::{Message, Value};
 use komrad_ast::sexpr::ToSexpr;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
+use tokio::io::AsyncWriteExt;
 use tracing::{debug, info};
 
 #[derive(Clone, Debug, Parser)]
@@ -34,6 +35,9 @@ enum Subcommands {
     },
     Run {
         file: PathBuf,
+
+        #[clap(long, default_value_t = false)]
+        watch: bool,
     },
 }
 
@@ -61,7 +65,7 @@ pub async fn main() {
 
     match args.clone().subcommand {
         Some(Subcommands::Parse { file, fmt }) => handle_parse(file, fmt),
-        Some(Subcommands::Run { file }) => handle_run(file, &args).await,
+        Some(Subcommands::Run { file, watch }) => handle_run(file, &args).await,
         None => {
             println!("Use `komrad --help` for more information.");
         }
@@ -125,6 +129,9 @@ async fn handle_run(file: PathBuf, args: &Args) {
                 tokio::signal::ctrl_c()
                     .await
                     .expect("Failed to wait for ctrl+c");
+                system.shutdown().await;
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                info!("Shutting down...");
             }
         }
         Err(err) => {

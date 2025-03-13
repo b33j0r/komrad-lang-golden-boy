@@ -4,7 +4,6 @@ use komrad_agent::AgentBehavior;
 use komrad_agents::prelude::DynamicAgent;
 use komrad_ast::prelude::{Block, Channel};
 use std::sync::Arc;
-use std::time::Duration;
 
 // system.rs
 pub struct System {
@@ -27,13 +26,14 @@ impl System {
         self.agents.insert(name.into(), agent);
         chan
     }
+
+    pub async fn shutdown(&self) {
+        self.shutdown_token.cancel();
+    }
 }
 
 impl Drop for System {
     fn drop(&mut self) {
-        // Cancel all agents
         self.shutdown_token.cancel();
-        // yield to allow all agents to finish
-        tokio::task::block_in_place(|| tokio::time::sleep(Duration::from_millis(100)));
     }
 }

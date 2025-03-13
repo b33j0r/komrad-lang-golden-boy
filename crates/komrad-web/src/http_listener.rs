@@ -5,6 +5,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::select;
 use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 use warp::Filter;
@@ -25,7 +26,7 @@ pub struct HttpListener {
 /// - Build a route / filter
 pub trait HttpListenerServer {
     /// Launch the server by spawning a Warp task.
-    fn start_server(&self, address: Value, port: Value, delegate: Value);
+    fn start_server(&self, address: Value, port: Value, delegate: Value) -> Option<JoinHandle<()>>;
 
     /// Build a route that just returns "Hello, World!"
     fn build_route(
@@ -54,7 +55,7 @@ impl HttpListener {
 }
 
 impl HttpListenerServer for HttpListener {
-    fn start_server(&self, address: Value, port: Value, delegate: Value) {
+    fn start_server(&self, address: Value, port: Value, delegate: Value) -> Option<JoinHandle<()>> {
         // Convert Komrad `Value` to concrete address, port
         let addr_str = match address {
             Value::String(s) => s,
@@ -74,16 +75,16 @@ impl HttpListenerServer for HttpListener {
         let socket_str = format!("{}:{}", addr_str, port_num);
         let Ok(socket_addr) = socket_str.parse::<SocketAddr>() else {
             error!("Invalid socket address: {socket_str}");
-            return;
+            return None;
         };
 
         warn!("Starting Warp HTTP server at {socket_addr}");
 
         let route = Self::build_route(delegate_channel);
         // Spawn the Warp server in background without capturing `&self`
-        tokio::spawn(async move {
+        Some(tokio::spawn(async move {
             warp::serve(route).run(socket_addr).await;
-        });
+        }))
     }
 
     // Minimal route returning "Hello, World!" — no `&self` usage
@@ -150,7 +151,7 @@ impl HttpListenerServer for HttpListener {
 impl AgentLifecycle for HttpListener {
     /// Called once before the main loop. We read `host`, `port`, and `delegate` from the scope,
     /// then start our Warp server.
-    async fn init(self: Arc<Self>, scope: &mut Scope) {
+    async fn init(self: Arc<Self>, scope: &mut Scope) -> Option<JoinHandle<()>> {
         warn!("HttpListener init: reading scope & starting server...");
 
         let address = scope
@@ -162,7 +163,7 @@ impl AgentLifecycle for HttpListener {
         let delegate = scope.get("delegate").unwrap_or(Value::Empty);
 
         // Just start the server (non-async).
-        self.start_server(address, port, delegate);
+        self.start_server(address, port, delegate)
     }
 
     /// Return the scope so Komrad can store or retrieve variables later.

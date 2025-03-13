@@ -4,20 +4,22 @@ use komrad_ast::prelude::{Channel, ChannelListener, Message, RuntimeError};
 use std::sync::Arc;
 use tokio::select;
 use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-use tracing::warn;
+use tracing::{info, warn};
 
 /// Core trait: requires only the minimal methods.
 #[async_trait]
 pub trait AgentLifecycle: Send + Sync + 'static {
-    async fn init(self: Arc<Self>, _scope: &mut Scope) {}
+    async fn init(self: Arc<Self>, _scope: &mut Scope) -> Option<JoinHandle<()>> {
+        None
+    }
     async fn get_scope(&self) -> Arc<Mutex<Scope>>;
 
     // we still need this for when the agent is dropped.
     // maybe it has a global cancellation token AND
     // a local cancellation token.
     async fn stop(&self) {
-        warn!("Agent stopped");
         self.local_cancellation_token().cancel();
     }
 
@@ -42,11 +44,11 @@ pub trait AgentBehavior: AgentLifecycle {
     }
 
     async fn actor_loop(self: Arc<Self>, _chan: Channel) {
-        {
+        let join_handle = {
             let scope = self.clone().get_scope().await;
             let mut scope = scope.lock().await;
-            self.clone().init(&mut scope).await;
-        }
+            self.clone().init(&mut scope).await
+        };
 
         let global_cancel = self.global_cancellation_token();
         let local_cancel = self.local_cancellation_token();
@@ -63,9 +65,14 @@ pub trait AgentBehavior: AgentLifecycle {
                     Err(_) => break,
                 },
                 _ = global_cancel.cancelled() => {
-                    self.stop().await;
+                    self.local_cancellation_token().cancel();
+                    warn!("Agent stopped");
                 }
                 _ = local_cancel.cancelled() => {
+                    if let Some(ref handle) = join_handle {
+                        info!("Stopping join handle as part of cancellation");
+                        handle.abort();
+                    }
                     break;
                 }
             }

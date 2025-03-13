@@ -28,13 +28,6 @@ pub struct RegistryAgent {
     state_rx: tokio::sync::watch::Receiver<AgentState>,
 }
 
-impl Drop for RegistryAgent {
-    fn drop(&mut self) {
-        debug!("RegistryAgent is being dropped");
-        self.control_tx.send(AgentControl::Stop);
-    }
-}
-
 impl RegistryAgent {
     pub fn new() -> Arc<Self> {
         let (channel, listener) = Channel::new(32);

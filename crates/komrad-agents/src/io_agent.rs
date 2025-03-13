@@ -41,13 +41,6 @@ pub struct IoAgent {
     state_rx: tokio::sync::watch::Receiver<AgentState>,
 }
 
-impl Drop for IoAgent {
-    fn drop(&mut self) {
-        debug!("IoAgent is being dropped");
-        self.control_tx.send(AgentControl::Stop);
-    }
-}
-
 impl IoAgent {
     /// Creates a new Io Agent with the given IoInterface.
     pub fn new(io_interface: Arc<RwLock<dyn IoInterface>>) -> Arc<Self> {

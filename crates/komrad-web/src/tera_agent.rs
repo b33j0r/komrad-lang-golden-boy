@@ -25,13 +25,6 @@ pub struct TeraAgent {
     state_rx: watch::Receiver<AgentState>,
 }
 
-impl Drop for TeraAgent {
-    fn drop(&mut self) {
-        debug!("TeraAgent {} is being dropped", self.name);
-        self.control_tx.send(AgentControl::Stop);
-    }
-}
-
 impl TeraAgent {
     pub fn new(base_dir: &Path, name: &str, scope: Scope) -> Arc<Self> {
         let (chan, listener) = Channel::new(32);

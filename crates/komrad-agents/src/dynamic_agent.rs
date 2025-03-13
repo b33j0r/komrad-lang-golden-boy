@@ -23,13 +23,6 @@ pub struct DynamicAgent {
     state_rx: tokio::sync::watch::Receiver<AgentState>,
 }
 
-impl Drop for DynamicAgent {
-    fn drop(&mut self) {
-        debug!("DynamicAgent {} is being dropped", self.name);
-        self.control_tx.send(AgentControl::Stop);
-    }
-}
-
 impl DynamicAgent {
     /// Construct from an AST Block, collecting any Handler statements
     /// and optionally executing others in the scope.

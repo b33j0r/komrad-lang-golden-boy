@@ -24,13 +24,6 @@ pub struct HttpListenerAgent {
     warp_handle: Mutex<Option<JoinHandle<()>>>,
 }
 
-impl Drop for HttpListenerAgent {
-    fn drop(&mut self) {
-        debug!("HttpListenerAgent {} is being dropped", self.name);
-        self.control_tx.send(AgentControl::Stop);
-    }
-}
-
 impl HttpListenerAgent {
     /// Creates a new HTTP Listener Agent.
     pub fn new(name: &str, initial_scope: Scope) -> Arc<Self> {

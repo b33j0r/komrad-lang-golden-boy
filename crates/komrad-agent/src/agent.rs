@@ -50,12 +50,24 @@ pub trait AgentLifecycle: Send + Sync + 'static {
                         "Sending ControlMessage::Stop over channel: {}",
                         chan.to_sexpr().format(0)
                     );
-                    let _ = chan.control(ControlMessage::Stop);
+                    match chan.control(ControlMessage::Stop).await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("Error sending Stop message: {:?}", e);
+                        }
+                    }
                 }
-                _ => {}
+                _ => {
+                    // skip non-channel values
+                }
             }
         }
-        let _ = self.channel().control(ControlMessage::Stop);
+        match self.channel().control(ControlMessage::Stop).await {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Error sending Stop message to SELF: {:?}", e);
+            }
+        }
     }
 
     fn channel(&self) -> &Channel;

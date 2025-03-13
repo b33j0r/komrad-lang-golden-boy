@@ -5,58 +5,103 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
     <style>
-      div, span, p, a, li, ul, ol, h1, h2, h3, h4, h5, h6 {
-        font-family: sans-serif;
+      * {
+        box-sizing: border-box;
+        font-family: Verdana, sans-serif;
+      }
+
+      body, html {
+        height: 100%;
         margin: 0;
         padding: 0;
       }
 
-      html, body {
-        margin: 0;
-      }
-
-      html {
-        background: linear-gradient(to bottom, #f84071, #f7fc6a);
-        height: 100dvh;
-      }
-
       body {
-        height: 100%;
         display: flex;
-        place-content: center;
-        place-items: center;
+        align-items: center;
+        justify-content: center;
         flex-direction: column;
+        background: linear-gradient(to bottom, #355bad, #7eafd7);
+        color: #ffffff;
+        animation: bgAnimation 15s infinite alternate;
+      }
+
+      @keyframes bgAnimation {
+        from {
+          background-position: 0 0;
+        }
+        to {
+          background-position: 100% 100%;
+        }
       }
 
       .banner {
-        padding: 0.5em;
-        background: #5a57de;
+        background: #ffffff;
+        color: #83a5c7;
+        padding: 1.5em;
         border-radius: 1em;
-        text-align: center;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        animation: fadeIn 1.5s ease-in-out;
+      }
 
-        .content {
-          padding: 2em 3em;
-          border-radius: 0.75em;
-          background: #fff;
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
         }
       }
 
       h1 {
-        font-size: 1.75em;
-        margin-bottom: 0.5em;
+        margin: 0 0 0.5em 0;
+        font-size: 1.5em;
+        text-align: center;
+        color: #0066ff;
       }
 
-      p {
-        margin: 0.25em 0.25em 0.25em 0.25em;
+      .content {
+        text-align: center;
+        font-size: 1em;
+      }
+
+      .content p {
+        margin: 0.5em;
+      }
+
+      .footer {
+        margin-top: 1em;
+        font-size: 0.85em;
+        opacity: 0.8;
+        text-align: center;
+      }
+
+      a {
+        color: #3498db;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
       }
     </style>
 </head>
 <body>
+
 <div class="banner">
+    <h1>{{ title }}</h1>
     <div class="content">
-        <h1>{{ title }}</h1>
-        <p>with Tera</p>
+        <p>
+            <span class="highlight">Concurrency</span> happens <br>
+            all the time
+        </p>
+    </div>
+    <div class="footer">
+        <a href="#">komrad-lang.org</a>
     </div>
 </div>
+
 </body>
 </html>

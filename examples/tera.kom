@@ -4,7 +4,7 @@ agent Server {
 			base_dir = "./examples/templates"
 		}
 		rendered = templates render "banner.html" {
-		  title = "Komrad!"
+		  title = "Komrad"
 		}
 		rendered
 	}

@@ -1,12 +1,10 @@
 use async_trait::async_trait;
 use komrad_agent::scope::Scope;
 use komrad_agent::{Agent, AgentBehavior, AgentLifecycle};
-use komrad_ast::prelude::{
-    Channel, ChannelListener, ControlMessage, Message, Number, RuntimeError, Value,
-};
+use komrad_ast::prelude::{Channel, ChannelListener, ControlMessage, Message, Number, Value};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 // ---------------------------------------------------------
 // 1) The “internal” traits your system had defined
@@ -44,6 +42,7 @@ pub trait ResponseFinalizerProtocol {
     fn binary(&self, body: Vec<u8>);
 }
 
+#[allow(unused)]
 pub trait ResponseProtocol:
     ResponseMetadataProtocol + ResponseWriteProtocol + ResponseFinalizerProtocol
 {

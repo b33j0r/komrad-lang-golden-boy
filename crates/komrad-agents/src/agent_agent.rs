@@ -1,11 +1,9 @@
-use crate::dynamic_agent::DynamicAgent;
 use crate::registry_agent::RegistryAgent;
 use komrad_agent::scope::Scope;
-use komrad_agent::{AgentBehavior, AgentControl, AgentLifecycle, AgentState};
+use komrad_agent::{AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
 use std::sync::Arc;
-use tokio::sync::{Mutex, mpsc};
-use tokio_util::sync::CancellationToken;
+use tokio::sync::Mutex;
 use tracing::debug;
 
 /// AgentAgent is a syntax proxy bound as `agent`.

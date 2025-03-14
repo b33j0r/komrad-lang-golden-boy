@@ -1,13 +1,12 @@
 use komrad_agent::execute::Execute;
 use komrad_agent::scope::Scope;
 use komrad_agent::try_bind::TryBind;
-use komrad_agent::{AgentBehavior, AgentControl, AgentLifecycle, AgentState};
+use komrad_agent::{AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::{
     Block, Channel, ChannelListener, Handler, Message, Statement, ToSexpr, Value,
 };
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
-use tokio_util::sync::CancellationToken;
 use tracing::{debug, trace};
 
 /// A universal dynamic "module" or "agent" that handles an AST block.

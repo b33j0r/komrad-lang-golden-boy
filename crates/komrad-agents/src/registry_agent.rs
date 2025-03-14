@@ -1,15 +1,13 @@
-use crate::agent_agent::AgentAgent;
 use crate::dynamic_agent::DynamicAgent;
 use komrad_agent::execute::Execute;
 use komrad_agent::scope::Scope;
-use komrad_agent::{AgentBehavior, AgentControl, AgentFactory, AgentLifecycle, AgentState};
+use komrad_agent::{AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
 use komrad_web::{HttpListenerFactory, TeraAgentFactory};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
-use tokio_util::sync::CancellationToken;
 use tracing::{debug, info};
 
 pub enum RegistryFactory {

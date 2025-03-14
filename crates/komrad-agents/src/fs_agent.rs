@@ -3,13 +3,12 @@ use komrad_agent::{Agent, AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, Value};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio_util::sync::CancellationToken;
-use tracing::{debug, error, info, warn};
+use tracing::{error, warn};
 
 // Use Tokio's async FS API and stream utilities.
 use tokio::fs;
-use tokio_stream::StreamExt;
 use tokio_stream::wrappers::ReadDirStream;
+use tokio_stream::StreamExt;
 
 pub struct FsAgent {
     channel: Channel,

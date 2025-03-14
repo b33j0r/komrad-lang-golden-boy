@@ -1,18 +1,17 @@
 use async_trait::async_trait;
 use komrad_agent::execute::Execute;
 use komrad_agent::scope::Scope;
-use komrad_agent::{Agent, AgentBehavior, AgentControl, AgentFactory, AgentLifecycle, AgentState};
-use komrad_ast::prelude::{Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
+use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
+use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tera::Tera;
-use tokio::sync::{Mutex, mpsc, watch};
-use tokio_util::sync::CancellationToken;
-use tracing::{debug, error, info, warn};
+use tokio::sync::Mutex;
+use tracing::{error, info, warn};
 
 /// Interface to the Tera templating engine.
 pub struct TeraAgent {
-    name: String,
+    _name: String,
     base_dir: PathBuf,
     channel: Channel, // We'll store our sending handle
     listener: Arc<ChannelListener>,
@@ -24,7 +23,7 @@ impl TeraAgent {
         let (chan, listener) = Channel::new(32);
         let scope = Arc::new(Mutex::new(scope));
         Arc::new(Self {
-            name: name.to_string(),
+            _name: name.to_string(),
             base_dir: base_dir.to_path_buf(),
             channel: chan,
             listener: Arc::new(listener),

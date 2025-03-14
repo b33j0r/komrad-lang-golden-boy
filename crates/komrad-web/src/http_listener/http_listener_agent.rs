@@ -9,7 +9,7 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 use warp::http::{self, Response};
-use warp::{Filter, Rejection, Reply, hyper};
+use warp::{hyper, Filter, Rejection, Reply};
 
 /// Converts the final list-based response (expected [status, headers, cookies, body])
 /// into a Warp `Response<hyper::Body>`. All branches return the same type.
@@ -131,7 +131,7 @@ fn build_route(
                         .collect();
 
                     // Create a final reply channel for the ephemeral agent.
-                    let (final_tx, mut final_rx) = Channel::new(1);
+                    let (final_tx, final_rx) = Channel::new(1);
                     let response_agent = HttpResponseAgent::new("Response", Some(final_tx.clone()));
                     let ephemeral_chan = response_agent.spawn();
 
@@ -197,7 +197,7 @@ fn build_route(
 }
 
 pub struct HttpListenerAgent {
-    name: String,
+    _name: String,
     scope: Arc<Mutex<Scope>>,
     channel: Channel,
     listener: Arc<ChannelListener>,
@@ -210,7 +210,7 @@ impl HttpListenerAgent {
         error!("Creating HttpListenerAgent");
         let (channel, listener) = Channel::new(32);
         Arc::new(Self {
-            name: name.to_string(),
+            _name: name.to_string(),
             scope: Arc::new(Mutex::new(initial_scope)),
             channel,
             listener: Arc::new(listener),

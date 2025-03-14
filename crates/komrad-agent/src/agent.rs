@@ -3,9 +3,9 @@ use async_trait::async_trait;
 use komrad_ast::prelude::{
     Channel, ChannelListener, ControlMessage, Message, RuntimeError, ToSexpr, Value,
 };
-use std::sync::{mpsc, Arc};
+use std::sync::{Arc, mpsc};
 use tokio::select;
-use tokio::sync::{watch, Mutex};
+use tokio::sync::{Mutex, watch};
 use tracing::{debug, error, info, trace, warn};
 
 pub enum AgentControl {

@@ -6,7 +6,7 @@ use komrad_ast::prelude::{Channel, ChannelListener, Message, RuntimeError, ToSex
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tera::Tera;
-use tokio::sync::{mpsc, watch, Mutex};
+use tokio::sync::{Mutex, mpsc, watch};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 

@@ -4,7 +4,7 @@ use komrad_agent::scope::Scope;
 use komrad_agent::{AgentBehavior, AgentControl, AgentLifecycle, AgentState};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex, mpsc};
 use tokio_util::sync::CancellationToken;
 use tracing::debug;
 

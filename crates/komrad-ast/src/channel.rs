@@ -1,6 +1,6 @@
 use crate::error::RuntimeError;
 use crate::message::Message;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex, mpsc};
 use uuid::Uuid;
 
 const CHANNEL_DIGEST_LEN: usize = 8;

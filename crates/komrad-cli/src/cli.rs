@@ -5,7 +5,6 @@ use komrad_ast::sexpr::ToSexpr;
 use notify::Watcher;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
-use tokio::io::AsyncWriteExt;
 use tracing::{debug, info, warn};
 
 #[derive(Clone, Debug, Parser)]
@@ -152,7 +151,7 @@ async fn handle_run(file: PathBuf, args: &Args) {
 /// Before running the file again, the previous system instance is gracefully shut down.
 async fn handle_run_watch(file: PathBuf) {
     use notify::{Config, RecommendedWatcher, RecursiveMode};
-    use std::sync::{mpsc, Arc, Mutex};
+    use std::sync::{Arc, Mutex, mpsc};
 
     info!("Running file in watch mode: {}", file.display());
     // Initial run

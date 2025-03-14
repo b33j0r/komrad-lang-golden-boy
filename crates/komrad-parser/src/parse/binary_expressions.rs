@@ -3,12 +3,12 @@ use crate::parse::expressions;
 use crate::parse::identifier::parse_identifier;
 use crate::span::KResult;
 use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr, Span};
+use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::space0;
 use nom::combinator::{map, opt};
 use nom::sequence::delimited;
-use nom::Parser;
 
 /// Returns the precedence value of a given binary operator.
 /// Higher numbers bind more tightly.

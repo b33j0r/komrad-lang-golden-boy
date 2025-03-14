@@ -9,7 +9,7 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 use warp::http::{self, Response};
-use warp::{hyper, Filter, Rejection, Reply};
+use warp::{Filter, Rejection, Reply, hyper};
 
 /// Converts the final list-based response (expected [status, headers, cookies, body])
 /// into a Warp `Response<hyper::Body>`. All branches return the same type.

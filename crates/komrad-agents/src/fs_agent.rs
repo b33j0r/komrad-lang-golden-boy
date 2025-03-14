@@ -8,8 +8,8 @@ use tracing::{debug, error, info, warn};
 
 // Use Tokio's async FS API and stream utilities.
 use tokio::fs;
-use tokio_stream::wrappers::ReadDirStream;
 use tokio_stream::StreamExt;
+use tokio_stream::wrappers::ReadDirStream;
 
 pub struct FsAgent {
     channel: Channel,

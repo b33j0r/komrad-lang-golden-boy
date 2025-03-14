@@ -1,10 +1,9 @@
 use crate::registry_agent::RegistryAgent;
 use komrad_agent::scope::Scope;
-use komrad_agent::{AgentBehavior, AgentControl, AgentLifecycle, AgentState};
+use komrad_agent::{AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio_util::sync::CancellationToken;
 use tracing::debug;
 
 /// SpawnAgent is a syntax proxy bound as `spawn`.

@@ -2,11 +2,11 @@ use crate::parse::identifier::parse_identifier;
 use crate::parse::strings::parse_escape_sequence;
 use crate::span::KResult;
 use komrad_ast::prelude::{EmbeddedBlock, ErrorKind, ParserError, Span, Value};
+use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{anychar, space1};
 use nom::multi::separated_list0;
-use nom::Parser;
 
 /// Parse a fenced block with arguments optionally on the first line
 ///    e.g. ```<tag1> <tag2> ...\n<text>```

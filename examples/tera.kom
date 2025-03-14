@@ -1,5 +1,5 @@
 agent Server {
-	[http GET "/"] {
+	[http GET] {
 		Io println "GET /"
 		templates = spawn Tera {
 			base_dir = "./examples/templates"
@@ -8,6 +8,43 @@ agent Server {
 		  title = "Komrad"
 		}
 		rendered
+	}
+
+	[http GET "about"] {
+		```html
+		<style>
+			body, html {
+				width: 100%;
+				height: 100%;
+				margin: 0;
+				flex-direction: column;
+				justify-content: center;
+				place-items: center;
+			}
+			body {
+				background-color: #f0f0f0;
+				color: #333;
+				font-family: Arial, sans-serif;
+			}
+			h1 {
+				color: #007BFF;
+			}
+			main {
+				display: flex;
+				flex-direction: column;
+				max-width: 400px;
+				padding: 20px;
+				margin: 0 auto;
+			}
+		</style>
+		<main>
+			<h1>About Komrad</h1>
+			<p>Komrad is asynchronous-only</p>
+			<p>Komrad uses the agent model</p>
+			<p>Komrad is built on top of the Tokio runtime</p>
+			<p>Komrad makes it easy to build reactive backends</p>
+		</main>
+		```
 	}
 }
 

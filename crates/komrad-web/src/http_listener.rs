@@ -76,54 +76,67 @@ impl HttpListenerAgent {
     fn build_route(
         delegate: Option<Channel>,
     ) -> impl Filter<Extract = (warp::reply::Html<String>,), Error = warp::Rejection> + Clone {
-        warp::any().and_then(move || {
-            let delegate = delegate.clone();
-            async move {
-                if let Some(delegate) = &delegate {
-                    info!(
-                        "Received request, forwarding to delegate channel {}:",
-                        delegate.uuid(),
-                    );
-                    let (reply_tx, mut reply_rx) = Channel::new(1);
-                    let message = Message::new(
-                        vec![
+        warp::path::full().and(warp::method()).and_then(
+            move |path: warp::filters::path::FullPath, method: warp::http::Method| {
+                let delegate = delegate.clone();
+                async move {
+                    if let Some(delegate) = &delegate {
+                        info!(
+                            "Received {} request for {}, forwarding to delegate channel {}:",
+                            method,
+                            path.as_str(),
+                            delegate.uuid(),
+                        );
+
+                        let path_segments: Vec<Value> = path
+                            .as_str()
+                            .split('/')
+                            .filter(|s| !s.is_empty())
+                            .map(|s| Value::String(s.to_string()))
+                            .collect();
+
+                        let mut message_terms = vec![
                             Value::Word("http".to_string()),
-                            Value::Word("GET".to_string()),
-                            Value::String("/".to_string()),
-                        ],
-                        Some(reply_tx),
-                    );
+                            Value::Word(method.to_string().to_uppercase()),
+                        ];
+                        message_terms.extend(path_segments);
 
-                    if let Err(e) = delegate.send(message).await {
-                        error!("Failed to send message to delegate: {:?}", e);
-                        return Ok::<_, warp::Rejection>(warp::reply::html("Error".to_string()));
-                    }
+                        let (reply_tx, mut reply_rx) = Channel::new(1);
+                        let message = Message::new(message_terms, Some(reply_tx));
 
-                    match reply_rx.recv().await {
-                        Ok(reply_msg) => {
-                            let body = reply_msg.terms().get(0);
-                            let body = match body {
-                                Some(Value::String(s)) => s.clone(),
-                                Some(Value::Number(n)) => n.to_string(),
-                                Some(Value::Embedded(e)) => format!("{}", e.text),
-                                _ => "Unsupported response type".to_string(),
-                            };
-                            Ok::<_, warp::Rejection>(warp::reply::html(body))
+                        if let Err(e) = delegate.send(message).await {
+                            error!("Failed to send message to delegate: {:?}", e);
+                            return Ok::<_, warp::Rejection>(warp::reply::html(
+                                "Error".to_string(),
+                            ));
                         }
-                        Err(e) => {
-                            error!(
-                                "Failed to receive reply from delegate {}: {:?}",
-                                delegate.uuid(),
-                                e
-                            );
-                            Ok::<_, warp::Rejection>(warp::reply::html("Error".to_string()))
+
+                        match reply_rx.recv().await {
+                            Ok(reply_msg) => {
+                                let body = reply_msg.terms().get(0);
+                                let body = match body {
+                                    Some(Value::String(s)) => s.clone(),
+                                    Some(Value::Number(n)) => n.to_string(),
+                                    Some(Value::Embedded(e)) => format!("{}", e.text),
+                                    _ => "Unsupported response type".to_string(),
+                                };
+                                Ok::<_, warp::Rejection>(warp::reply::html(body))
+                            }
+                            Err(e) => {
+                                error!(
+                                    "Failed to receive reply from delegate {}: {:?}",
+                                    delegate.uuid(),
+                                    e
+                                );
+                                Ok::<_, warp::Rejection>(warp::reply::html("Error".to_string()))
+                            }
                         }
+                    } else {
+                        Ok::<_, warp::Rejection>(warp::reply::html("Hello, World!".to_string()))
                     }
-                } else {
-                    Ok::<_, warp::Rejection>(warp::reply::html("Hello, World!".to_string()))
                 }
-            }
-        })
+            },
+        )
     }
 }
 

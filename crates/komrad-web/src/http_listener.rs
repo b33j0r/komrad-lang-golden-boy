@@ -6,6 +6,7 @@ use std::sync::Arc;
 use tokio::select;
 use tokio::sync::{mpsc, watch, Mutex};
 use tokio::task::JoinHandle;
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 use warp::Filter;
 
@@ -17,6 +18,7 @@ pub struct HttpListenerAgent {
     listener: Arc<ChannelListener>,
 
     warp_handle: Mutex<Option<JoinHandle<()>>>,
+    warp_shutdown: CancellationToken,
 }
 
 impl HttpListenerAgent {
@@ -31,6 +33,7 @@ impl HttpListenerAgent {
             channel,
             listener: Arc::new(listener),
             warp_handle: Mutex::new(None),
+            warp_shutdown: CancellationToken::new(),
         })
     }
 
@@ -60,12 +63,14 @@ impl HttpListenerAgent {
             }
         };
 
-        warn!("Starting Warp HTTP server at {}", socket_addr);
-
         let route = Self::build_route(delegate_channel);
-        tokio::spawn(async move {
-            warp::serve(route).run(socket_addr).await;
-        })
+        let warp_shutdown = self.warp_shutdown.clone();
+        let (addr, server) =
+            warp::serve(route).bind_with_graceful_shutdown(socket_addr, async move {
+                warp_shutdown.cancelled().await;
+            });
+        warn!("Starting Warp HTTP server at http://{}", addr);
+        tokio::spawn(server)
     }
 
     fn build_route(
@@ -124,7 +129,7 @@ impl HttpListenerAgent {
 
 #[async_trait::async_trait]
 impl AgentLifecycle for HttpListenerAgent {
-    async fn init(self: Arc<Self>, scope: &mut Scope) -> Option<JoinHandle<()>> {
+    async fn init(self: Arc<Self>, scope: &mut Scope) {
         info!("Initializing HttpListenerAgent");
         let (address, port, delegate) = {
             let address = scope
@@ -136,7 +141,10 @@ impl AgentLifecycle for HttpListenerAgent {
             let delegate = scope.get("delegate").unwrap_or(Value::Empty);
             (address, port, delegate)
         };
-        Some(self.start_server(address, port, delegate))
+        self.warp_handle
+            .lock()
+            .await
+            .replace(self.start_server(address, port, delegate));
     }
 
     async fn get_scope(&self) -> Arc<Mutex<Scope>> {
@@ -144,8 +152,10 @@ impl AgentLifecycle for HttpListenerAgent {
     }
 
     async fn stop(&self) {
+        info!("Stopping HttpListenerAgent");
         if let Some(handle) = self.warp_handle.lock().await.take() {
             info!("Stopping warp server");
+            self.warp_shutdown.cancel();
             if let Err(e) = handle.await {
                 error!("Error stopping Warp server: {:?}", e);
             }

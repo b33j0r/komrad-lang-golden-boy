@@ -31,9 +31,7 @@ pub struct AgentData {
 /// Core trait: requires only the minimal methods.
 #[async_trait]
 pub trait AgentLifecycle: Send + Sync + 'static {
-    async fn init(self: Arc<Self>, _scope: &mut Scope) -> Option<JoinHandle<()>> {
-        None
-    }
+    async fn init(self: Arc<Self>, _scope: &mut Scope) {}
     async fn get_scope(&self) -> Arc<Mutex<Scope>>;
 
     async fn stop(&self) {
@@ -53,7 +51,7 @@ pub trait AgentLifecycle: Send + Sync + 'static {
                     match chan.control(ControlMessage::Stop).await {
                         Ok(_) => {}
                         Err(e) => {
-                            error!("Error sending Stop message: {:?}", e);
+                            debug!("Error sending Stop message: {:?}", e);
                         }
                     }
                 }
@@ -65,7 +63,7 @@ pub trait AgentLifecycle: Send + Sync + 'static {
         match self.channel().control(ControlMessage::Stop).await {
             Ok(_) => {}
             Err(e) => {
-                error!("Error sending Stop message to SELF: {:?}", e);
+                warn!("Error sending Stop message to SELF: {:?}", e);
             }
         }
     }

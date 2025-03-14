@@ -174,6 +174,7 @@ async fn handle_run_watch(file: PathBuf) {
                 info!("Ctrl+C received, exiting watch mode.");
                 if let Some(system) = active_system.take() {
                     system.shutdown().await;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
                 }
                 break;
             },
@@ -188,7 +189,6 @@ async fn handle_run_watch(file: PathBuf) {
                         if let Some(system) = active_system.take() {
                             info!("Shutting down previous system instance.");
                             system.shutdown().await;
-                            drop(system);
                         }
                         // Re-run the file and store the new system instance
                         active_system = run_file_once(&file).await;

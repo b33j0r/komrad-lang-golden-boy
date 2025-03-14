@@ -6,7 +6,7 @@ use komrad_ast::prelude::{
 use std::sync::{mpsc, Arc};
 use tokio::select;
 use tokio::sync::{watch, Mutex};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 pub enum AgentControl {
     Stop,
@@ -61,7 +61,7 @@ pub trait AgentLifecycle: Send + Sync + 'static {
         match self.channel().control(ControlMessage::Stop).await {
             Ok(_) => {}
             Err(e) => {
-                warn!("Error sending Stop message to SELF: {:?}", e);
+                info!("Error sending Stop message to SELF: {:?}", e);
             }
         }
     }
@@ -81,7 +81,7 @@ pub trait AgentBehavior: AgentLifecycle {
     }
 
     async fn actor_loop(self: Arc<Self>, _chan: Channel) {
-        info!(
+        debug!(
             "Starting actor loop for agent {}",
             self.channel().to_sexpr().format(0)
         );
@@ -91,7 +91,7 @@ pub trait AgentBehavior: AgentLifecycle {
         {
             let scope = self.clone().get_scope().await;
             let mut scope = scope.lock().await;
-            info!("Initializing agent");
+            debug!("Initializing agent");
             self.clone().init(&mut scope).await
         };
 
@@ -114,7 +114,7 @@ pub trait AgentBehavior: AgentLifecycle {
                     Ok(msg) => {
                         match msg {
                             ControlMessage::Stop => {
-                                info!("Received Stop message");
+                                debug!("Received Stop message");
                                 self.stop().await;
                                 break;
                             }
@@ -127,7 +127,7 @@ pub trait AgentBehavior: AgentLifecycle {
                 }
             }
         }
-        error!("Agent loop exited");
+        trace!("Agent loop exited");
     }
 
     async fn send(&self, msg: Message) -> Result<(), RuntimeError> {

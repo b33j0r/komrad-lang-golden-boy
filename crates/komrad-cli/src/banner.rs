@@ -4,7 +4,7 @@ use palette::{LinSrgb, Mix};
 use tracing::warn;
 
 const BANNER_TEXT: &str = "komrad";
-const FONT_NAME: &str = "ANSI Shadow";
+// const FONT_NAME: &str = "ANSI Shadow";
 
 pub fn banner() {
     let stops = vec![
@@ -20,7 +20,9 @@ pub fn banner() {
 
 pub fn gradient_banner(text: &str, stops: &[(f32, LinSrgb)]) -> String {
     let standard_font =
-        FIGfont::from_file(format!("assets/fonts/{}.flf", FONT_NAME).as_str()).unwrap();
+        FIGfont::from_content(include_str!("../../../assets/fonts/ANSI Shadow.flf")).unwrap();
+    // let standard_font =
+    //     FIGfont::from_file(format!("assets/fonts/{}.flf", FONT_NAME).as_str()).unwrap();
     let figure = standard_font.convert(text).unwrap();
     let ascii_text = figure.to_string();
 

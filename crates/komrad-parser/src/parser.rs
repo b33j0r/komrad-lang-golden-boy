@@ -47,10 +47,6 @@ pub fn parse_module(input: Span) -> KResult<ModuleBuilder> {
     Ok((remaining, builder))
 }
 
-pub fn parse_statement(input: Span) -> KResult<Statement> {
-    alt((parse_assignment_statement,)).parse(input)
-}
-
 pub fn parse_assignment_statement(input: Span) -> KResult<Statement> {
     separated_pair(
         crate::parse::identifier::parse_identifier,

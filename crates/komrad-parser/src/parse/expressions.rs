@@ -1,17 +1,17 @@
 use crate::parse::embedded_block::parse_embedded_block_value;
-use crate::parse::{identifier, lines, statements};
+use crate::parse::{binary_expressions, identifier, lines, statements};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Block, CallExpr, Expr, Value};
-use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{digit1, multispace0, space0, space1};
 use nom::combinator::map;
 use nom::multi::{many0, separated_list1};
 use nom::sequence::delimited;
+use nom::Parser;
 
 /// Parse an expression that is not a "call" — i.e. block, number, string, or variable
-fn parse_value_expression(input: Span) -> KResult<Box<Expr>> {
+pub fn parse_value_expression(input: Span) -> KResult<Box<Expr>> {
     map(
         alt((
             parse_block_expression,
@@ -25,7 +25,7 @@ fn parse_value_expression(input: Span) -> KResult<Box<Expr>> {
 }
 
 /// Parse a block expression, i.e. `{ ...statements... }`
-fn parse_block_expression(input: Span) -> KResult<Expr> {
+pub fn parse_block_expression(input: Span) -> KResult<Expr> {
     map(
         delimited(
             delimited(space0, tag("{"), multispace0),
@@ -43,7 +43,7 @@ fn parse_block_expression(input: Span) -> KResult<Expr> {
 
 /// Parse a call argument, which could be any "value expression" (block, number, string, variable).
 /// You already have parse_value_expression.
-fn parse_call_part_expression(input: Span) -> KResult<Box<Expr>> {
+pub fn parse_call_part_expression(input: Span) -> KResult<Box<Expr>> {
     // The simplest approach is just parse_value_expression (which includes blocks).
     parse_value_expression(input)
 }
@@ -52,7 +52,7 @@ fn parse_call_part_expression(input: Span) -> KResult<Box<Expr>> {
 ///
 /// The first identifier is the target (`foo`).
 /// Then we parse zero or more arguments, each preceded by *multispace1* so newlines are allowed.
-fn parse_call_expression(input: Span) -> KResult<Expr> {
+pub fn parse_call_expression(input: Span) -> KResult<Expr> {
     let (remaining, receiver) = identifier::parse_identifier.parse(input)?;
     let (remaining, _) = space0.parse(remaining)?;
     let (remaining, parts) =
@@ -66,6 +66,7 @@ fn parse_call_expression(input: Span) -> KResult<Expr> {
 /// Parse an expression (calls, block, number, string, variable).
 pub fn parse_expression(input: Span) -> KResult<Expr> {
     alt((
+        binary_expressions::parse_binary_expression,
         parse_call_expression,
         parse_number_expression,
         parse_string_expression,
@@ -76,7 +77,7 @@ pub fn parse_expression(input: Span) -> KResult<Expr> {
 }
 
 /// Minimal approach: parse digits as a number.
-fn parse_number_expression(input: Span) -> KResult<Expr> {
+pub fn parse_number_expression(input: Span) -> KResult<Expr> {
     map(digit1, |digits: Span| {
         let txt = digits.fragment();
         let val = txt.parse::<u64>().unwrap_or_default();
@@ -86,7 +87,7 @@ fn parse_number_expression(input: Span) -> KResult<Expr> {
 }
 
 /// Minimal string parser (delegates to your strings module).
-fn parse_string_expression(input: Span) -> KResult<Expr> {
+pub fn parse_string_expression(input: Span) -> KResult<Expr> {
     crate::parse::strings::parse_string(input).map(|(remaining, val)| (remaining, Expr::Value(val)))
 }
 
@@ -95,8 +96,9 @@ mod test_parse_expression {
     use crate::parse::expressions::parse_value_expression;
     use crate::parse::statements::parse_statement;
     use crate::parse::strings::test_parse_string::full_span;
-    use komrad_ast::prelude::{Block, CallExpr, Expr, Handler, Number, Pattern, Statement, Value};
-    use komrad_ast::type_expr::TypeExpr;
+    use komrad_ast::prelude::{
+        Block, CallExpr, Expr, Handler, Number, Pattern, Statement, TypeExpr, Value,
+    };
 
     #[test]
     fn test_parse_block_expression() {

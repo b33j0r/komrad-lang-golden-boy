@@ -3,12 +3,12 @@ use crate::parse::identifier::parse_identifier;
 use crate::parse::strings::parse_string;
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Block, Handler, Pattern, Statement, TypeExpr};
-use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{space0, space1};
 use nom::multi::{many0, separated_list1};
 use nom::sequence::{delimited, preceded, separated_pair};
+use nom::Parser;
 use std::sync::Arc;
 
 /// Parse a handler block, e.g. `{ IO println "hello!" }` -> Block(statements)
@@ -112,7 +112,7 @@ pub fn parse_handler_statement(input: Span) -> KResult<Statement> {
 mod tests {
     use super::*;
     use crate::parse::strings::test_parse_string::full_span;
-    use komrad_ast::prelude::{Pattern, Statement};
+    use komrad_ast::prelude::{Pattern, Statement, ValueType};
 
     #[test]
     fn test_parse_simple_handler_pattern() {

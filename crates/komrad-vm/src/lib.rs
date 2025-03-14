@@ -1,5 +1,3 @@
-mod agents;
-
 mod system;
 
 pub use komrad_agent::scope::Scope;

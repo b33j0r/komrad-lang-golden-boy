@@ -356,6 +356,11 @@ impl AgentBehavior for HttpResponseAgent {
                     self.set_content_type(to_string(val));
                 }
             }
+            "set-content-disposition" => {
+                if let Some(val) = terms.get(1) {
+                    self.set_header("Content-Disposition".to_string(), to_string(val));
+                }
+            }
             "set-cache-control" => {
                 if let Some(val) = terms.get(1) {
                     let cc = match to_string(val).as_str() {

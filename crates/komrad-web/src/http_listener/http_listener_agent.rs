@@ -9,29 +9,28 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 use warp::http::{self, Response};
-use warp::{http::HeaderMap, Filter, Rejection, Reply};
+use warp::{hyper, Filter, Rejection, Reply};
 
 /// Converts the final list-based response (expected [status, headers, cookies, body])
-/// into a Warp `Response<Vec<u8>>` so that binary data is preserved.
-fn warp_response_from_komrad(terms: &[Value]) -> Response<Vec<u8>> {
+/// into a Warp `Response<hyper::Body>`. All branches return the same type.
+fn warp_response_from_komrad(terms: &[Value]) -> Response<hyper::Body> {
     // If empty, respond with an error response.
     if terms.is_empty() {
         return http::Response::builder()
             .status(http::StatusCode::INTERNAL_SERVER_ERROR)
             .header(http::header::CONTENT_TYPE, "text/plain")
-            .body("Empty response".as_bytes().to_vec())
+            .body(hyper::Body::from("Empty response".as_bytes().to_vec()))
             .unwrap();
     }
-
     match &terms[0] {
         // Expect 4-element list: [status, headers, cookies, body]
         Value::List(list_of_4) if list_of_4.len() == 4 => {
-            // 1) Extract status code
+            // 1) Extract status code.
             let status_code = if let Value::Number(n) = &list_of_4[0] {
                 let raw = match n {
                     Number::Int(i) => *i,
                     Number::UInt(u) => *u as i64,
-                    Number::Float(_) => 200, // fallback
+                    Number::Float(_) => 200,
                 };
                 if raw < 100 || raw > 599 {
                     error!("Invalid status code: {}", raw);
@@ -43,8 +42,8 @@ fn warp_response_from_komrad(terms: &[Value]) -> Response<Vec<u8>> {
                 200
             };
 
-            // 2) Extract headers
-            let mut header_map = HeaderMap::new();
+            // 2) Extract normal headers.
+            let mut header_map = http::HeaderMap::new();
             if let Value::List(header_list) = &list_of_4[1] {
                 for hpair in header_list {
                     if let Value::List(pair) = hpair {
@@ -77,7 +76,7 @@ fn warp_response_from_komrad(terms: &[Value]) -> Response<Vec<u8>> {
                 }
             }
 
-            // 4) Extract body without converting binary data to UTF-8.
+            // 4) Extract body without altering binary data.
             let body: Vec<u8> = match &list_of_4[3] {
                 Value::Bytes(b) => b.clone(),
                 Value::String(s) => s.clone().into_bytes(),
@@ -87,12 +86,12 @@ fn warp_response_from_komrad(terms: &[Value]) -> Response<Vec<u8>> {
             // Build the response.
             let mut resp_builder = http::Response::builder()
                 .status(http::StatusCode::from_u16(status_code).unwrap_or(http::StatusCode::OK));
-            for (k, v) in header_map.iter() {
-                resp_builder = resp_builder.header(k, v);
+            for (key, value) in header_map.iter() {
+                resp_builder = resp_builder.header(key, value);
             }
-            resp_builder.body(body).unwrap()
+            resp_builder.body(hyper::Body::from(body)).unwrap()
         }
-        // Fallback: if not a 4-element list, treat it as a string.
+        // Fallback for non 4-element final messages: treat as string.
         other => {
             let text = match other {
                 Value::String(s) => s.clone(),
@@ -103,7 +102,7 @@ fn warp_response_from_komrad(terms: &[Value]) -> Response<Vec<u8>> {
             http::Response::builder()
                 .status(http::StatusCode::OK)
                 .header(http::header::CONTENT_TYPE, "text/html")
-                .body(text.into_bytes())
+                .body(hyper::Body::from(text.into_bytes()))
                 .unwrap()
         }
     }
@@ -124,7 +123,6 @@ fn build_route(
                         delegate.uuid(),
                     );
 
-                    // Break the path into segments.
                     let path_segments: Vec<Value> = path
                         .as_str()
                         .split('/')
@@ -132,20 +130,20 @@ fn build_route(
                         .map(|s| Value::String(s.to_string()))
                         .collect();
 
-                    // Create a final channel for the ephemeral agent's final message.
+                    // Create a final reply channel for the ephemeral agent.
                     let (final_tx, mut final_rx) = Channel::new(1);
                     let response_agent = HttpResponseAgent::new("Response", Some(final_tx.clone()));
                     let ephemeral_chan = response_agent.spawn();
 
-                    // Build message terms in the order: [ "http", <response>, <METHOD>, ...path segments ]
+                    // Build message terms in the order: [ "http", <response>, <METHOD>, ... ]
                     let mut message_terms = vec![
                         Value::Word("http".into()),
-                        Value::Channel(ephemeral_chan),
+                        Value::Channel(ephemeral_chan), // Binds to _response in user code.
                         Value::Word(method.to_string().to_uppercase()),
                     ];
                     message_terms.extend(path_segments);
 
-                    // We do not pass a reply_to here – the ephemeral agent sends its final message to final_tx.
+                    // No reply_to is passed here because the ephemeral agent sends final output to final_tx.
                     let msg_to_delegate = Message::new(message_terms, None);
                     if let Err(e) = delegate.send(msg_to_delegate).await {
                         error!("Failed to send message to delegate: {:?}", e);
@@ -153,7 +151,7 @@ fn build_route(
                             http::Response::builder()
                                 .status(http::StatusCode::INTERNAL_SERVER_ERROR)
                                 .header(http::header::CONTENT_TYPE, "text/plain")
-                                .body("Error".as_bytes().to_vec())
+                                .body(hyper::Body::from("Error".as_bytes().to_vec()))
                                 .unwrap(),
                         );
                     }
@@ -173,7 +171,9 @@ fn build_route(
                                 http::Response::builder()
                                     .status(http::StatusCode::INTERNAL_SERVER_ERROR)
                                     .header(http::header::CONTENT_TYPE, "text/plain")
-                                    .body("Error receiving final reply".as_bytes().to_vec())
+                                    .body(hyper::Body::from(
+                                        "Error receiving final reply".as_bytes().to_vec(),
+                                    ))
                                     .unwrap(),
                             )
                         }
@@ -183,11 +183,11 @@ fn build_route(
                         http::Response::builder()
                             .status(http::StatusCode::INTERNAL_SERVER_ERROR)
                             .header(http::header::CONTENT_TYPE, "text/plain")
-                            .body(
+                            .body(hyper::Body::from(
                                 "No delegate was found to return a response"
                                     .as_bytes()
                                     .to_vec(),
-                            )
+                            ))
                             .unwrap(),
                     )
                 }
@@ -196,7 +196,6 @@ fn build_route(
     )
 }
 
-// The remainder of HttpListenerAgent and its AgentLifecycle, AgentBehavior implementations remain unchanged.
 pub struct HttpListenerAgent {
     name: String,
     scope: Arc<Mutex<Scope>>,
@@ -249,7 +248,7 @@ impl HttpListenerAgent {
         let warp_shutdown = self.warp_shutdown.clone();
         let (addr, server) =
             warp::serve(route).bind_with_graceful_shutdown(socket_addr, async move {
-                warp_shutdown.cancelled().await
+                warp_shutdown.cancelled().await;
             });
         warn!("Starting Warp HTTP server at http://{}", addr);
         tokio::spawn(server)

@@ -1,0 +1,4 @@
+[main] {
+	contents = Fs read-all "examples/quine.kom"
+	Io println contents
+}

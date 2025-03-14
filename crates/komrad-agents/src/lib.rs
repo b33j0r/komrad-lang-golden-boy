@@ -1,6 +1,7 @@
 mod agent_agent;
 mod default_agents;
 mod dynamic_agent;
+mod fs_agent;
 mod io_agent;
 mod registry_agent;
 mod spawn_agent;

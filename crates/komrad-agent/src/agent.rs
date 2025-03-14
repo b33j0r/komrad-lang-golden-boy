@@ -6,8 +6,6 @@ use komrad_ast::prelude::{
 use std::sync::{mpsc, Arc};
 use tokio::select;
 use tokio::sync::{watch, Mutex};
-use tokio::task::JoinHandle;
-use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
 pub enum AgentControl {
@@ -87,7 +85,10 @@ pub trait AgentBehavior: AgentLifecycle {
             "Starting actor loop for agent {}",
             self.channel().to_sexpr().format(0)
         );
-        let join_handle = {
+
+        // Init with scope
+        // IMPORTANT: only hold lock while initializing
+        {
             let scope = self.clone().get_scope().await;
             let mut scope = scope.lock().await;
             info!("Initializing agent");
@@ -95,8 +96,11 @@ pub trait AgentBehavior: AgentLifecycle {
         };
 
         loop {
+            // The listener has internal locking that allows us to await
+            // both recv and recv_control without deadlocking.
             let listener = self.listener().clone();
             select! {
+                // Receive a komrad message from the channel
                 msg = listener.recv() => match msg {
                     Ok(msg) => {
                         if !Self::handle_message(&self, msg).await {
@@ -105,6 +109,7 @@ pub trait AgentBehavior: AgentLifecycle {
                     }
                     Err(_) => break,
                 },
+                // Receive a control message (just stop for now)
                 msg = listener.recv_control() => match msg {
                     Ok(msg) => {
                         match msg {

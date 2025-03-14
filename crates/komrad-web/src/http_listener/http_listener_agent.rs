@@ -1,13 +1,12 @@
 use komrad_agent::scope::Scope;
-use komrad_agent::{Agent, AgentBehavior, AgentControl, AgentFactory, AgentLifecycle, AgentState};
-use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, RuntimeError, Value};
+use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
+use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, Value};
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::select;
-use tokio::sync::{mpsc, watch, Mutex};
+use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 use warp::Filter;
 
 /// HTTP Listener Agent responsible for handling HTTP requests via Warp.

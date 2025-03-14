@@ -1,4 +1,3 @@
-use crate::HttpListenerAgent;
 use async_trait::async_trait;
 use komrad_agent::execute::Execute;
 use komrad_agent::scope::Scope;

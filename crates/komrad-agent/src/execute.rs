@@ -190,7 +190,7 @@ impl ExecuteWithReply for CallExpr {
         );
 
         if let Value::Channel(channel) = target {
-            let (reply_chan, mut reply_chan_rx) = Channel::new(1);
+            let (reply_chan, reply_chan_rx) = Channel::new(1);
             let message_with_reply_to = Message::new(args, Some(reply_chan.clone()));
             match channel.send(message_with_reply_to).await {
                 Ok(_) => {

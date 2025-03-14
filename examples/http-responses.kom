@@ -7,17 +7,7 @@ agent Server {
 		rendered = templates render "banner.html" {
 		  title = "Komrad"
 		}
-		response set-cookie "session" "1234567890"
 		response html rendered
-
-		// ChatGPT:
-		// in the pre-responses version, we returned the response
-		// data by putting it as the last expr stmt here.
-
-		// if it's clean, we should still allow that IF
-		// the response object was not used.
-
-		// if that adds a lot to the solution, defer doing this.
 	}
 }
 

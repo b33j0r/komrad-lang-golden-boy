@@ -35,6 +35,13 @@
         }
       }
 
+      img {
+        max-width: 70dvw;
+        max-height: 70dvh;
+        height: auto;
+        margin: 0 auto;
+      }
+
       .banner {
         background: #ffffff;
         color: #83a5c7;
@@ -91,14 +98,13 @@
 <body>
 
 <div class="banner">
-    <h1>{{ title }}</h1>
     <div class="content">
-        <img src="doctor.png"/>
         <p>
             <span class="highlight">Concurrency</span> happens <br>
             all the time
         </p>
     </div>
+    <h1><img alt="Komrad landing logo" src="/static/logo-landing.png"/></h1>
     <div class="footer">
         <a href="#">komrad-lang.org</a>
     </div>

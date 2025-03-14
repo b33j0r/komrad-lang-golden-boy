@@ -8,16 +8,21 @@ use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
-use warp::http::Response;
-use warp::{http, Filter, Rejection, Reply};
+use warp::http::{self, Response};
+use warp::{http::HeaderMap, Filter, Rejection, Reply};
 
 /// Converts the final list-based response (expected [status, headers, cookies, body])
-/// into a Warp `Response<Body>`.
-fn warp_response_from_komrad(terms: &[Value]) -> warp::reply::Response {
+/// into a Warp `Response<Vec<u8>>` so that binary data is preserved.
+fn warp_response_from_komrad(terms: &[Value]) -> Response<Vec<u8>> {
+    // If empty, respond with an error response.
     if terms.is_empty() {
-        return warp::reply::with_status("Empty response", http::StatusCode::INTERNAL_SERVER_ERROR)
-            .into_response();
+        return http::Response::builder()
+            .status(http::StatusCode::INTERNAL_SERVER_ERROR)
+            .header(http::header::CONTENT_TYPE, "text/plain")
+            .body("Empty response".as_bytes().to_vec())
+            .unwrap();
     }
+
     match &terms[0] {
         // Expect 4-element list: [status, headers, cookies, body]
         Value::List(list_of_4) if list_of_4.len() == 4 => {
@@ -39,7 +44,7 @@ fn warp_response_from_komrad(terms: &[Value]) -> warp::reply::Response {
             };
 
             // 2) Extract headers
-            let mut header_map = http::HeaderMap::new();
+            let mut header_map = HeaderMap::new();
             if let Value::List(header_list) = &list_of_4[1] {
                 for hpair in header_list {
                     if let Value::List(pair) = hpair {
@@ -47,7 +52,7 @@ fn warp_response_from_komrad(terms: &[Value]) -> warp::reply::Response {
                             if let (Value::String(k), Value::String(v)) = (&pair[0], &pair[1]) {
                                 header_map.insert(
                                     http::header::HeaderName::from_bytes(k.as_bytes()).unwrap(),
-                                    v.parse().unwrap(),
+                                    http::header::HeaderValue::from_str(v).unwrap(),
                                 );
                             }
                         }
@@ -55,41 +60,39 @@ fn warp_response_from_komrad(terms: &[Value]) -> warp::reply::Response {
                 }
             }
 
-            // 3) Extract cookies => "Set-Cookie"
+            // 3) Extract cookies as "Set-Cookie" headers.
             if let Value::List(cookie_list) = &list_of_4[2] {
                 for cpair in cookie_list {
                     if let Value::List(pair) = cpair {
                         if pair.len() == 2 {
                             if let (Value::String(k), Value::String(v)) = (&pair[0], &pair[1]) {
-                                let ck_line = format!("{}={}", k, v);
-                                header_map
-                                    .append(http::header::SET_COOKIE, ck_line.parse().unwrap());
+                                header_map.append(
+                                    http::header::SET_COOKIE,
+                                    http::header::HeaderValue::from_str(&format!("{}={}", k, v))
+                                        .unwrap(),
+                                );
                             }
                         }
                     }
                 }
             }
 
-            // 4) Body
-            let body_str = match &list_of_4[3] {
-                Value::Bytes(b) => String::from_utf8_lossy(b).to_string(),
-                Value::String(s) => s.clone(),
-                _ => "".to_string(),
+            // 4) Extract body without converting binary data to UTF-8.
+            let body: Vec<u8> = match &list_of_4[3] {
+                Value::Bytes(b) => b.clone(),
+                Value::String(s) => s.clone().into_bytes(),
+                _ => Vec::new(),
             };
 
-            // Build final response
-            let mut response = Response::new(body_str.into());
-            *response.status_mut() =
-                http::StatusCode::from_u16(status_code).unwrap_or(http::StatusCode::OK);
-
-            // Insert headers
-            let resp_headers = response.headers_mut();
-            for (k, v) in header_map {
-                resp_headers.insert(k.unwrap(), v);
+            // Build the response.
+            let mut resp_builder = http::Response::builder()
+                .status(http::StatusCode::from_u16(status_code).unwrap_or(http::StatusCode::OK));
+            for (k, v) in header_map.iter() {
+                resp_builder = resp_builder.header(k, v);
             }
-            response
+            resp_builder.body(body).unwrap()
         }
-        // Fallback if only a single element: e.g. "Empty", "Unsupported", etc.
+        // Fallback: if not a 4-element list, treat it as a string.
         other => {
             let text = match other {
                 Value::String(s) => s.clone(),
@@ -97,7 +100,11 @@ fn warp_response_from_komrad(terms: &[Value]) -> warp::reply::Response {
                 Value::Embedded(e) => e.text.clone(),
                 _ => format!("Unsupported response type: {:?}", other),
             };
-            warp::reply::html(text).into_response()
+            http::Response::builder()
+                .status(http::StatusCode::OK)
+                .header(http::header::CONTENT_TYPE, "text/html")
+                .body(text.into_bytes())
+                .unwrap()
         }
     }
 }
@@ -114,10 +121,10 @@ fn build_route(
                         "Received {} request for {}, forwarding to delegate channel {}",
                         method,
                         path.as_str(),
-                        delegate.uuid()
+                        delegate.uuid(),
                     );
 
-                    // Split path into segments
+                    // Break the path into segments.
                     let path_segments: Vec<Value> = path
                         .as_str()
                         .split('/')
@@ -125,63 +132,63 @@ fn build_route(
                         .map(|s| Value::String(s.to_string()))
                         .collect();
 
-                    // 1) The final, ultimate channel we want to read from:
-                    //    We'll read ephemeral agent's final `[status, headers, cookies, body]`
+                    // Create a final channel for the ephemeral agent's final message.
                     let (final_tx, mut final_rx) = Channel::new(1);
-
-                    // 2) Create ephemeral response agent with `reply_to = final_tx`.
                     let response_agent = HttpResponseAgent::new("Response", Some(final_tx.clone()));
                     let ephemeral_chan = response_agent.spawn();
 
-                    // 3) Instead of giving the dynamic agent the warp route's reply channel,
-                    //    we give it `ephemeral_chan` so the dynamic agent's fallback
-                    //    goes to ephemeral agent (which can ignore it).
-                    //    -> ephemeral agent alone sends final message to `final_tx`.
+                    // Build message terms in the order: [ "http", <response>, <METHOD>, ...path segments ]
                     let mut message_terms = vec![
                         Value::Word("http".into()),
-                        Value::Channel(ephemeral_chan), // `_response`
-                        Value::Word(method.to_string().to_uppercase()), // GET, POST, etc.
+                        Value::Channel(ephemeral_chan),
+                        Value::Word(method.to_string().to_uppercase()),
                     ];
-                    // Then path segments
                     message_terms.extend(path_segments);
 
-                    // The final message has `Some(final_tx)` in the ephemeral agent, not here
+                    // We do not pass a reply_to here – the ephemeral agent sends its final message to final_tx.
                     let msg_to_delegate = Message::new(message_terms, None);
                     if let Err(e) = delegate.send(msg_to_delegate).await {
                         error!("Failed to send message to delegate: {:?}", e);
                         return Ok::<_, Rejection>(
-                            warp::reply::with_status(
-                                "Error",
-                                http::StatusCode::INTERNAL_SERVER_ERROR,
-                            )
-                            .into_response(),
+                            http::Response::builder()
+                                .status(http::StatusCode::INTERNAL_SERVER_ERROR)
+                                .header(http::header::CONTENT_TYPE, "text/plain")
+                                .body("Error".as_bytes().to_vec())
+                                .unwrap(),
                         );
                     }
 
-                    // 4) Wait for ephemeral agent's final
+                    // Wait for the final response from the ephemeral agent.
                     match final_rx.recv().await {
                         Ok(final_msg) => {
                             let resp = warp_response_from_komrad(final_msg.terms());
                             Ok::<_, Rejection>(resp)
                         }
                         Err(e) => {
-                            error!("Failed final reply from ephemeral agent: {:?}", e);
+                            error!(
+                                "Failed to receive final reply from ephemeral agent: {:?}",
+                                e
+                            );
                             Ok::<_, Rejection>(
-                                warp::reply::with_status(
-                                    "Error receiving final reply",
-                                    http::StatusCode::INTERNAL_SERVER_ERROR,
-                                )
-                                .into_response(),
+                                http::Response::builder()
+                                    .status(http::StatusCode::INTERNAL_SERVER_ERROR)
+                                    .header(http::header::CONTENT_TYPE, "text/plain")
+                                    .body("Error receiving final reply".as_bytes().to_vec())
+                                    .unwrap(),
                             )
                         }
                     }
                 } else {
                     Ok::<_, Rejection>(
-                        warp::reply::with_status(
-                            "No delegate was found to return a response",
-                            http::StatusCode::INTERNAL_SERVER_ERROR,
-                        )
-                        .into_response(),
+                        http::Response::builder()
+                            .status(http::StatusCode::INTERNAL_SERVER_ERROR)
+                            .header(http::header::CONTENT_TYPE, "text/plain")
+                            .body(
+                                "No delegate was found to return a response"
+                                    .as_bytes()
+                                    .to_vec(),
+                            )
+                            .unwrap(),
                     )
                 }
             }
@@ -189,7 +196,7 @@ fn build_route(
     )
 }
 
-/// HTTP Listener Agent ...
+// The remainder of HttpListenerAgent and its AgentLifecycle, AgentBehavior implementations remain unchanged.
 pub struct HttpListenerAgent {
     name: String,
     scope: Arc<Mutex<Scope>>,
@@ -200,7 +207,6 @@ pub struct HttpListenerAgent {
 }
 
 impl HttpListenerAgent {
-    /// ...
     pub fn new(name: &str, initial_scope: Scope) -> Arc<Self> {
         error!("Creating HttpListenerAgent");
         let (channel, listener) = Channel::new(32);
@@ -243,10 +249,9 @@ impl HttpListenerAgent {
         let warp_shutdown = self.warp_shutdown.clone();
         let (addr, server) =
             warp::serve(route).bind_with_graceful_shutdown(socket_addr, async move {
-                warp_shutdown.cancelled().await;
+                warp_shutdown.cancelled().await
             });
         warn!("Starting Warp HTTP server at http://{}", addr);
-
         tokio::spawn(server)
     }
 }

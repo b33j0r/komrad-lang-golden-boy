@@ -9,6 +9,12 @@ agent Server {
 		}
 		response html rendered
 	}
+
+	[http _response GET "doctor.png"] {
+	  image = Fs read-all-binary "./assets/doctor.png"
+	  response set-content-type "image/png"
+	  response binary image
+	}
 }
 
 [main] {

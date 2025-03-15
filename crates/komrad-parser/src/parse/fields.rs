@@ -1,36 +1,19 @@
 use crate::parse::expressions::parse_expression;
 use crate::parse::identifier::parse_identifier;
+use crate::parse::value_type;
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Statement, TypeExpr, ValueType};
-use nom::Parser;
 use nom::bytes::complete::tag;
 use nom::character::complete::space0;
 use nom::combinator::opt;
 use nom::sequence::{pair, preceded};
-
-pub fn parse_value_type(input: Span) -> KResult<ValueType> {
-    let (remaining, typ) = parse_identifier.parse(input)?;
-    let value_type = match typ.as_str() {
-        "Empty" => ValueType::Empty,
-        "Error" => ValueType::Error,
-        "Word" => ValueType::Word,
-        "List" => ValueType::List,
-        "Channel" => ValueType::Channel,
-        "Boolean" => ValueType::Boolean,
-        "String" => ValueType::String,
-        "Number" => ValueType::Number,
-        "Bytes" => ValueType::Bytes,
-        "Block" => ValueType::Block,
-        _ => ValueType::User(typ.to_string()),
-    };
-    Ok((remaining, value_type))
-}
+use nom::Parser;
 
 pub fn parse_field_definition(input: Span) -> KResult<Statement> {
     let (remaining, field) = (
         parse_identifier,
         space0,
-        preceded(pair(tag(":"), space0), parse_value_type),
+        preceded(pair(tag(":"), space0), value_type::parse_value_type),
         space0,
         opt(preceded(pair(tag("="), space0), parse_expression)),
     )

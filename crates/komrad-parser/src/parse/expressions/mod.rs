@@ -1,5 +1,5 @@
 use crate::parse::embedded_block::parse_embedded_block_value;
-use crate::parse::{binary_expressions, identifier, lines, statements};
+use crate::parse::{identifier, lines, statements};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Block, CallExpr, Expr, Value};
 use nom::branch::alt;
@@ -9,6 +9,8 @@ use nom::combinator::map;
 use nom::multi::{many0, separated_list1};
 use nom::sequence::{delimited, preceded};
 use nom::Parser;
+
+pub mod binary_expressions;
 
 /// Parse an expression that is not a "call" — i.e. block, number, string, or variable
 pub fn parse_value_expression(input: Span) -> KResult<Box<Expr>> {

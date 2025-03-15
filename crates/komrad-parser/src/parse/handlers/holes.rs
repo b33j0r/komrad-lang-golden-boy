@@ -1,8 +1,8 @@
 use crate::parse::expressions::parse_value_expression;
-use crate::parse::fields::parse_value_type;
 use crate::parse::handlers::primitives;
 use crate::parse::identifier::parse_identifier;
 use crate::parse::strings::parse_string;
+use crate::parse::value_type::parse_value_type;
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Expr, TypeExpr, Value};
 use nom::branch::alt;

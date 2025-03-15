@@ -32,10 +32,12 @@ pub trait AgentLifecycle: Send + Sync + 'static {
     async fn init(self: Arc<Self>, _scope: &mut Scope) {}
     async fn get_scope(&self) -> Arc<Mutex<Scope>>;
 
+    /// Stops this agent and all agents in its scope. Calls `stop_in_scope`.
     async fn stop(&self) {
         self.stop_in_scope().await;
     }
 
+    /// This is our current method of "garbage collection" for agents.
     async fn stop_in_scope(&self) {
         // send stop message to all channels in scope
         let scope = self.get_scope().await;

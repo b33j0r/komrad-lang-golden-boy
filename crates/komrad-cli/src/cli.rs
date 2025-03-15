@@ -121,7 +121,7 @@ async fn run_file_once(file: &PathBuf) -> Option<komrad_vm::System> {
                     Some(system)
                 }
                 Err(err) => {
-                    info!("Failed to parse file: {}", err);
+                    error!("Failed to parse file: {}", err);
                     None
                 }
             }

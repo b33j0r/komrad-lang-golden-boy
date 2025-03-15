@@ -456,6 +456,7 @@ fn to_string(val: &Value) -> String {
         Value::Number(n) => n.to_string(),
         Value::Boolean(b) => b.to_string(),
         Value::Word(w) => w.clone(),
+        Value::Embedded(e) => e.text().clone(),
         other => format!("{:?}", other),
     }
 }

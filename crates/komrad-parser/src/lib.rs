@@ -14,6 +14,8 @@
 //     println!("{:?}", report);
 // }
 
+extern crate core;
+
 mod module_builder;
 pub mod parse;
 pub mod parser;

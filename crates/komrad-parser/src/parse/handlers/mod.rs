@@ -1,5 +1,7 @@
+use crate::parse::primitives;
+use crate::parse::strings::parse_string;
 use crate::span::{KResult, Span};
-use komrad_ast::prelude::{Block, Handler, Pattern, Statement, TypeExpr};
+use komrad_ast::prelude::{Block, Handler, Number, Pattern, Statement, TypeExpr, Value};
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{space0, space1};
@@ -7,8 +9,8 @@ use nom::multi::{many0, separated_list1};
 use nom::sequence::delimited;
 use nom::Parser;
 use std::sync::Arc;
+
 mod holes;
-mod primitives;
 
 /// Parse a handler block, e.g. `{ IO println "hello!" }` -> Block(statements)
 pub fn parse_handler_block(input: Span) -> KResult<Block> {
@@ -34,7 +36,10 @@ pub fn parse_handle_pattern_parts(input: Span) -> KResult<Vec<TypeExpr>> {
             holes::parse_block_hole,
             holes::parse_type_expr_hole,
             holes::parse_named_hole,
-            primitives::parse_word,
+            parse_string.map(|string: Value| TypeExpr::Value(string)),
+            primitives::parse_number.map(|number: Number| TypeExpr::Value(Value::Number(number))),
+            primitives::parse_boolean.map(|boolean: Value| TypeExpr::Value(boolean)),
+            primitives::parse_word.map(|word: Value| TypeExpr::Value(word)),
         )),
     )
     .parse(input)

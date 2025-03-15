@@ -1,10 +1,11 @@
 use crate::parse::embedded_block::parse_embedded_block_value;
+use crate::parse::primitives;
 use crate::parse::{identifier, lines, statements};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Block, CallExpr, Expr, Value};
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::{digit1, multispace0, space0, space1};
+use nom::character::complete::{multispace0, space0, space1};
 use nom::combinator::map;
 use nom::multi::{many0, separated_list1};
 use nom::sequence::{delimited, preceded};
@@ -80,11 +81,9 @@ pub fn parse_expression(input: Span) -> KResult<Expr> {
 
 /// Minimal approach: parse digits as a number.
 pub fn parse_number_expression(input: Span) -> KResult<Expr> {
-    map(digit1, |digits: Span| {
-        let txt = digits.fragment();
-        let val = txt.parse::<u64>().unwrap_or_default();
-        Expr::Value(Value::Number(val.into()))
-    })
+    map(primitives::parse_number, |number| {
+        Expr::Value(Value::Number(number))
+    }) // Wrap in Value::Number
     .parse(input)
 }
 

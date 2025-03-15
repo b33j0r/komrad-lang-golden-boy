@@ -1,7 +1,6 @@
 use crate::parse::expressions::parse_value_expression;
-use crate::parse::handlers::primitives;
 use crate::parse::identifier::parse_identifier;
-use crate::parse::strings::parse_string;
+use crate::parse::primitives;
 use crate::parse::value_type::parse_value_type;
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Expr, TypeExpr, Value};
@@ -196,6 +195,21 @@ mod tests {
                 "hello".to_string(),
                 komrad_ast::prelude::ComparisonOp::Eq,
                 Value::Word("world".to_string())
+            )
+        );
+    }
+
+    #[test]
+    fn test_type_expr_hole_string_constraint() {
+        let input = full_span("\"world\"");
+        let (remaining, hole) = parse_type_expr_hole(input).unwrap();
+        assert_eq!(*remaining.fragment(), "");
+        assert_eq!(
+            hole,
+            TypeExpr::Binary(
+                "hello".to_string(),
+                komrad_ast::prelude::ComparisonOp::Eq,
+                Value::String("world".to_string())
             )
         );
     }

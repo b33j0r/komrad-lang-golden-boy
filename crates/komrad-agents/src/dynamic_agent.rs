@@ -7,7 +7,7 @@ use komrad_ast::prelude::{
 };
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
-use tracing::{debug, trace};
+use tracing::debug;
 
 /// A universal dynamic "module" or "agent" that handles an AST block.
 pub struct DynamicAgent {

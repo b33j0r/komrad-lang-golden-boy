@@ -2,7 +2,7 @@ use crate::parse::expressions::parse_expression;
 use crate::parse::identifier::parse_identifier;
 use crate::parse::value_type;
 use crate::span::{KResult, Span};
-use komrad_ast::prelude::{Statement, TypeExpr, ValueType};
+use komrad_ast::prelude::{Statement, TypeExpr};
 use nom::bytes::complete::tag;
 use nom::character::complete::space0;
 use nom::combinator::opt;

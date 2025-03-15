@@ -1,13 +1,15 @@
 use crate::parse::identifier::parse_identifier;
 use crate::span::{KResult, Span};
-use komrad_ast::prelude::{TypeExpr, Value};
+use komrad_ast::prelude::{Number, Value};
 use nom::bytes::complete::tag;
+use nom::character::complete::digit1;
+use nom::combinator::map;
 use nom::Parser;
 
-pub fn parse_word(input: Span) -> KResult<TypeExpr> {
+pub fn parse_word(input: Span) -> KResult<Value> {
     // parse an identifier
     parse_identifier
-        .map(|identifier| TypeExpr::Word(identifier.to_string()))
+        .map(|identifier| Value::Word(identifier.to_string()))
         .parse(input)
 }
 
@@ -18,11 +20,20 @@ pub fn parse_boolean(input: Span) -> KResult<Value> {
         .parse(input)
 }
 
+pub fn parse_number(input: Span) -> KResult<Number> {
+    map(digit1, |digits: Span| {
+        let txt = digits.fragment();
+        let unsigned_value = txt.parse::<u64>().unwrap_or_default();
+        Number::UInt(unsigned_value)
+    })
+    .parse(input)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::parse::strings::test_parse_string::full_span;
-    use komrad_ast::prelude::{TypeExpr, Value};
+    use komrad_ast::prelude::Value;
 
     #[test]
     fn test_parse_word() {
@@ -30,7 +41,7 @@ mod tests {
         let input = full_span("hello");
         let (remaining, word) = parse_word(input).unwrap();
         assert_eq!(*remaining.fragment(), "");
-        assert_eq!(word, TypeExpr::Word("hello".to_string()));
+        assert_eq!(word, Value::Word("hello".to_string()));
     }
 
     #[test]

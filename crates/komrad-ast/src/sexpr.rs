@@ -1,6 +1,6 @@
 use crate::channel::Channel;
 use crate::prelude::{
-    BinaryOp, Block, Expr, Handler, Message, Pattern, Statement, UnaryOp, ValueType,
+    BinaryOp, Block, ComparisonOp, Expr, Handler, Message, Pattern, Statement, UnaryOp, ValueType,
 };
 use crate::type_expr::TypeExpr;
 use crate::value::Value;
@@ -293,6 +293,12 @@ impl ToSexpr for TypeExpr {
                 Sexpr::Atom(name.clone()),
                 typ.to_sexpr(),
             ]),
+            TypeExpr::Binary(left, op, right) => Sexpr::List(vec![
+                Sexpr::Atom("binary".to_string()),
+                Sexpr::Atom(left.clone()),
+                op.to_sexpr(),
+                right.to_sexpr(),
+            ]),
         }
     }
 }
@@ -355,6 +361,19 @@ impl ToSexpr for (Value, Vec<Value>) {
             items.push(value.to_sexpr());
         }
         Sexpr::List(items)
+    }
+}
+
+impl ToSexpr for ComparisonOp {
+    fn to_sexpr(&self) -> Sexpr {
+        match self {
+            ComparisonOp::Eq => Sexpr::Atom("==".to_string()),
+            ComparisonOp::Ne => Sexpr::Atom("!=".to_string()),
+            ComparisonOp::Gt => Sexpr::Atom(">".to_string()),
+            ComparisonOp::Ge => Sexpr::Atom(">=".to_string()),
+            ComparisonOp::Lt => Sexpr::Atom("<".to_string()),
+            ComparisonOp::Le => Sexpr::Atom("<=".to_string()),
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::prelude::Value;
+use crate::prelude::{ComparisonOp, Value};
 use crate::value_type::ValueType;
 
 pub enum Predicate {}
@@ -6,12 +6,13 @@ pub enum Predicate {}
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeExpr {
     Empty,
+    Value(Value),
     Type(ValueType),
     Word(String),
     Hole(String),
     TypeHole(String, ValueType),
     BlockHole(String),
-    Value(Value),
+    Binary(String, ComparisonOp, Value),
 }
 
 impl TypeExpr {

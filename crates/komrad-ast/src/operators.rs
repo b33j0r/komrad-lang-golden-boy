@@ -1,4 +1,29 @@
 use crate::prelude::Expr;
+use std::fmt::Display;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ComparisonOp {
+    Eq,
+    Ne,
+    Gt,
+    Ge,
+    Lt,
+    Le,
+}
+
+impl Display for ComparisonOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let op = match self {
+            ComparisonOp::Eq => "==",
+            ComparisonOp::Ne => "!=",
+            ComparisonOp::Gt => ">",
+            ComparisonOp::Ge => ">=",
+            ComparisonOp::Lt => "<",
+            ComparisonOp::Le => "<=",
+        };
+        write!(f, "{}", op)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BinaryOp {

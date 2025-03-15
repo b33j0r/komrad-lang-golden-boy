@@ -2,10 +2,11 @@ use crate::ast::Block;
 use crate::channel::Channel;
 use crate::error::RuntimeError;
 use crate::number::Number;
-use crate::prelude::{EmbeddedBlock, TypeExpr, literal};
+use crate::prelude::{literal, EmbeddedBlock, TypeExpr};
 use crate::value_type::ValueType;
 use std::fmt::Display;
 use std::hash::Hash;
+use tracing::error;
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -177,6 +178,25 @@ impl PartialEq for Value {
             (Value::Bytes(b1), Value::Bytes(b2)) => b1 == b2,
             (Value::Embedded(b1), Value::Embedded(b2)) => b1 == b2,
             _ => false,
+        }
+    }
+}
+
+impl PartialOrd for Value {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (Value::Number(n1), Value::Number(n2)) => match (n1, n2) {
+                (Number::Int(i1), Number::Int(i2)) => i1.partial_cmp(i2),
+                (Number::UInt(u1), Number::UInt(u2)) => u1.partial_cmp(u2),
+                (Number::Float(f1), Number::Float(f2)) => f1.partial_cmp(f2),
+                _ => None,
+            },
+            (Value::String(s1), Value::String(s2)) => s1.partial_cmp(s2),
+            (Value::Boolean(b1), Value::Boolean(b2)) => b1.partial_cmp(b2),
+            _ => {
+                error!("Type mismatch: Cannot compare {:?} with {:?}", self, other);
+                None
+            }
         }
     }
 }

@@ -1,6 +1,6 @@
 use crate::scope::Scope;
 use async_trait::async_trait;
-use komrad_ast::prelude::{Message, Pattern, TypeExpr, Typed, Value};
+use komrad_ast::prelude::{ComparisonOp, Message, Pattern, TypeExpr, Typed, Value};
 
 #[async_trait]
 pub trait TryBind {
@@ -78,6 +78,22 @@ impl TryBind for Pattern {
                     if *value != Value::Empty {
                         return None;
                     }
+                }
+                // For Binary, check if the value passes the condition.
+                TypeExpr::Binary(name, op, expected_value) => {
+                    let result = match op {
+                        ComparisonOp::Eq => value == expected_value,
+                        ComparisonOp::Ne => value != expected_value,
+                        ComparisonOp::Lt => value < expected_value,
+                        ComparisonOp::Le => value <= expected_value,
+                        ComparisonOp::Gt => value > expected_value,
+                        ComparisonOp::Ge => value >= expected_value,
+                    };
+                    if !result {
+                        return None;
+                    }
+                    // Bind the value to the name.
+                    scope.set(name.clone(), value.clone()).await;
                 }
             }
         }

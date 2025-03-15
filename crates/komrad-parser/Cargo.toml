@@ -15,3 +15,4 @@ nom_locate.workspace = true
 thiserror.workspace = true
 miette = { version = "7.5.0", features = ["fancy"] }
 owo-colors.workspace = true
+tracing.workspace = true

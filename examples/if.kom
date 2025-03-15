@@ -1,7 +1,13 @@
-[if true _{trueBranch}] {
+[if _(x==true) _{trueBranch}] {
 	*trueBranch
 }
 
+[if _(x==false) _{falseBranch}] {}
+
 me if true {
   Io println "True branch inner"
+}
+
+me if false {
+	Io println "False branch inner"
 }

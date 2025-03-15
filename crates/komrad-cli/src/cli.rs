@@ -20,6 +20,10 @@ struct Args {
     #[arg(long, global = true, default_value_t = false)]
     wait: bool,
 
+    /// Wait for 1 ms before exiting
+    #[arg(long, global = true, default_value_t = false)]
+    wait_1: bool,
+
     /// Wait for 100 ms before exiting
     #[arg(long, global = true, default_value_t = false)]
     wait_100: bool,
@@ -132,6 +136,10 @@ async fn run_file_once(file: &PathBuf) -> Option<komrad_vm::System> {
 /// Non‑watch mode: execute the file once then optionally wait.
 async fn handle_run(file: PathBuf, args: &Args) {
     let system = run_file_once(&file).await;
+    if args.wait_1 {
+        info!("Waiting for 1 ms...");
+        tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
+    }
     if args.wait_100 {
         info!("Waiting for 100 ms...");
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;

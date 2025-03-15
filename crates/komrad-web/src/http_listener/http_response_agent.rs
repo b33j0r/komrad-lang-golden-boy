@@ -390,7 +390,8 @@ impl AgentBehavior for HttpResponseAgent {
                     self.set_cache_control(cc);
                 }
             }
-            "write-value" => {
+            // TODO: I think this was always meant to just be "write"?
+            "write-value" | "write" => {
                 // e.g. `[response write-value someValue]`
                 if let Some(val) = terms.get(1) {
                     self.write_value(val.clone());

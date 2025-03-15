@@ -51,10 +51,10 @@ pub fn parse_binary_constraint(input: Span) -> KResult<TypeExpr> {
             alt((
                 tag("=="),
                 tag("!="),
-                tag("<"),
                 tag("<="),
-                tag(">"),
                 tag(">="),
+                tag("<"),
+                tag(">"),
             )),
         ),
         preceded(space0, parse_value_expression),
@@ -63,10 +63,10 @@ pub fn parse_binary_constraint(input: Span) -> KResult<TypeExpr> {
             let op = match *op {
                 "==" => komrad_ast::prelude::ComparisonOp::Eq,
                 "!=" => komrad_ast::prelude::ComparisonOp::Ne,
-                "<" => komrad_ast::prelude::ComparisonOp::Lt,
                 "<=" => komrad_ast::prelude::ComparisonOp::Le,
-                ">" => komrad_ast::prelude::ComparisonOp::Gt,
                 ">=" => komrad_ast::prelude::ComparisonOp::Ge,
+                "<" => komrad_ast::prelude::ComparisonOp::Lt,
+                ">" => komrad_ast::prelude::ComparisonOp::Gt,
                 _ => unreachable!(),
             };
             // the expr has to be a value or a variable

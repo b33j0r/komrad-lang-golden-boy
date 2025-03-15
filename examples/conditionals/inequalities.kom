@@ -1,0 +1,20 @@
+[filter _(x > 3) _{trueBranch} else _{falseBranch}] {
+	*trueBranch
+}
+
+[filter _(x <= 3) _{trueBranch} else _{falseBranch}] {
+	*falseBranch
+}
+
+me filter 5 {
+	Io println "5 is greater than 3"
+} else {
+	Io println "5 is not greater than 3"
+}
+
+me filter 2 {
+	Io println "2 is greater than 3"
+} else {
+	Io println "2 is not greater than 3"
+}
+

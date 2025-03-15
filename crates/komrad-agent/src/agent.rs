@@ -42,14 +42,14 @@ pub trait AgentLifecycle: Send + Sync + 'static {
         for (_, channel) in scope.lock().await.iter() {
             match channel {
                 Value::Channel(chan) => {
-                    debug!(
+                    trace!(
                         "Sending ControlMessage::Stop over channel: {}",
                         chan.to_sexpr().format(0)
                     );
                     match chan.control(ControlMessage::Stop).await {
                         Ok(_) => {}
                         Err(e) => {
-                            debug!("Error sending Stop message: {:?}", e);
+                            trace!("Error sending Stop message: {:?}", e);
                         }
                     }
                 }

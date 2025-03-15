@@ -1,0 +1,19 @@
+[if _(x==true) _{trueBranch} else _{falseBranch}] {
+	*trueBranch
+}
+
+[if _(x==false) _{trueBranch} else _{falseBranch}] {
+	*falseBranch
+}
+
+me if true {
+	Io println "Condition is true"
+} else {
+	Io println "Condition is false"
+}
+
+me if false {
+	Io println "Condition is true"
+} else {
+	Io println "Condition is false"
+}

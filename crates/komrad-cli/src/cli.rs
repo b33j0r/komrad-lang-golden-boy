@@ -5,7 +5,7 @@ use komrad_ast::sexpr::ToSexpr;
 use notify::Watcher;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 
 #[derive(Clone, Debug, Parser)]
 #[command(name = "komrad", version, about = "Komrad CLI")]
@@ -90,7 +90,7 @@ fn handle_parse(file: PathBuf, fmt: Option<KomradOutputFormat>) {
             }
         }
         Err(err) => {
-            info!("Failed to parse file: {}", err);
+            error!("Failed to parse file: {}", err);
         }
     }
 }
@@ -151,7 +151,7 @@ async fn handle_run(file: PathBuf, args: &Args) {
 /// Before running the file again, the previous system instance is gracefully shut down.
 async fn handle_run_watch(file: PathBuf) {
     use notify::{Config, RecommendedWatcher, RecursiveMode};
-    use std::sync::{Arc, Mutex, mpsc};
+    use std::sync::{mpsc, Arc, Mutex};
 
     info!("Running file in watch mode: {}", file.display());
     // Initial run

@@ -2,13 +2,13 @@ use crate::parse::embedded_block::parse_embedded_block_value;
 use crate::parse::{binary_expressions, identifier, lines, statements};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Block, CallExpr, Expr, Value};
-use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{digit1, multispace0, space0, space1};
 use nom::combinator::map;
 use nom::multi::{many0, separated_list1};
-use nom::sequence::delimited;
+use nom::sequence::{delimited, preceded};
+use nom::Parser;
 
 /// Parse an expression that is not a "call" — i.e. block, number, string, or variable
 pub fn parse_value_expression(input: Span) -> KResult<Box<Expr>> {
@@ -34,7 +34,7 @@ pub fn parse_block_expression(input: Span) -> KResult<Expr> {
                 lines::parse_blank_line,
                 lines::parse_comment,
             ))),
-            delimited(multispace0, tag("}"), space0),
+            preceded(multispace0, tag("}")),
         ),
         |statements| Expr::Block(Box::new(Block::new(statements))),
     )

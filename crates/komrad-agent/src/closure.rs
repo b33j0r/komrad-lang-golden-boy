@@ -55,6 +55,7 @@ impl Closure for Statement {
                     Statement::Field(name.to_string(), typ_expr.clone(), None)
                 }
             }
+            Statement::Expander(expr) => Statement::Expander(expr.closure(context).await),
         }
     }
 }

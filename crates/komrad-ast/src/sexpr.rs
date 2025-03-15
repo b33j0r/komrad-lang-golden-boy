@@ -135,10 +135,23 @@ impl ToSexpr for Value {
             Value::Block(block) => {
                 Sexpr::List(vec![Sexpr::Atom("block".to_string()), block.to_sexpr()])
             }
-            Value::Bytes(bytes) => Sexpr::List(vec![
-                Sexpr::Atom("bytes".to_string()),
-                Sexpr::Atom(format!("{:?}", bytes)),
-            ]),
+            Value::Bytes(bytes) => {
+                const MAX_BYTES: usize = 32;
+                const MAX_BYTES_DISPLAY: usize = 16;
+                let digest = if bytes.len() > MAX_BYTES {
+                    format!(
+                        "{} ... {}",
+                        hex::encode(&bytes[0..MAX_BYTES_DISPLAY]),
+                        hex::encode(&bytes[bytes.len() - MAX_BYTES_DISPLAY..])
+                    )
+                } else {
+                    format!("{:?}", hex::encode(bytes))
+                };
+                Sexpr::List(vec![
+                    Sexpr::Atom("bytes".to_string()),
+                    Sexpr::Atom(digest.to_string()),
+                ])
+            }
             Value::Embedded(eb) => {
                 let mut tags = vec![Sexpr::Atom("tags".to_string())];
                 tags.extend(eb.tags().iter().map(|t| Sexpr::Atom(t.clone())));
@@ -186,6 +199,9 @@ impl ToSexpr for Statement {
     fn to_sexpr(&self) -> Sexpr {
         match self {
             Statement::NoOp => Sexpr::List(vec![Sexpr::Atom("noop".to_string())]),
+            Statement::Expander(expr) => {
+                Sexpr::List(vec![Sexpr::Atom("expander".to_string()), expr.to_sexpr()])
+            }
             Statement::Comment(text) => Sexpr::List(vec![
                 Sexpr::Atom("comment".to_string()),
                 Sexpr::Atom(format!("\"{}\"", text)),

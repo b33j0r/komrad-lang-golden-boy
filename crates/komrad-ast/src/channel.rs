@@ -1,6 +1,6 @@
 use crate::error::RuntimeError;
 use crate::message::Message;
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
 const CHANNEL_DIGEST_LEN: usize = 8;
@@ -17,6 +17,17 @@ pub struct Channel {
 }
 
 impl std::fmt::Debug for Channel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = self.uuid.to_string();
+        write!(
+            f,
+            "Channel({})",
+            s[s.len() - CHANNEL_DIGEST_LEN..].to_string()
+        )
+    }
+}
+
+impl std::fmt::Display for Channel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = self.uuid.to_string();
         write!(

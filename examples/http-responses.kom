@@ -10,8 +10,9 @@ agent Server {
 		response html rendered
 	}
 
-	[http _response GET "static" "logo-landing.png"] {
-	  image = Fs read-all-binary "./assets/logo-landing.png"
+	[http _response GET "static" _name] {
+		file_name = "./assets/" + name
+	  image = Fs read-all-binary file_name
 	  response set-content-type "image/png"
 	  response binary image
 	}

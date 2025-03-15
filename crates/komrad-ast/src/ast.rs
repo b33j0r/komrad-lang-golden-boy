@@ -23,6 +23,7 @@ pub enum Expr {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Statement {
     NoOp,
+    Expander(Expr),
     Comment(String),
     Expr(Expr),
     Assignment(String, Expr),

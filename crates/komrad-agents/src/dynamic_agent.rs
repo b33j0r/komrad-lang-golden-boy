@@ -107,7 +107,18 @@ impl AgentBehavior for DynamicAgent {
                         }
                     }
                 }
-                trace!("DynamicAgent {} -> handler result: {:?}", self.name, result);
+                match result {
+                    Value::Bytes(_) => {
+                        debug!("DynamicAgent {} -> bytes result", self.name);
+                    }
+                    _ => {
+                        debug!(
+                            "DynamicAgent {} -> result: {:}",
+                            self.name,
+                            result.to_sexpr().format(0)
+                        );
+                    }
+                }
                 return true; // handled
             }
         }

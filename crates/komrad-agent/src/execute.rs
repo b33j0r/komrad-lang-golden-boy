@@ -97,6 +97,30 @@ impl Execute for Statement {
                     Value::Empty
                 }
             }
+            Statement::Expander(expr) => {
+                let name = expr.execute(scope).await;
+                match name {
+                    Value::Word(name) => match scope.get(name.as_str()) {
+                        Some(Value::Block(block)) => block.execute(scope).await,
+                        Some(value) => Value::Error(RuntimeError::TypeMismatch(format!(
+                            "Expected a block, found {:?}",
+                            value
+                        ))),
+                        None => Value::Error(RuntimeError::TypeMismatch(format!(
+                            "Expander block not found: {:?}",
+                            name
+                        ))),
+                    },
+                    Value::Block(block) => {
+                        // If an actual block is provided, execute it directly
+                        block.execute(scope).await
+                    }
+                    _ => Value::Error(RuntimeError::TypeMismatch(format!(
+                        "Expected a word or block, found {:?}",
+                        name
+                    ))),
+                }
+            }
         }
     }
 }
@@ -231,9 +255,13 @@ impl Execute for BinaryExpr {
 
         match self.operator() {
             // Math
-            BinaryOp::Add => match (left, right) {
+            BinaryOp::Add => match (left.clone(), right.clone()) {
                 (Value::Number(l), Value::Number(r)) => Value::Number(l + r),
                 (Value::String(l), Value::String(r)) => Value::String(format!("{}{}", l, r)),
+                (Value::String(l), Value::Channel(ch)) => {
+                    Value::String(format!("{}{}", l, ch.uuid().to_string()))
+                }
+                (Value::String(l), Value::Empty) => Value::String(format!("{}{}", l, "EMPTY")),
                 (Value::String(l), Value::Number(r)) => {
                     let mut l = l.clone();
                     l = format!("{}{}", l, r);
@@ -249,7 +277,13 @@ impl Execute for BinaryExpr {
                     b.text = format!("{}{}", l, b.text());
                     Value::Embedded(b)
                 }
-                _ => Value::Empty,
+                _ => {
+                    error!("Unsupported binary operation: {:?} {:?}", left, right);
+                    Value::Error(RuntimeError::TypeMismatch(format!(
+                        "Unsupported binary operation: {:} {:}",
+                        left, right
+                    )))
+                }
             },
             BinaryOp::Sub => {
                 if let (Value::Number(l), Value::Number(r)) = (left, right) {

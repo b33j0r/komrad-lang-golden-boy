@@ -13,3 +13,4 @@ tracing.workspace = true
 nom.workspace = true
 nom_locate.workspace = true
 owo-colors.workspace = true
+hex = "0.4.3"

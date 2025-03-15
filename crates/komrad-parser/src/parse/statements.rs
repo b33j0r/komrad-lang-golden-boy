@@ -4,11 +4,11 @@ use crate::parse::lines::{parse_blank_line, parse_comment};
 use crate::parse::{expressions, fields, identifier};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::Statement;
-use nom::Parser;
 use nom::branch::alt;
 use nom::character::complete::{newline, space0};
 use nom::combinator::{map, opt};
-use nom::sequence::{delimited, separated_pair};
+use nom::sequence::{delimited, preceded, separated_pair};
+use nom::Parser;
 
 /// Parse a single statement: possible forms are:
 /// - "IDENT: Type = expression" (field)
@@ -22,6 +22,7 @@ pub fn parse_statement(input: Span) -> KResult<Statement> {
     let (remaining, _) = space0.parse(input)?;
 
     let (remaining, statement) = alt((
+        parse_expander_statement,
         fields::parse_field_definition,
         parse_handler_statement,
         parse_assignment_statement,
@@ -37,7 +38,7 @@ pub fn parse_statement(input: Span) -> KResult<Statement> {
     Ok((remaining, statement))
 }
 
-/// A minimal assignment parser: "IDENT = expression"
+/// Assignment parser: "IDENT = expression"
 pub fn parse_assignment_statement(input: Span) -> KResult<Statement> {
     let assignment_parser = separated_pair(
         identifier::parse_identifier,
@@ -53,4 +54,43 @@ pub fn parse_assignment_statement(input: Span) -> KResult<Statement> {
         Statement::Assignment(name, expr)
     })
     .parse(input)
+}
+
+/// A minimal expander parser: "*IDENT"
+pub fn parse_expander_statement(input: Span) -> KResult<Statement> {
+    let expander_parser = preceded(
+        nom::bytes::complete::tag("*"),
+        expressions::parse_expression,
+    );
+
+    map(expander_parser, |name| Statement::Expander(name)).parse(input)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parse::strings::test_parse_string::full_span;
+    use komrad_ast::prelude::{Expr, Number, Statement, Value};
+
+    fn test_parse(input: &str, expected: Statement) {
+        let (remaining, result) = parse_statement(full_span(input)).unwrap();
+        assert_eq!(remaining.fragment().to_string(), "");
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parse_assignment() {
+        test_parse(
+            "x = 42",
+            Statement::Assignment(
+                "x".to_string(),
+                Expr::Value(Value::Number(Number::UInt(42))),
+            ),
+        );
+    }
+
+    #[test]
+    fn test_parse_expander() {
+        test_parse("*x", Statement::Expander(Expr::Variable("x".to_string())));
+    }
 }

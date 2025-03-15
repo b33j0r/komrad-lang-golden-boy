@@ -1,0 +1,7 @@
+[if true _{trueBranch}] {
+	*trueBranch
+}
+
+me if true {
+  Io println "True branch inner"
+}

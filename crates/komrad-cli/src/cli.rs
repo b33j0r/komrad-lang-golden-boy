@@ -136,6 +136,8 @@ async fn run_file_once(file: &PathBuf) -> Option<komrad_vm::System> {
 /// Non‑watch mode: execute the file once then optionally wait.
 async fn handle_run(file: PathBuf, args: &Args) {
     let system = run_file_once(&file).await;
+    tokio::time::sleep(tokio::time::Duration::from_millis(0)).await;
+
     if args.wait_1 {
         info!("Waiting for 1 ms...");
         tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;

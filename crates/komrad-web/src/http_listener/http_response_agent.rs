@@ -4,7 +4,7 @@ use komrad_agent::{Agent, AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, ControlMessage, Message, Number, Value};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 
 // ---------------------------------------------------------
 // 1) The “internal” traits your system had defined
@@ -439,7 +439,7 @@ impl AgentBehavior for HttpResponseAgent {
                 return false;
             }
             other => {
-                warn!("Unrecognized response command: {}", other);
+                error!("Unrecognized response command: {}", other);
             }
         }
 

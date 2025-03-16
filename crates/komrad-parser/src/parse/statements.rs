@@ -5,10 +5,19 @@ use crate::parse::{expressions, fields, identifier};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::Statement;
 use nom::branch::alt;
-use nom::character::complete::{newline, space0};
-use nom::combinator::{map, opt};
+use nom::character::complete::{line_ending, space0};
+use nom::combinator::map;
+use nom::multi::separated_list0;
 use nom::sequence::{delimited, preceded, separated_pair};
 use nom::Parser;
+
+pub fn parse_block_statements(input: Span) -> KResult<Vec<Statement>> {
+    separated_list0(
+        line_ending,
+        alt((parse_statement, parse_blank_line, parse_comment)),
+    )
+    .parse(input)
+}
 
 /// Parse a single statement: possible forms are:
 /// - "IDENT: Type = expression" (field)
@@ -31,9 +40,6 @@ pub fn parse_statement(input: Span) -> KResult<Statement> {
         parse_comment,
     ))
     .parse(remaining)?;
-
-    // Optionally consume a trailing newline so that statements can appear on multiple lines
-    let (remaining, _) = opt(newline).parse(remaining)?;
 
     Ok((remaining, statement))
 }

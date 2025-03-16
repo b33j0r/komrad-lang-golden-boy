@@ -1,14 +1,16 @@
 use crate::parse::embedded_block::parse_embedded_block_value;
+use crate::parse::expressions::binary_expressions::parse_binary_expression;
+use crate::parse::identifier;
 use crate::parse::primitives;
-use crate::parse::{identifier, lines, statements};
+use crate::parse::statements::parse_block_statements;
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Block, CallExpr, Expr, Value};
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::{multispace0, space0, space1};
+use nom::character::complete::{multispace0, space1};
 use nom::combinator::map;
-use nom::multi::{many0, separated_list1};
-use nom::sequence::{delimited, preceded};
+use nom::multi::separated_list0;
+use nom::sequence::{delimited, pair, preceded};
 use nom::Parser;
 
 pub mod binary_expressions;
@@ -17,6 +19,7 @@ pub mod binary_expressions;
 pub fn parse_value_expression(input: Span) -> KResult<Box<Expr>> {
     map(
         alt((
+            parse_binary_expression,
             parse_block_expression,
             parse_number_expression,
             parse_string_expression,
@@ -31,12 +34,8 @@ pub fn parse_value_expression(input: Span) -> KResult<Box<Expr>> {
 pub fn parse_block_expression(input: Span) -> KResult<Expr> {
     map(
         delimited(
-            delimited(space0, tag("{"), multispace0),
-            many0(alt((
-                statements::parse_statement,
-                lines::parse_blank_line,
-                lines::parse_comment,
-            ))),
+            tag("{"),
+            preceded(multispace0, parse_block_statements),
             preceded(multispace0, tag("}")),
         ),
         |statements| Expr::Block(Box::new(Block::new(statements))),
@@ -44,33 +43,29 @@ pub fn parse_block_expression(input: Span) -> KResult<Expr> {
     .parse(input)
 }
 
-/// Parse a call argument, which could be any "value expression" (block, number, string, variable).
-/// You already have parse_value_expression.
-pub fn parse_call_part_expression(input: Span) -> KResult<Box<Expr>> {
-    // The simplest approach is just parse_value_expression (which includes blocks).
-    parse_value_expression(input)
-}
-
 /// Parse a call expression like `foo bar { ... } baz`.
 ///
 /// The first identifier is the target (`foo`).
 /// Then we parse zero or more arguments, each preceded by *multispace1* so newlines are allowed.
 pub fn parse_call_expression(input: Span) -> KResult<Expr> {
-    let (remaining, receiver) = identifier::parse_identifier.parse(input)?;
-    let (remaining, _) = space0.parse(remaining)?;
-    let (remaining, parts) =
-        separated_list1(space1, parse_call_part_expression).parse(remaining)?;
-    Ok((
-        remaining,
-        Expr::Call(CallExpr::new(Expr::Variable(receiver), parts)),
-    ))
+    pair(
+        identifier::parse_identifier.map(|name| Expr::Variable(name)),
+        preceded(space1, separated_list0(space1, parse_value_expression)),
+    )
+    .map(|(target, args)| {
+        Expr::Call(CallExpr::new(
+            target,
+            args.into_iter().map(|arg| arg.into()).collect(),
+        ))
+    })
+    .parse(input)
 }
 
 /// Parse an expression (calls, block, number, string, variable).
 pub fn parse_expression(input: Span) -> KResult<Expr> {
     alt((
-        binary_expressions::parse_binary_expression,
         parse_call_expression,
+        binary_expressions::parse_binary_expression,
         parse_number_expression,
         parse_string_expression,
         map(parse_embedded_block_value, Expr::Value),
@@ -128,6 +123,72 @@ mod test_parse_expression {
             ))
         );
         assert_eq!(*remaining.fragment(), "");
+    }
+
+    #[test]
+    fn test_parse_agent_valid_but_wrong_expression() {
+        let input = full_span(
+            r#"
+        agent Alice
+        "#
+            .trim(),
+        );
+
+        let result = parse_statement(input);
+        let (_remaining, stmt) = result.unwrap().clone();
+
+        assert_eq!(
+            stmt,
+            Statement::Expr(Expr::Call(CallExpr::new(
+                Expr::Variable("agent".into()),
+                vec![Expr::Variable("Alice".into()).into()]
+            )))
+        )
+    }
+
+    #[test]
+    fn test_parse_agent_valid_but_wrong_block_expression() {
+        let input = full_span(
+            r#"
+        agent {}
+        "#
+            .trim(),
+        );
+
+        let result = parse_statement(input);
+        let (_remaining, stmt) = result.unwrap().clone();
+
+        assert_eq!(
+            stmt,
+            Statement::Expr(Expr::Call(CallExpr::new(
+                Expr::Variable("agent".into()),
+                vec![Expr::Block(Block::new(vec![]).into()).into()]
+            )))
+        )
+    }
+
+    #[test]
+    fn test_parse_agent_valid_but_wrong_two_name_expression() {
+        let input = full_span(
+            r#"
+        agent Alice Bob
+        "#
+            .trim(),
+        );
+
+        let result = parse_statement(input);
+        let (_remaining, stmt) = result.unwrap().clone();
+
+        assert_eq!(
+            stmt,
+            Statement::Expr(Expr::Call(CallExpr::new(
+                Expr::Variable("agent".into()),
+                vec![
+                    Expr::Variable("Alice".into()).into(),
+                    Expr::Variable("Bob".into()).into()
+                ]
+            )))
+        )
     }
 
     #[test]

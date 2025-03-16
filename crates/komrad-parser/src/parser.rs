@@ -1,13 +1,11 @@
 use crate::module_builder::ModuleBuilder;
-use crate::parse::{lines, statements};
+use crate::parse::statements::parse_block_statements;
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::Statement;
 use miette::{NamedSource, Report};
-use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{multispace0, space0};
 use nom::combinator::all_consuming;
-use nom::multi::many0;
 use nom::sequence::{delimited, separated_pair};
 use nom::{Finish, Parser};
 use std::sync::Arc;
@@ -28,17 +26,8 @@ pub fn parse_verbose(input: &str) -> Result<ModuleBuilder, Report> {
 pub fn parse_module(input: Span) -> KResult<ModuleBuilder> {
     let mut builder = ModuleBuilder::new();
 
-    let (remaining, statements) = all_consuming(delimited(
-        multispace0,
-        //
-        many0(alt((
-            statements::parse_statement,
-            lines::parse_blank_line,
-            lines::parse_comment,
-        ))), //
-        multispace0,
-    ))
-    .parse(input)?;
+    let (remaining, statements) =
+        all_consuming(delimited(multispace0, parse_block_statements, multispace0)).parse(input)?;
 
     for statement in statements {
         builder.add_statement(statement);
@@ -61,7 +50,7 @@ pub fn parse_assignment_statement(input: Span) -> KResult<Statement> {
 mod tests {
     use super::*;
     use crate::parse::strings::test_parse_string::full_span;
-    use komrad_ast::prelude::{Expr, Number, Value};
+    use komrad_ast::prelude::{Block, CallExpr, Expr, Number, Pattern, TypeExpr, Value};
 
     #[test]
     fn test_parse_assignment_statement() {
@@ -93,5 +82,112 @@ mod tests {
         let (remaining, module) = result.unwrap();
         assert_eq!(*remaining.fragment(), "");
         assert_eq!(module.statements().len(), 2);
+    }
+
+    #[test]
+    fn test_parse_module_with_agent() {
+        let input = full_span(
+            r#"
+agent Alice {
+}
+            "#,
+        );
+        let result = parse_module(input);
+        println!("{:?}", result);
+        assert!(result.is_ok(), "Failed to parse module");
+        let (remaining, module) = result.unwrap();
+        assert_eq!(*remaining.fragment(), "");
+        assert_eq!(module.statements().len(), 1);
+    }
+
+    #[test]
+    fn test_parse_module_with_agent_and_handler() {
+        let input = full_span(
+            r#"
+agent Alice {
+    [foo bar] {}
+}
+            "#,
+        );
+        let result = parse_module(input);
+        println!("{:?}", result);
+        assert!(result.is_ok(), "Failed to parse module");
+        let (remaining, module) = result.unwrap();
+        assert_eq!(*remaining.fragment(), "");
+        assert_eq!(module.statements().len(), 1);
+        // it's a CallExpr with a Handler inside a Block
+        assert_eq!(
+            module.statements()[0],
+            Statement::Expr(Expr::Call(CallExpr::new(
+                Expr::Variable("agent".into()),
+                vec![
+                    Expr::Variable("Alice".into()).into(),
+                    Expr::Block(
+                        Block::new(vec![Statement::Handler(
+                            komrad_ast::prelude::Handler::new(
+                                Pattern::new(vec![
+                                    TypeExpr::Word("foo".to_string()),
+                                    TypeExpr::Word("bar".to_string())
+                                ]),
+                                Block::new(vec![]),
+                            )
+                            .into()
+                        ),])
+                        .into()
+                    )
+                    .into(),
+                ]
+            )))
+        );
+    }
+
+    #[test]
+    fn test_parse_module_with_agent_and_handler_with_statement() {
+        let input = full_span(
+            r#"
+agent Alice {
+    [foo bar] {
+        Io println "Hello, world!"
+    }
+}
+            "#,
+        );
+        let result = parse_module(input);
+        println!("{:?}", result);
+        assert!(result.is_ok(), "Failed to parse module");
+        let (remaining, module) = result.unwrap();
+        assert_eq!(*remaining.fragment(), "");
+        assert_eq!(module.statements().len(), 1);
+        // it's a CallExpr with a Handler inside a Block
+        assert_eq!(
+            module.statements()[0],
+            Statement::Expr(Expr::Call(CallExpr::new(
+                Expr::Variable("agent".into()),
+                vec![
+                    Expr::Variable("Alice".into()).into(),
+                    Expr::Block(
+                        Block::new(vec![Statement::Handler(
+                            komrad_ast::prelude::Handler::new(
+                                Pattern::new(vec![
+                                    TypeExpr::Word("foo".to_string()),
+                                    TypeExpr::Word("bar".to_string())
+                                ]),
+                                Block::new(vec![Statement::Expr(Expr::Call(CallExpr::new(
+                                    Expr::Variable("Io".into()),
+                                    vec![
+                                        Expr::Variable("println".into()).into(),
+                                        Expr::Value(Value::String("Hello, world!".to_string()))
+                                            .into()
+                                    ]
+                                ))),]),
+                            )
+                            .into()
+                        ),])
+                        .into()
+                    )
+                    .into(),
+                ]
+            )))
+        );
     }
 }

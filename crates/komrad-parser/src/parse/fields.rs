@@ -29,7 +29,7 @@ pub fn parse_field_definition(input: Span) -> KResult<Statement> {
 mod tests {
     use super::*;
     use crate::parse::strings::test_parse_string::full_span;
-    use komrad_ast::prelude::{Expr, Number, Value};
+    use komrad_ast::prelude::{Expr, Number, Value, ValueType};
 
     #[test]
     fn test_parse_field_definition() {

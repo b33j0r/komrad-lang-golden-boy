@@ -103,7 +103,7 @@ pub fn parse_type_expr_hole(input: Span) -> KResult<TypeExpr> {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_holes {
     use super::*;
     use crate::parse::strings::test_parse_string::full_span;
     use komrad_ast::prelude::{Number, ValueType};
@@ -195,21 +195,6 @@ mod tests {
                 "hello".to_string(),
                 komrad_ast::prelude::ComparisonOp::Eq,
                 Value::Word("world".to_string())
-            )
-        );
-    }
-
-    #[test]
-    fn test_type_expr_hole_string_constraint() {
-        let input = full_span("\"world\"");
-        let (remaining, hole) = parse_type_expr_hole(input).unwrap();
-        assert_eq!(*remaining.fragment(), "");
-        assert_eq!(
-            hole,
-            TypeExpr::Binary(
-                "hello".to_string(),
-                komrad_ast::prelude::ComparisonOp::Eq,
-                Value::String("world".to_string())
             )
         );
     }

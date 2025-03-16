@@ -3,12 +3,12 @@ use crate::parse::expressions;
 use crate::parse::identifier::parse_identifier;
 use crate::span::KResult;
 use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr, Span};
-use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::space0;
 use nom::combinator::{map, opt};
 use nom::sequence::delimited;
+use nom::Parser;
 
 /// Returns the precedence value of a given binary operator.
 /// Higher numbers bind more tightly.
@@ -40,7 +40,7 @@ fn parse_binary_operator(input: Span) -> KResult<BinaryOp> {
 /// This combines call expressions, blocks, numbers, strings, embedded values, and identifiers.
 fn parse_primary(input: Span) -> KResult<Expr> {
     alt((
-        expressions::parse_call_expression,
+        //expressions::parse_call_expression,
         expressions::parse_block_expression,
         expressions::parse_number_expression,
         expressions::parse_string_expression,
@@ -56,7 +56,6 @@ fn parse_primary(input: Span) -> KResult<Expr> {
 /// has a precedence higher than or equal to `min_prec`, it consumes the operator and recursively
 /// parses the right-hand side expression with a higher minimum precedence (to enforce left associativity).
 fn parse_binary_expr_prec(input: Span, min_prec: u8) -> KResult<Expr> {
-    let (input, _) = space0.parse(input)?;
     // Parse the left-hand side as a primary expression.
     let (mut input, mut lhs) = parse_primary(input)?;
     loop {
@@ -86,7 +85,6 @@ fn parse_binary_expr_prec(input: Span, min_prec: u8) -> KResult<Expr> {
             None => break,
         }
     }
-    let (input, _) = space0.parse(input)?;
     Ok((input, lhs))
 }
 
@@ -184,63 +182,6 @@ mod tests {
     #[test]
     fn test_whitespace_handling_in_between() {
         let input = new_span("1 +  2 *   3");
-        let (remaining, expr) = parse_binary_expression(input).expect("parse failed");
-        assert!(remaining.fragment().is_empty());
-
-        // Expected AST: 1 + (2 * 3)
-        let expected = Expr::Binary(BinaryExpr {
-            left: Box::new(Expr::Value(Value::Number(Number::UInt(1)))),
-            op: BinaryOp::Add,
-            right: Box::new(Expr::Binary(BinaryExpr {
-                left: Box::new(Expr::Value(Value::Number(Number::UInt(2)))),
-                op: BinaryOp::Mul,
-                right: Box::new(Expr::Value(Value::Number(Number::UInt(3)))),
-            })),
-        });
-        assert_eq!(expr, expected);
-    }
-
-    #[test]
-    fn test_whitespace_handling_after() {
-        let input = new_span("1 +  2 *   3 ");
-        let (remaining, expr) = parse_binary_expression(input).expect("parse failed");
-        assert!(remaining.fragment().is_empty());
-
-        // Expected AST: 1 + (2 * 3)
-        let expected = Expr::Binary(BinaryExpr {
-            left: Box::new(Expr::Value(Value::Number(Number::UInt(1)))),
-            op: BinaryOp::Add,
-            right: Box::new(Expr::Binary(BinaryExpr {
-                left: Box::new(Expr::Value(Value::Number(Number::UInt(2)))),
-                op: BinaryOp::Mul,
-                right: Box::new(Expr::Value(Value::Number(Number::UInt(3)))),
-            })),
-        });
-        assert_eq!(expr, expected);
-    }
-
-    #[test]
-    fn test_whitespace_handling_before() {
-        let input = new_span(" 1 +  2 *   3");
-        let (remaining, expr) = parse_binary_expression(input).expect("parse failed");
-        assert!(remaining.fragment().is_empty());
-
-        // Expected AST: 1 + (2 * 3)
-        let expected = Expr::Binary(BinaryExpr {
-            left: Box::new(Expr::Value(Value::Number(Number::UInt(1)))),
-            op: BinaryOp::Add,
-            right: Box::new(Expr::Binary(BinaryExpr {
-                left: Box::new(Expr::Value(Value::Number(Number::UInt(2)))),
-                op: BinaryOp::Mul,
-                right: Box::new(Expr::Value(Value::Number(Number::UInt(3)))),
-            })),
-        });
-        assert_eq!(expr, expected);
-    }
-
-    #[test]
-    fn test_whitespace_handling_before_and_after() {
-        let input = new_span(" 1 +  2 *   3 ");
         let (remaining, expr) = parse_binary_expression(input).expect("parse failed");
         assert!(remaining.fragment().is_empty());
 

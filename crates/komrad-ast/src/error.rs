@@ -105,20 +105,34 @@ pub enum ErrorKind {
 pub enum RuntimeError {
     #[error("Failed to send message")]
     SendError,
+
     #[error("Failed to receive message")]
     ReceiveError,
+
     #[error("Failed to receive control message")]
     ReceiveControlError,
+
     #[error("Failed to parse message")]
     ParseError(ParserError),
+
     #[error("Division by zero")]
     DivisionByZero,
+
     #[error("Invalid agent definition")]
     InvalidAgentDefinition,
+
     #[error("Agent not found")]
     AgentNotFound,
+
     #[error("Type mismatch: {0}")]
     TypeMismatch(String),
+
     #[error("Failed to send control message")]
     SendControlError,
+
+    #[error("Index out of bounds: {0}")]
+    IndexOutOfBounds(usize),
+
+    #[error("Invalid arguments: {0}")]
+    InvalidArugments(String),
 }

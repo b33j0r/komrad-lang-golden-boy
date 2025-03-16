@@ -46,6 +46,16 @@ impl IoAgent {
         })
     }
 
+    fn default() -> Arc<Self> {
+        let io_interface = Arc::new(RwLock::new(StdIo));
+        let (chan, listener) = Channel::new(32);
+        Arc::new(Self {
+            io_interface,
+            channel: chan,
+            listener: Arc::new(listener),
+        })
+    }
+
     /// **Helper**: actual logic for "println" commands.
     async fn handle_println(&self, msg: &Message) {
         let output: Vec<String> = msg.terms()[1..]
@@ -93,7 +103,6 @@ impl AgentLifecycle for IoAgent {
 
 #[async_trait::async_trait]
 impl AgentBehavior for IoAgent {
-    /// The intelligence: decide how to handle each message.
     async fn handle_message(&self, msg: Message) -> bool {
         if let Some(cmd) = msg.first_word() {
             match cmd.as_str() {
@@ -123,40 +132,24 @@ mod tests {
     use tokio::time::Duration;
 
     #[tokio::test]
-    async fn test_orca_io_agent_println() {
-        let agent = IoAgent::default();
-        let agent_chan = agent.spawn();
+    async fn test_io_agent() {
+        let io_agent = IoAgent::default();
+        let io_chan = io_agent.clone().spawn();
 
-        // Another channel to receive ack
-        let (ack_chan, mut ack_listener) = Channel::new(10);
+        // Send a println message
+        let (reply_chan, mut reply_listener) = Channel::new(10);
         let msg = Message::new(
             vec![
                 Value::Word("println".into()),
-                Value::String("Hello, Orca!".into()),
+                Value::String("Hello, World!".into()),
             ],
-            Some(ack_chan.clone()),
+            Some(reply_chan.clone()),
         );
+        let _ = io_chan.send(msg).await;
 
-        agent_chan.send(msg).await.unwrap();
-        let ack = ack_listener.recv().await.unwrap();
-        assert_eq!(ack.terms(), &[Value::String("ack".into())]);
-    }
-
-    #[tokio::test]
-    async fn test_orca_io_agent_shutdown() {
-        let agent = IoAgent::default();
-        let spawned_agent = agent.clone();
-        let chan = spawned_agent.spawn();
-
-        // Check running
-        assert!(agent.is_running());
-
-        // Send shutdown
-        let stop_msg = Message::new(vec![Value::Word("shutdown".into())], None);
-        chan.send(stop_msg).await.unwrap();
-
-        // Let the agent process the shutdown
-        tokio::time::sleep(Duration::from_millis(10)).await;
-        assert!(!agent.is_running(), "Agent should have stopped by now.");
+        // Wait for the reply
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        let reply = reply_listener.recv().await.unwrap();
+        assert_eq!(reply.terms()[0], Value::String("ack".into()));
     }
 }

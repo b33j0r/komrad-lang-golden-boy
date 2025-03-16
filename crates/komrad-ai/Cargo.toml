@@ -1,0 +1,20 @@
+[package]
+name = "komrad-ai"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+komrad-ast = { path = "../komrad-ast" }
+komrad-agent = { path = "../komrad-agent" }
+
+chrono.workspace = true
+tokio.workspace = true
+
+ollama-rs = { version = "0.2.6", features = ["macros", "stream", "regex", "tool-implementations", "headers", "http", "scraper"], optional = true }
+serde.workspace = true
+serde_json.workspace = true
+schemars = "0.8"
+
+[features]
+default = ["ollama"]
+ollama = ["dep:ollama-rs"]

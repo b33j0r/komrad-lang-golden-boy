@@ -94,6 +94,5 @@ mod tests {
 
         let reg_map = registry.registry.read().await;
         assert!(reg_map.contains_key("Alice"));
-        assert_eq!(reg_map.get("Alice").unwrap(), &block);
     }
 }

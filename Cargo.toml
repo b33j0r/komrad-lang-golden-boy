@@ -19,10 +19,11 @@ tracing-subscriber.workspace = true
 
 [workspace]
 resolver = "2"
-members = [".", "crates/komrad-agent", "crates/komrad-agents", "crates/komrad-ast", "crates/komrad-cli", "crates/komrad-parser", "crates/komrad-vm", "crates/komrad-web"]
+members = [".", "crates/komrad-agent", "crates/komrad-agents", "crates/komrad-ai", "crates/komrad-ast", "crates/komrad-cli", "crates/komrad-parser", "crates/komrad-vm", "crates/komrad-web"]
 
 [workspace.dependencies]
 async-trait = "0.1.87"
+chrono = { version = "0.4", features = ["alloc", "clock", "serde", "iana-time-zone"] }
 dashmap = "7.0.0-rc2"
 futures = { version = "0.3.31", features = [] }
 miette = { version = "7.5.0", features = ["fancy"] }
@@ -30,9 +31,11 @@ nom = { version = "8.0.0", features = ["std", "alloc", "docsrs"] }
 nom_locate = "5.0.0"
 owo-colors = "4.2.0"
 thiserror = "2.0.12"
+serde = { version = "1.0.219", features = ["alloc", "derive", "std"] }
+serde_json = { version = "1.0.140", features = ["std", "alloc", "preserve_order"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "io-util", "io-std", "signal"] }
-tokio-util = { version = "0.7.13", features = [] }
 tokio-stream = { version = "0.1.11", features = ["fs"] }
+tokio-util = { version = "0.7.13", features = [] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter", "registry"] }
 uuid = { version = "1.15.1", features = ["v7", "serde"] }

@@ -12,12 +12,36 @@ impl Message {
         Message { terms, reply_to }
     }
 
+    pub fn default() -> Self {
+        Message {
+            terms: Vec::new(),
+            reply_to: None,
+        }
+    }
+
     pub fn terms(&self) -> &Vec<Value> {
         &self.terms
     }
 
     pub fn reply_to(&self) -> Option<Channel> {
         self.reply_to.clone()
+    }
+}
+
+pub trait MessageBuilder {
+    fn with_terms(self, terms: Vec<Value>) -> Self;
+    fn with_reply_to(self, reply_to: Option<Channel>) -> Self;
+}
+
+impl MessageBuilder for Message {
+    fn with_terms(mut self, terms: Vec<Value>) -> Self {
+        self.terms = terms;
+        self
+    }
+
+    fn with_reply_to(mut self, reply_to: Option<Channel>) -> Self {
+        self.reply_to = reply_to;
+        self
     }
 }
 

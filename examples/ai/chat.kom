@@ -1,0 +1,20 @@
+agent ChatWorkflow {
+	[chat _role _msg] {
+		Io println role + ": " + msg
+		next chat role msg
+	}
+}
+
+agent ChatHistory {
+	messages = spawn List
+
+	[chat _role _msg] {
+		Io println role + ": " + msg
+		next chat role msg
+	}
+}
+
+[main] {
+	step = spawn ChatWorkflow {}
+	step chat "user" "Hello, how are you?"
+}

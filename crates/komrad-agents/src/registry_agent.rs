@@ -275,7 +275,12 @@ mod tests {
         assert!(reg_map.contains_key("Alice"));
         match reg_map.get("Alice").unwrap() {
             RegistryFactory::FromBlock(block) => {
-                assert_eq!(block, &block);
+                assert_eq!(block.statements().len(), 1);
+                if let Statement::NoOp = block.statements()[0] {
+                    // success
+                } else {
+                    panic!("Expected a NoOp statement");
+                }
             }
             _ => panic!("Expected a block, got something else"),
         }

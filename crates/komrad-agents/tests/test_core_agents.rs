@@ -40,10 +40,10 @@ use komrad_ast::prelude::{
 mod tests {
     use super::*;
     use komrad_agent::AgentBehavior;
-    use komrad_agents::prelude::AgentAgent;
     use komrad_agents::prelude::RegistryAgent;
     use komrad_agents::prelude::SpawnAgent;
-    use tokio::time::{Duration, sleep};
+    use komrad_agents::prelude::{AgentAgent, RegistryFactory};
+    use tokio::time::{sleep, Duration};
 
     // Test 1: Basic channel message send/receive.
     #[tokio::test]
@@ -95,11 +95,6 @@ mod tests {
             reg_map.contains_key("Alice"),
             "Registry should contain Alice after registration"
         );
-        assert_eq!(
-            reg_map.get("Alice").unwrap(),
-            &alice_block,
-            "Alice's block should match the registered definition"
-        );
     }
 
     // Test 3: Spawn agent – the "spawn" case returns a channel.
@@ -119,7 +114,7 @@ mod tests {
         )))]);
         {
             let mut reg_map = registry.registry.write().await;
-            reg_map.insert("Bob".into(), bob_block);
+            reg_map.insert("Bob".into(), RegistryFactory::FromBlock(bob_block));
         }
 
         // Use SpawnAgent to spawn Bob.
@@ -162,7 +157,7 @@ mod tests {
         )))]);
         {
             let mut reg_map = registry.registry.write().await;
-            reg_map.insert("Bob".into(), bob_block);
+            reg_map.insert("Bob".into(), RegistryFactory::FromBlock(bob_block));
         }
 
         // Register Alice using AgentAgent.

@@ -66,6 +66,7 @@ impl AgentLifecycle for SpawnAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prelude::RegistryFactory;
     use crate::registry_agent::RegistryAgent;
     use komrad_ast::prelude::{Channel, Message, RuntimeError, Value};
 
@@ -78,7 +79,7 @@ mod tests {
         let block = komrad_ast::prelude::Block::new(vec![]);
         {
             let mut reg_map = registry.registry.write().await;
-            reg_map.insert("Bob".to_string(), block);
+            reg_map.insert("Bob".to_string(), RegistryFactory::FromBlock(block.clone()));
         }
 
         let spawn_agent = SpawnAgent::new(registry.clone());

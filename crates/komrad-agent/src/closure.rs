@@ -68,7 +68,13 @@ impl Closure for Expr {
 
     async fn closure(&self, context: &mut Self::Context) -> Self::Output {
         match self {
-            // When we see a variable, try to look it up in the closure environment.
+            Expr::List(list) => {
+                let mut new_list = Vec::new();
+                for item in list {
+                    new_list.push(item.closure(context).await);
+                }
+                Expr::List(new_list)
+            }
             Expr::Variable(name) => {
                 if let Some(val) = context.get(name) {
                     Expr::Value(val)

@@ -14,6 +14,7 @@ pub struct CallExpr {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expr {
     Value(Value),
+    List(Vec<Expr>),
     Variable(String),
     Binary(BinaryExpr),
     Call(CallExpr),

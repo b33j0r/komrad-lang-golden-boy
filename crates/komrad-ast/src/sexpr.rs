@@ -172,6 +172,11 @@ impl ToSexpr for Value {
 impl ToSexpr for Expr {
     fn to_sexpr(&self) -> Sexpr {
         match self {
+            Expr::List(items) => {
+                let mut list_items = vec![Sexpr::Atom("list".to_string())];
+                list_items.extend(items.iter().map(|item| item.to_sexpr()));
+                Sexpr::List(list_items)
+            }
             Expr::Value(value) => value.to_sexpr(),
             Expr::Variable(name) => Sexpr::Atom(name.clone()),
             Expr::Binary(binary) => {

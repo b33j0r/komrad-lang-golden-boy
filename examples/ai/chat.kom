@@ -6,7 +6,7 @@ agent ChatWorkflow {
 }
 
 agent ChatHistory {
-	messages = spawn List
+	messages = new List
 
 	[chat _role _msg] {
 		Io println role + ": " + msg

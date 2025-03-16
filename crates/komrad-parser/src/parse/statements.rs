@@ -83,6 +83,52 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_assignment_list() {
+        test_parse(
+            "x = [4 2]",
+            Statement::Assignment(
+                "x".to_string(),
+                Expr::List(
+                    (vec![
+                        Expr::Value(Value::Number(Number::UInt(4))),
+                        Expr::Value(Value::Number(Number::UInt(2))),
+                    ]),
+                ),
+            ),
+        );
+    }
+
+    #[test]
+    fn test_parse_assignment_list_with_words() {
+        test_parse(
+            "x = [4 2 hello]",
+            Statement::Assignment(
+                "x".to_string(),
+                Expr::List(vec![
+                    Expr::Value(Value::Number(Number::UInt(4))),
+                    Expr::Value(Value::Number(Number::UInt(2))),
+                    Expr::Variable("hello".to_string()),
+                ]),
+            ),
+        );
+    }
+
+    #[test]
+    fn test_parse_assignment_list_with_strings() {
+        test_parse(
+            "x = [say 2 \"hello\"]",
+            Statement::Assignment(
+                "x".to_string(),
+                Expr::List(vec![
+                    Expr::Variable("say".to_string()),
+                    Expr::Value(Value::Number(Number::UInt(2))),
+                    Expr::Value(Value::String("hello".to_string())),
+                ]),
+            ),
+        );
+    }
+
+    #[test]
     fn test_parse_expander() {
         test_parse("*x", Statement::Expander(Expr::Variable("x".to_string())));
     }

@@ -1,0 +1,9 @@
+some-block = {
+	Io println "Hello, world!"
+}
+
+*some-block
+
+some-list = [Io println "Bye, world!"]
+
+*some-list

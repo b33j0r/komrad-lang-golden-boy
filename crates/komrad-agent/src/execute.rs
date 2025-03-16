@@ -101,7 +101,28 @@ impl Execute for Statement {
                 let name = expr.execute(scope).await;
                 match name {
                     Value::Word(name) => match scope.get(name.as_str()) {
-                        Some(Value::Block(block)) => block.execute(scope).await,
+                        Some(Value::Block(block)) => {
+                            error!("did expander for block");
+                            block.execute(scope).await
+                        }
+                        Some(Value::List(list)) => {
+                            info!("execute expander: {:?}", list);
+                            // convert to a call
+                            if let Some(Value::Channel(target)) = list.get(0) {
+                                let mut args = Vec::new();
+                                for arg in list.iter().skip(1) {
+                                    args.push(Expr::Value(arg.clone()).into());
+                                }
+                                let target = Expr::Value(Value::Channel(target.clone())).into();
+                                let call = CallExpr::new(target, args);
+                                call.execute_with_reply(scope).await
+                            } else {
+                                Value::Error(RuntimeError::TypeMismatch(format!(
+                                    "Expected a channel or word, found {:?}",
+                                    list.get(0)
+                                )))
+                            }
+                        }
                         Some(value) => Value::Error(RuntimeError::TypeMismatch(format!(
                             "Expected a block, found {:?}",
                             value
@@ -114,6 +135,23 @@ impl Execute for Statement {
                     Value::Block(block) => {
                         // If an actual block is provided, execute it directly
                         block.execute(scope).await
+                    }
+                    Value::List(list) => {
+                        // If a list is provided, treat it as a call
+                        if let Some(Value::Channel(target)) = list.get(0) {
+                            let mut args = Vec::new();
+                            for arg in list.iter().skip(1) {
+                                args.push(Expr::Value(arg.clone()).into());
+                            }
+                            let target = Expr::Value(Value::Channel(target.clone())).into();
+                            let call = CallExpr::new(target, args);
+                            call.execute_with_reply(scope).await
+                        } else {
+                            Value::Error(RuntimeError::TypeMismatch(format!(
+                                "Expected a channel or word, found {:?}",
+                                list.get(0)
+                            )))
+                        }
                     }
                     _ => Value::Error(RuntimeError::TypeMismatch(format!(
                         "Expected a word or block, found {:?}",
@@ -132,6 +170,14 @@ impl Execute for Expr {
 
     async fn execute(&self, scope: &mut Self::Context) -> Self::Output {
         match self {
+            Expr::List(list) => {
+                let mut new_list = Vec::new();
+                for item in list {
+                    new_list.push(item.execute(scope).await);
+                }
+                error!("execute expr: {:?}", new_list);
+                Value::List(new_list)
+            }
             Expr::Value(val) => val.clone(),
 
             Expr::Variable(name) => {
@@ -492,5 +538,35 @@ mod tests {
         let var_expr = Expr::Variable("undefined".to_string());
         let result = var_expr.execute(&mut scope).await;
         assert_eq!(result, Value::Word("undefined".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_assign_list_to_variable() {
+        let mut scope = Scope::default();
+
+        // Assign a list to a variable.
+        let assign_stmt = Statement::Assignment(
+            "my_list".to_string(),
+            Expr::List(vec![
+                Expr::Value(Value::Number(Number::Int(1))).into(),
+                Expr::Value(Value::Number(Number::Int(2))).into(),
+                Expr::Value(Value::Number(Number::Int(3))).into(),
+            ]),
+        );
+        assign_stmt.execute(&mut scope).await;
+
+        // Now, evaluate the variable "my_list".
+        let var_stmt = Statement::Expr(Expr::Variable("my_list".to_string()));
+        let var_result = var_stmt.execute(&mut scope).await;
+
+        // The result should be a list with the assigned values.
+        assert_eq!(
+            var_result,
+            Value::List(vec![
+                Value::Number(Number::Int(1)),
+                Value::Number(Number::Int(2)),
+                Value::Number(Number::Int(3))
+            ])
+        );
     }
 }

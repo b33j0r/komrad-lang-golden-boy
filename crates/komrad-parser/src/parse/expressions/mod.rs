@@ -49,6 +49,7 @@ pub fn parse_call_expression(input: Span) -> KResult<Expr> {
 /// Parse an expression (calls, block, number, string, variable).
 pub fn parse_expression(input: Span) -> KResult<Expr> {
     alt((
+        map(primitives::parse_list, |list| Expr::List(list)),
         parse_call_expression,
         binary_expressions::parse_binary_expression,
         parse_number_expression,

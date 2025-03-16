@@ -111,7 +111,7 @@ impl AgentBehavior for ListAgent {
                     println!("ListAgent: items command received");
                     let items = self.items.read().await.clone();
                     println!("ListAgent: items: {:?}", items);
-                    let reply = Message::new(items, None);
+                    let reply = Message::new(vec![Value::List(items)], None);
                     if reply_chan.send(reply).await.is_err() {
                         error!("ListAgent: failed to send 'items' reply");
                     }

@@ -1,0 +1,8 @@
+call = new List
+
+call add Io
+call add println
+call add "Hello, world!"
+
+call-items = call items
+*call-items

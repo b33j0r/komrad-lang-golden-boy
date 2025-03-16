@@ -4,7 +4,7 @@ use crate::io_agent::IoAgent;
 use crate::prelude::StdIo;
 use crate::registry_agent::RegistryAgent;
 use crate::spawn_agent::SpawnAgent;
-use crate::stdlib_agent::StdLibAgent;
+use komrad_agent::stdlib_agent::StdLibAgent;
 use komrad_agent::AgentBehavior;
 use komrad_ast::prelude::Channel;
 use std::collections::HashMap;

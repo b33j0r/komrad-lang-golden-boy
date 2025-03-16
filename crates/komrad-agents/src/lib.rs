@@ -4,11 +4,8 @@ mod dynamic_agent;
 mod fs_agent;
 mod io_agent;
 
-#[macro_use]
-mod macros;
 mod registry_agent;
 mod spawn_agent;
-mod stdlib_agent;
 
 pub mod prelude {
     pub use crate::agent_agent::AgentAgent;

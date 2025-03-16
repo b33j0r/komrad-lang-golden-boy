@@ -1,6 +1,7 @@
+use crate::scope::Scope;
+use crate::AgentBehavior;
 use async_trait::async_trait;
-use komrad_agent::scope::Scope;
-use komrad_agent::{AgentBehavior, AgentLifecycle};
+use futures::task::SpawnExt;
 use komrad_ast::prelude::{
     Channel, ChannelListener, ControlMessage, Message, MessageBuilder, Number, RuntimeError, Value,
 };
@@ -108,9 +109,7 @@ impl AgentBehavior for ListAgent {
         match msg.first_word().as_deref() {
             Some("items") => {
                 if let Some(reply_chan) = msg.reply_to() {
-                    println!("ListAgent: items command received");
                     let items = self.items.read().await.clone();
-                    println!("ListAgent: items: {:?}", items);
                     let reply = Message::new(vec![Value::List(items)], None);
                     if reply_chan.send(reply).await.is_err() {
                         error!("ListAgent: failed to send 'items' reply");
@@ -172,17 +171,17 @@ impl AgentBehavior for ListAgent {
             Some(other) => {
                 error!("ListAgent: unknown command '{other}'");
                 if let Some(reply_chan) = msg.reply_to() {
-                    let reply = Message::default()
-                        .with_terms(vec![Value::from("error"), Value::from("unknown command")]);
+                    error!("ListAgent: unknown command '{other}'");
+                    let reply = Message::default().with_terms(vec![Value::from("error")]);
                     if reply_chan.send(reply).await.is_err() {
                         error!("ListAgent: failed to send 'error' reply");
                     }
                 }
             }
             None => {
+                error!("ListAgent: no command in message {:?}", msg);
                 if let Some(reply_chan) = msg.reply_to() {
-                    let reply = Message::default()
-                        .with_terms(vec![Value::from("error"), Value::from("no command")]);
+                    let reply = Message::default().with_terms(vec![Value::from("error")]);
                     if reply_chan.send(reply).await.is_err() {
                         error!("ListAgent: failed to send 'error' reply");
                     }
@@ -218,7 +217,7 @@ mod tests {
 
         // 3. Send a "list" command to the agent’s channel
         let msg = Message::default()
-            .with_terms(vec![Value::Word("list".into())])
+            .with_terms(vec![Value::Word("List".into())])
             .with_reply_to(Some(reply_chan));
         stdlib_chan.send(msg).await.unwrap();
 
@@ -258,7 +257,7 @@ mod tests {
         let reply = reply_listener.recv().await.unwrap();
 
         let items = reply.terms();
-        assert_eq!(items.len(), 2);
+        assert_eq!(items.len(), 1);
 
         println!("items: {:?}", items);
     }

@@ -12,12 +12,10 @@ macro_rules! stateless_agent_impl {
         }
 
         #[async_trait::async_trait]
-        impl komrad_agent::AgentLifecycle for $agent_name {
-            async fn get_scope(
-                &self,
-            ) -> std::sync::Arc<tokio::sync::Mutex<komrad_agent::scope::Scope>> {
+        impl crate::AgentLifecycle for $agent_name {
+            async fn get_scope(&self) -> std::sync::Arc<tokio::sync::Mutex<crate::scope::Scope>> {
                 // An empty scope
-                std::sync::Arc::new(tokio::sync::Mutex::new(komrad_agent::scope::Scope::new()))
+                std::sync::Arc::new(tokio::sync::Mutex::new(crate::scope::Scope::new()))
             }
             fn channel(&self) -> &komrad_ast::prelude::Channel {
                 &self.channel
@@ -33,10 +31,8 @@ macro_rules! stateless_agent_impl {
 macro_rules! stateful_agent_impl {
     ($agent_name:ident) => {
         #[async_trait::async_trait]
-        impl komrad_agent::AgentLifecycle for $agent_name {
-            async fn get_scope(
-                &self,
-            ) -> std::sync::Arc<tokio::sync::Mutex<komrad_agent::scope::Scope>> {
+        impl crate::AgentLifecycle for $agent_name {
+            async fn get_scope(&self) -> std::sync::Arc<tokio::sync::Mutex<crate::scope::Scope>> {
                 self.scope.clone()
             }
             fn channel(&self) -> &komrad_ast::prelude::Channel {

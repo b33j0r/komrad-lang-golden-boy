@@ -135,4 +135,7 @@ pub enum RuntimeError {
 
     #[error("Invalid arguments: {0}")]
     InvalidArugments(String),
+
+    #[error("Name not found in scope: {0}")]
+    NameNotFound(String),
 }

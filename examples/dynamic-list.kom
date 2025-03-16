@@ -1,8 +1,8 @@
-call = new List
+call = []
 
 call add Io
 call add println
 call add "Hello, world!"
 
-call-items = call items
-*call-items
+//call = call items
+*call

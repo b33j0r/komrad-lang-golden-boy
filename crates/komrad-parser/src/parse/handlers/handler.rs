@@ -1,28 +1,15 @@
 use crate::parse::handlers::holes;
-use crate::parse::statements::parse_block_statements;
 use crate::parse::strings::parse_string;
-use crate::parse::{identifier, primitives};
+use crate::parse::{block, identifier, primitives};
 use crate::span::{KResult, Span};
-use komrad_ast::prelude::{Block, Handler, Number, Pattern, Statement, TypeExpr, Value};
+use komrad_ast::prelude::{Handler, Number, Pattern, Statement, TypeExpr, Value};
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::{multispace0, space0, space1};
+use nom::character::complete::{space0, space1};
 use nom::multi::separated_list1;
-use nom::sequence::delimited;
+use nom::sequence::{delimited, pair, preceded};
 use nom::Parser;
 use std::sync::Arc;
-
-/// Parse a handler block, e.g. `{ IO println "hello!" }` -> Block(statements)
-pub fn parse_handler_block(input: Span) -> KResult<Block> {
-    let (remaining, block) = delimited(
-        delimited(space0, tag("{"), multispace0), // allow spaces before and after '{'
-        parse_block_statements,
-        delimited(multispace0, tag("}"), space0), // allow spaces before and after '}'
-    )
-    .parse(input)?;
-
-    Ok((remaining, Block::new(block)))
-}
 
 /// Parse a handler pattern's parts, e.g. `foo do` -> `((foo) (do))`.
 pub fn parse_handle_pattern_parts(input: Span) -> KResult<Vec<TypeExpr>> {
@@ -49,14 +36,16 @@ pub fn parse_handle_pattern(input: Span) -> KResult<Pattern> {
 
 /// Parse a handler statement, e.g. `[foo do] {\n  IO println "hello!"\n}`.
 pub fn parse_handler_statement(input: Span) -> KResult<Statement> {
-    let (input, _) = tag("[").parse(input)?;
-    let (remaining, parts) = parse_handle_pattern.parse(input)?;
-    let (input, _) = tag("]").parse(remaining)?;
-    let (remaining, block) = parse_handler_block.parse(input)?;
-    Ok((
-        remaining,
-        Statement::Handler(Arc::new(Handler::new(parts, block))),
-    ))
+    pair(
+        delimited(
+            tag("["),
+            preceded(space0, parse_handle_pattern),
+            preceded(space0, tag("]")),
+        ),
+        preceded(space0, block::parse_block),
+    )
+    .map(|(pattern, block)| Statement::Handler(Arc::new(Handler::new(pattern, block))))
+    .parse(input)
 }
 
 #[cfg(test)]

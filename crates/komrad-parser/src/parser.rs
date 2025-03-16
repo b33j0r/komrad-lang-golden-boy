@@ -1,5 +1,5 @@
 use crate::module_builder::ModuleBuilder;
-use crate::parse::statements::parse_block_statements;
+use crate::parse::block::parse_block_statements;
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::Statement;
 use miette::{NamedSource, Report};

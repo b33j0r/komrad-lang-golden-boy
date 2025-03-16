@@ -1,14 +1,9 @@
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::Statement;
+use nom::{character::complete::line_ending, Parser};
 
 /// Parse a blank line as a NoOp statement.
 pub(crate) fn parse_blank_line(input: Span) -> KResult<Statement> {
-    use nom::{
-        character::complete::line_ending,
-        Parser
-        ,
-    };
-
     let (remaining, _) = line_ending.parse(input)?;
     Ok((remaining, Statement::NoOp))
 }

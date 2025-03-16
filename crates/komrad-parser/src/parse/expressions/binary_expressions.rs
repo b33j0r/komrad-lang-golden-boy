@@ -1,6 +1,6 @@
 use crate::parse::embedded_block::parse_embedded_block_value;
-use crate::parse::expressions;
 use crate::parse::identifier::parse_identifier;
+use crate::parse::{block, expressions};
 use crate::span::KResult;
 use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr, Span};
 use nom::branch::alt;
@@ -41,7 +41,7 @@ fn parse_binary_operator(input: Span) -> KResult<BinaryOp> {
 fn parse_primary(input: Span) -> KResult<Expr> {
     alt((
         //expressions::parse_call_expression,
-        expressions::parse_block_expression,
+        block::parse_block_expression,
         expressions::parse_number_expression,
         expressions::parse_string_expression,
         map(parse_embedded_block_value, Expr::Value),

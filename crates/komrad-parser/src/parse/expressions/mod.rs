@@ -1,16 +1,14 @@
 use crate::parse::embedded_block::parse_embedded_block_value;
 use crate::parse::expressions::binary_expressions::parse_binary_expression;
-use crate::parse::identifier;
 use crate::parse::primitives;
-use crate::parse::statements::parse_block_statements;
+use crate::parse::{block, identifier};
 use crate::span::{KResult, Span};
-use komrad_ast::prelude::{Block, CallExpr, Expr, Value};
+use komrad_ast::prelude::{CallExpr, Expr, Value};
 use nom::branch::alt;
-use nom::bytes::complete::tag;
-use nom::character::complete::{multispace0, space1};
+use nom::character::complete::space1;
 use nom::combinator::map;
 use nom::multi::separated_list0;
-use nom::sequence::{delimited, pair, preceded};
+use nom::sequence::{pair, preceded};
 use nom::Parser;
 
 pub mod binary_expressions;
@@ -20,25 +18,12 @@ pub fn parse_value_expression(input: Span) -> KResult<Box<Expr>> {
     map(
         alt((
             parse_binary_expression,
-            parse_block_expression,
+            block::parse_block_expression,
             parse_number_expression,
             parse_string_expression,
             map(identifier::parse_identifier, Expr::Variable),
         )),
         Box::new,
-    )
-    .parse(input)
-}
-
-/// Parse a block expression, i.e. `{ ...statements... }`
-pub fn parse_block_expression(input: Span) -> KResult<Expr> {
-    map(
-        delimited(
-            tag("{"),
-            preceded(multispace0, parse_block_statements),
-            preceded(multispace0, tag("}")),
-        ),
-        |statements| Expr::Block(Box::new(Block::new(statements))),
     )
     .parse(input)
 }

@@ -5,19 +5,10 @@ use crate::parse::{expressions, fields, identifier};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::Statement;
 use nom::branch::alt;
-use nom::character::complete::{line_ending, space0};
+use nom::character::complete::space0;
 use nom::combinator::map;
-use nom::multi::separated_list0;
 use nom::sequence::{delimited, preceded, separated_pair};
 use nom::Parser;
-
-pub fn parse_block_statements(input: Span) -> KResult<Vec<Statement>> {
-    separated_list0(
-        line_ending,
-        alt((parse_statement, parse_blank_line, parse_comment)),
-    )
-    .parse(input)
-}
 
 /// Parse a single statement: possible forms are:
 /// - "IDENT: Type = expression" (field)
@@ -31,10 +22,10 @@ pub fn parse_statement(input: Span) -> KResult<Statement> {
     let (remaining, _) = space0.parse(input)?;
 
     let (remaining, statement) = alt((
-        parse_expander_statement,
         fields::parse_field_definition,
-        parse_handler_statement,
         parse_assignment_statement,
+        parse_handler_statement,
+        parse_expander_statement,
         map(expressions::parse_expression, Statement::Expr),
         parse_blank_line,
         parse_comment,
@@ -48,11 +39,7 @@ pub fn parse_statement(input: Span) -> KResult<Statement> {
 pub fn parse_assignment_statement(input: Span) -> KResult<Statement> {
     let assignment_parser = separated_pair(
         identifier::parse_identifier,
-        delimited(
-            nom::character::complete::space0,
-            nom::bytes::complete::tag("="),
-            nom::character::complete::space0,
-        ),
+        delimited(space0, nom::bytes::complete::tag("="), space0),
         expressions::parse_expression,
     );
 

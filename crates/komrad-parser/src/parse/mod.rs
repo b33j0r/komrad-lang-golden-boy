@@ -6,6 +6,7 @@ pub mod lines;
 pub mod statements;
 pub mod strings;
 
+pub mod block;
 pub mod embedded_block;
-mod primitives;
-mod value_type;
+pub mod primitives;
+pub mod value_type;

@@ -126,6 +126,28 @@ impl PartialEq for Number {
 
 impl Eq for Number {}
 
+impl PartialOrd for Number {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (Number::Int(i1), Number::Int(i2)) => i1.partial_cmp(i2),
+            (Number::UInt(u1), Number::UInt(u2)) => u1.partial_cmp(u2),
+            (Number::Float(f1), Number::Float(f2)) => f1.partial_cmp(f2),
+            _ => None,
+        }
+    }
+}
+
+impl Ord for Number {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (Number::Int(i1), Number::Int(i2)) => i1.cmp(i2),
+            (Number::UInt(u1), Number::UInt(u2)) => u1.cmp(u2),
+            (Number::Float(f1), Number::Float(f2)) => f1.partial_cmp(f2).unwrap(),
+            _ => panic!("Cannot compare different number types"),
+        }
+    }
+}
+
 impl Display for Number {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

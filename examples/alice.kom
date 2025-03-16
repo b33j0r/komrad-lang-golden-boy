@@ -5,7 +5,7 @@ agent Alice {
 
 	[start] {
 		Io println "Alice messaged bob!"
-		bob tell
+		bob tell "This is a message from Alice"
 	}
 }
 

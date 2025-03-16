@@ -6,6 +6,8 @@ agent Chat {
 
 [main] {
 	chat = spawn Chat {
+		// initializer blocks in komrad actually
+		// create an initial scope for the agent
 		delim = " >> "
 	}
 	chat say "Hello" from "Alice"

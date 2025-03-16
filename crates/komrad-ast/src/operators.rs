@@ -9,6 +9,7 @@ pub enum ComparisonOp {
     Ge,
     Lt,
     Le,
+    Divisible,
 }
 
 impl Display for ComparisonOp {
@@ -20,6 +21,7 @@ impl Display for ComparisonOp {
             ComparisonOp::Ge => ">=",
             ComparisonOp::Lt => "<",
             ComparisonOp::Le => "<=",
+            ComparisonOp::Divisible => "%%",
         };
         write!(f, "{}", op)
     }

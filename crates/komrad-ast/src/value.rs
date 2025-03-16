@@ -6,6 +6,7 @@ use crate::prelude::{literal, EmbeddedBlock, TypeExpr};
 use crate::value_type::ValueType;
 use std::fmt::Display;
 use std::hash::Hash;
+use std::ops::Rem;
 use tracing::error;
 
 #[derive(Debug, Clone)]
@@ -197,6 +198,22 @@ impl PartialOrd for Value {
                 error!("Type mismatch: Cannot compare {:?} with {:?}", self, other);
                 None
             }
+        }
+    }
+}
+
+impl Rem for &Value {
+    type Output = Value;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Value::Number(Number::Int(i1)), Value::Number(Number::Int(i2))) => {
+                Value::Number(Number::Int(i1 % i2))
+            }
+            (Value::Number(Number::UInt(u1)), Value::Number(Number::UInt(u2))) => {
+                Value::Number(Number::UInt(u1 % u2))
+            }
+            (_, _) => Value::Error(RuntimeError::TypeMismatch(String::new())),
         }
     }
 }

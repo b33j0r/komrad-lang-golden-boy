@@ -1,3 +1,22 @@
-[if (x % 3 == 0) _{zeroBlock}] {
-	*zeroBlock
+[fizzbuzz _(x %% 15)] {
+	Io println "FizzBuzz"
 }
+
+[fizzbuzz _(x %% 3)] {
+	Io println "Fizz"
+}
+
+[fizzbuzz _(x %% 5)] {
+	Io println "Buzz"
+}
+
+[fizzbuzz _(x %% 1)] {
+	Io println x
+}
+
+[for _(x < 16)] {
+	me fizzbuzz x
+	me for x + 1
+}
+
+me for 1

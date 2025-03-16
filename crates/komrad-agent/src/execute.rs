@@ -461,7 +461,7 @@ mod tests {
         let mut scope = Scope::default();
 
         // Create a channel with capacity 1.
-        let (channel, mut listener) = Channel::new(1);
+        let (channel, listener) = Channel::new(1);
         // Create a call expression whose target is the channel.
         // The argument is a single number value (e.g. 100).
         let call_expr = Expr::Call(CallExpr::new(

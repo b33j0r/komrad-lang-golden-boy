@@ -1,6 +1,6 @@
 use crate::scope::Scope;
 use async_trait::async_trait;
-use komrad_ast::prelude::{ComparisonOp, Message, Pattern, TypeExpr, Typed, Value};
+use komrad_ast::prelude::{ComparisonOp, Message, Number, Pattern, TypeExpr, Typed, Value};
 
 #[async_trait]
 pub trait TryBind {
@@ -88,6 +88,20 @@ impl TryBind for Pattern {
                         ComparisonOp::Le => value <= expected_value,
                         ComparisonOp::Gt => value > expected_value,
                         ComparisonOp::Ge => value >= expected_value,
+                        ComparisonOp::Divisible => {
+                            let outcome = match (value, expected_value) {
+                                (
+                                    Value::Number(Number::Int(value)),
+                                    Value::Number(Number::Int(expected_value)),
+                                ) => value % expected_value == 0,
+                                (
+                                    Value::Number(Number::UInt(value)),
+                                    Value::Number(Number::UInt(expected_value)),
+                                ) => value % expected_value == 0,
+                                _ => false,
+                            };
+                            outcome
+                        }
                     };
                     if !result {
                         return None;
@@ -190,6 +204,32 @@ mod tests {
         assert!(
             bound_scope.is_none(),
             "Expected word literal mismatch to fail binding"
+        );
+    }
+
+    /// Test binding with a divisibility check
+    #[tokio::test]
+    async fn test_try_bind_with_divisible_check() {
+        let pattern = Pattern::new(vec![TypeExpr::Binary(
+            "x".to_string(),
+            ComparisonOp::Divisible,
+            Value::Number(Number::UInt(3)),
+        )]);
+        let message = Message::new(vec![Value::Number(Number::UInt(9))], None);
+        let mut context = Scope::new();
+        let bound_scope = pattern.try_bind(message, &mut context).await;
+        assert!(
+            bound_scope.is_some(),
+            "Expected divisibility check to succeed"
+        );
+
+        // Now test a mismatch case.
+        let message_mismatch = Message::new(vec![Value::Number(Number::UInt(10))], None);
+        let mut context2 = Scope::new();
+        let bound_scope = pattern.try_bind(message_mismatch, &mut context2).await;
+        assert!(
+            bound_scope.is_none(),
+            "Expected divisibility check mismatch to fail binding"
         );
     }
 }

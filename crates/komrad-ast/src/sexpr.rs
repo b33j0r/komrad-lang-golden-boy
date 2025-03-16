@@ -373,6 +373,7 @@ impl ToSexpr for ComparisonOp {
             ComparisonOp::Ge => Sexpr::Atom(">=".to_string()),
             ComparisonOp::Lt => Sexpr::Atom("<".to_string()),
             ComparisonOp::Le => Sexpr::Atom("<=".to_string()),
+            ComparisonOp::Divisible => Sexpr::Atom("%%".to_string()),
         }
     }
 }

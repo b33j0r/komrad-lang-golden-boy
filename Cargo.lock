@@ -1033,6 +1033,7 @@ dependencies = [
  "dashmap",
  "futures",
  "komrad-ast",
+ "log",
  "tokio",
  "tokio-util",
  "tracing",

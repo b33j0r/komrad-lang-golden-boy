@@ -12,3 +12,4 @@ tokio.workspace = true
 tokio-util.workspace = true
 tracing.workspace = true
 futures.workspace = true
+log = "0.4.26"

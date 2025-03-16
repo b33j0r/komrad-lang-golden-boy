@@ -54,6 +54,7 @@ pub fn parse_binary_constraint(input: Span) -> KResult<TypeExpr> {
                 tag(">="),
                 tag("<"),
                 tag(">"),
+                tag("%%"),
             )),
         ),
         preceded(space0, parse_value_expression),
@@ -66,6 +67,7 @@ pub fn parse_binary_constraint(input: Span) -> KResult<TypeExpr> {
                 ">=" => komrad_ast::prelude::ComparisonOp::Ge,
                 "<" => komrad_ast::prelude::ComparisonOp::Lt,
                 ">" => komrad_ast::prelude::ComparisonOp::Gt,
+                "%%" => komrad_ast::prelude::ComparisonOp::Divisible,
                 _ => unreachable!(),
             };
             // the expr has to be a value or a variable
@@ -164,6 +166,21 @@ mod test_holes {
             TypeExpr::Binary(
                 "hello".to_string(),
                 komrad_ast::prelude::ComparisonOp::Eq,
+                Value::Number(Number::UInt(42))
+            )
+        );
+    }
+
+    #[test]
+    fn test_type_expr_hole_binary_divisible_constraint() {
+        let input = full_span("_(hello %% 42)");
+        let (remaining, hole) = parse_type_expr_hole(input).unwrap();
+        assert_eq!(*remaining.fragment(), "");
+        assert_eq!(
+            hole,
+            TypeExpr::Binary(
+                "hello".to_string(),
+                komrad_ast::prelude::ComparisonOp::Divisible,
                 Value::Number(Number::UInt(42))
             )
         );

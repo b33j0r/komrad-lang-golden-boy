@@ -51,9 +51,8 @@ pub fn parse_handler_statement(input: Span) -> KResult<Statement> {
 #[cfg(test)]
 mod tests {
     use crate::parse::handlers::handler::{parse_handle_pattern, parse_handler_statement};
-    use crate::parse::handlers::*;
     use crate::parse::strings::test_parse_string::full_span;
-    use komrad_ast::prelude::{Pattern, Statement, ValueType};
+    use komrad_ast::prelude::{Pattern, Statement, TypeExpr, ValueType};
 
     #[test]
     fn test_parse_simple_handler_pattern() {

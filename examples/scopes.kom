@@ -1,10 +1,15 @@
 agent Chat {
 	[say _text from _user] {
-		Io println user + ": " + text
+		Io println user + delim + text
 	}
 }
 
 [main] {
-	chat = spawn Chat {}
+	chat = spawn Chat {
+		delim = " >> "
+	}
 	chat say "Hello" from "Alice"
+
+	// shouldn't work
+	Io println delim
 }

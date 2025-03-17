@@ -56,7 +56,10 @@ pub async fn main() {
     let args = Args::parse();
 
     tracing_subscriber::fmt()
-        .with_max_level(args.verbose)
+        .with_env_filter(format!(
+            "komrad={},warp=info",
+            args.verbose.log_level_filter()
+        ))
         .with_target(false)
         .without_time()
         .with_ansi(true)
@@ -161,7 +164,7 @@ async fn handle_run(file: PathBuf, args: &Args) {
 /// Before running the file again, the previous system instance is gracefully shut down.
 async fn handle_run_watch(file: PathBuf) {
     use notify::{Config, RecommendedWatcher, RecursiveMode};
-    use std::sync::{Arc, Mutex, mpsc};
+    use std::sync::{mpsc, Arc, Mutex};
 
     info!("Running file in watch mode: {}", file.display());
     // Initial run

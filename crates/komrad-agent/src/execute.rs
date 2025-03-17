@@ -1,13 +1,13 @@
-use crate::AgentBehavior;
 use crate::closure::Closure;
 use crate::stdlib_agent::ListAgent;
+use crate::AgentBehavior;
 use async_trait::async_trait;
 use komrad_ast::prelude::{
     BinaryExpr, BinaryOp, Block, CallExpr, Channel, Expr, Message, RuntimeError, Statement,
     ToSexpr, Typed, Value,
 };
 use komrad_ast::scope::Scope;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 // TODO
 // pub enum ExecutionResult<T, E> {
 //     Skip,
@@ -262,7 +262,7 @@ impl Execute for CallExpr {
             args.push(arg.execute(scope).await);
         }
         let target = self.target().execute(scope).await;
-        info!(
+        debug!(
             "☎️ {:}",
             (target.clone(), args.clone()).to_sexpr().format(0)
         );

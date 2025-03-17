@@ -117,12 +117,7 @@ fn build_route(
             let delegate = delegate.clone();
             async move {
                 if let Some(delegate) = &delegate {
-                    info!(
-                        "Received {} request for {}, forwarding to delegate channel {}",
-                        method,
-                        path.as_str(),
-                        delegate.uuid(),
-                    );
+                    debug!("{} {} -> {}", method, path.as_str(), delegate.uuid(),);
 
                     let path_segments: Vec<Value> = path
                         .as_str()
@@ -222,6 +217,8 @@ impl WarpListenerAgent {
 
     fn start_server(&self, address: Value, port: Value, delegate: Value) -> JoinHandle<()> {
         error!("Starting Warp HTTP server");
+
+        // Parse the message
         let addr_str = match address {
             Value::String(s) => s,
             _ => "0.0.0.0".to_string(),
@@ -236,6 +233,7 @@ impl WarpListenerAgent {
             _ => None,
         };
 
+        // Construct the socket address
         let socket_str = format!("{}:{}", addr_str, port_num);
         let socket_addr: SocketAddr = match socket_str.parse() {
             Ok(addr) => addr,
@@ -245,6 +243,7 @@ impl WarpListenerAgent {
             }
         };
 
+        // Start the Warp server
         let route = build_route(delegate_channel);
         let warp_shutdown = self.warp_shutdown.clone();
         let (addr, server) =

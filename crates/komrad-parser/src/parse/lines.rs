@@ -1,6 +1,6 @@
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::Statement;
-use nom::{character::complete::line_ending, Parser};
+use nom::{Parser, character::complete::line_ending};
 
 /// Parse a blank line as a NoOp statement.
 pub(crate) fn parse_blank_line(input: Span) -> KResult<Statement> {
@@ -11,7 +11,7 @@ pub(crate) fn parse_blank_line(input: Span) -> KResult<Statement> {
 /// Parse a comment line, e.g. `// hello`.
 pub(crate) fn parse_comment(input: Span) -> KResult<Statement> {
     use nom::{
-        bytes::complete::tag, character::complete::not_line_ending, sequence::preceded, Parser,
+        Parser, bytes::complete::tag, character::complete::not_line_ending, sequence::preceded,
     };
 
     let (remaining, comment_content) = preceded(tag("//"), not_line_ending).parse(input)?;

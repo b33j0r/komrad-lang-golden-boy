@@ -197,7 +197,7 @@ impl AgentBehavior for ListAgent {
 mod tests {
     use super::*;
     use komrad_ast::prelude::{Channel, Message, MessageBuilder, Number, Value};
-    use tokio::time::{sleep, Duration};
+    use tokio::time::{Duration, sleep};
     use tracing::info;
 
     #[tokio::test]

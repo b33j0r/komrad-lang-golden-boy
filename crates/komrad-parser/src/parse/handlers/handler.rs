@@ -3,12 +3,12 @@ use crate::parse::strings::parse_string;
 use crate::parse::{block, identifier, primitives};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Handler, Number, Pattern, Statement, TypeExpr, Value};
+use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{space0, space1};
 use nom::multi::separated_list1;
 use nom::sequence::{delimited, pair, preceded};
-use nom::Parser;
 use std::sync::Arc;
 
 /// Parse a handler pattern's parts, e.g. `foo do` -> `((foo) (do))`.

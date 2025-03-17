@@ -4,11 +4,11 @@ use crate::parse::primitives;
 use crate::parse::value_type::parse_value_type;
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Expr, TypeExpr, Value};
+use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::space0;
 use nom::sequence::{delimited, preceded, separated_pair};
-use nom::Parser;
 use tracing::error;
 
 pub fn parse_named_hole(input: Span) -> KResult<TypeExpr> {

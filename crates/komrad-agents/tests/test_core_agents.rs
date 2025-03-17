@@ -43,12 +43,12 @@ mod tests {
     use komrad_agents::prelude::RegistryAgent;
     use komrad_agents::prelude::SpawnAgent;
     use komrad_agents::prelude::{AgentAgent, RegistryFactory};
-    use tokio::time::{sleep, Duration};
+    use tokio::time::{Duration, sleep};
 
     // Test 1: Basic channel message send/receive.
     #[tokio::test]
     async fn test_basic_channel_send() {
-        let (chan, mut listener) = Channel::new(1);
+        let (chan, listener) = Channel::new(1);
         let msg = Message::new(vec![Value::Number(Number::UInt(42))], None);
         chan.send(msg.clone()).await.unwrap();
         let received = listener.recv().await.unwrap();
@@ -121,7 +121,7 @@ mod tests {
         let spawn_agent = SpawnAgent::new(registry.clone());
         let spawn_chan = spawn_agent.clone().spawn();
 
-        let (reply_chan, mut reply_listener) = Channel::new(10);
+        let (reply_chan, reply_listener) = Channel::new(10);
         let msg = Message::new(vec![Value::Word("Bob".into())], Some(reply_chan.clone()));
         spawn_chan.send(msg).await.unwrap();
 
@@ -159,7 +159,7 @@ mod tests {
         let agent_agent = AgentAgent::new(registry.clone());
         let agent_chan = agent_agent.clone().spawn();
 
-        let (reply_chan_alice, mut reply_listener_alice) = Channel::new(10);
+        let (reply_chan_alice, reply_listener_alice) = Channel::new(10);
         // Manually construct the agent registration message for Alice.
         // This message will be transformed by AgentAgent into:
         //   [define, agent, Alice, <block>]
@@ -196,7 +196,7 @@ mod tests {
         // For testing, we simulate the spawn of Bob and then sending "foo".
         let spawn_agent = SpawnAgent::new(registry.clone());
         let spawn_chan = spawn_agent.clone().spawn();
-        let (reply_chan_bob, mut reply_listener_bob) = Channel::new(10);
+        let (reply_chan_bob, reply_listener_bob) = Channel::new(10);
         let msg_spawn_bob = Message::new(
             vec![Value::Word("Bob".into())],
             Some(reply_chan_bob.clone()),

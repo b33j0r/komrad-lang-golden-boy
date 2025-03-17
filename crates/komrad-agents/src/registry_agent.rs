@@ -255,7 +255,7 @@ mod tests {
         let registry = RegistryAgent::new();
         let reg_chan = registry.clone().spawn();
 
-        let (reply_chan, mut reply_listener) = Channel::new(10);
+        let (reply_chan, reply_listener) = Channel::new(10);
         let block = Block::new(vec![Statement::NoOp]);
         let msg = Message::new(
             vec![
@@ -291,7 +291,7 @@ mod tests {
         let registry = RegistryAgent::new();
         let reg_chan = registry.clone().spawn();
 
-        let (reply_chan, mut reply_listener) = Channel::new(10);
+        let (reply_chan, reply_listener) = Channel::new(10);
         // Missing the Block definition
         let msg = Message::new(
             vec![
@@ -325,7 +325,7 @@ mod tests {
             );
         }
 
-        let (reply_chan, mut reply_listener) = Channel::new(10);
+        let (reply_chan, reply_listener) = Channel::new(10);
         let msg = Message::new(
             vec![
                 Value::Word("spawn".into()),
@@ -348,7 +348,7 @@ mod tests {
         let registry = RegistryAgent::new();
         let reg_chan = registry.clone().spawn();
 
-        let (reply_chan, mut reply_listener) = Channel::new(10);
+        let (reply_chan, reply_listener) = Channel::new(10);
         let msg = Message::new(
             vec![
                 Value::Word("spawn".into()),

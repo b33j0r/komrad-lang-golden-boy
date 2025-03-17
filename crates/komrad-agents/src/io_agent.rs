@@ -1,10 +1,9 @@
 use komrad_agent::{AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::Message;
 use komrad_ast::prelude::{Channel, ChannelListener, Value};
-use komrad_ast::scope::Scope;
 use komrad_macros::agent_lifecycle_impl;
 use std::sync::Arc;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 use tracing::warn;
 
 /// **IoInterface** trait for pluggable Io.
@@ -47,6 +46,7 @@ impl IoAgent {
         })
     }
 
+    #[allow(dead_code)]
     fn default() -> Arc<Self> {
         let io_interface = Arc::new(RwLock::new(StdIo));
         let (chan, listener) = Channel::new(32);
@@ -124,7 +124,7 @@ mod tests {
         let io_chan = io_agent.clone().spawn();
 
         // Send a println message
-        let (reply_chan, mut reply_listener) = Channel::new(10);
+        let (reply_chan, reply_listener) = Channel::new(10);
         let msg = Message::new(
             vec![
                 Value::Word("println".into()),

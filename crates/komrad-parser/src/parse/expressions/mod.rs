@@ -4,12 +4,12 @@ use crate::parse::primitives;
 use crate::parse::{block, identifier};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{CallExpr, Expr, Value};
+use nom::Parser;
 use nom::branch::alt;
 use nom::character::complete::space1;
 use nom::combinator::map;
 use nom::multi::separated_list0;
 use nom::sequence::{pair, preceded};
-use nom::Parser;
 
 pub mod binary_expressions;
 

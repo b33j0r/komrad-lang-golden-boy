@@ -2,12 +2,12 @@ use crate::parse::lines::{parse_blank_line, parse_comment};
 use crate::parse::statements;
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Block, Expr, Statement};
+use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{line_ending, multispace0};
 use nom::multi::{many1, separated_list0};
 use nom::sequence::{delimited, preceded};
-use nom::Parser;
 
 /// Parse a handler block, e.g. `{ IO println "hello!" }` -> Block(statements)
 pub fn parse_block(input: Span) -> KResult<Block> {

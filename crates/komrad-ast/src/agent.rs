@@ -3,9 +3,9 @@ use crate::prelude::{
 };
 use crate::scope::Scope;
 use async_trait::async_trait;
-use std::sync::{mpsc, Arc};
+use std::sync::{Arc, mpsc};
 use tokio::select;
-use tokio::sync::{watch, Mutex};
+use tokio::sync::{Mutex, watch};
 use tracing::{debug, error, info, trace};
 
 pub enum AgentControl {

@@ -1,15 +1,11 @@
-use komrad_agent::{Agent, AgentBehavior, AgentLifecycle};
+use komrad_agent::{Agent, AgentBehavior};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, Value};
-use komrad_ast::scope::Scope;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tracing::{error, warn};
-
-// Use Tokio's async FS API and stream utilities.
 use komrad_macros::agent_stateless_impl;
+use std::sync::Arc;
 use tokio::fs;
-use tokio_stream::wrappers::ReadDirStream;
 use tokio_stream::StreamExt;
+use tokio_stream::wrappers::ReadDirStream;
+use tracing::{error, warn};
 
 pub struct FsAgent {
     channel: Channel,

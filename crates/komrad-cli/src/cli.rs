@@ -161,7 +161,7 @@ async fn handle_run(file: PathBuf, args: &Args) {
 /// Before running the file again, the previous system instance is gracefully shut down.
 async fn handle_run_watch(file: PathBuf) {
     use notify::{Config, RecommendedWatcher, RecursiveMode};
-    use std::sync::{mpsc, Arc, Mutex};
+    use std::sync::{Arc, Mutex, mpsc};
 
     info!("Running file in watch mode: {}", file.display());
     // Initial run

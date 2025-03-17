@@ -1,6 +1,6 @@
+use crate::AgentBehavior;
 use crate::closure::Closure;
 use crate::stdlib_agent::ListAgent;
-use crate::AgentBehavior;
 use async_trait::async_trait;
 use komrad_ast::prelude::{
     BinaryExpr, BinaryOp, Block, CallExpr, Channel, Expr, Message, RuntimeError, Statement,

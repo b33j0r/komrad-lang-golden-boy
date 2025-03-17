@@ -62,7 +62,7 @@ mod tests {
         let agent_agent = AgentAgent::new(registry.clone());
         let agent_chan = agent_agent.clone().spawn();
 
-        let (reply_chan, mut reply_listener) = Channel::new(10);
+        let (reply_chan, reply_listener) = Channel::new(10);
         let block = Block::new(vec![Statement::NoOp]);
         let msg = Message::new(
             vec![

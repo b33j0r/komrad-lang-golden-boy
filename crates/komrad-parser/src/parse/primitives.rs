@@ -2,13 +2,13 @@ use crate::parse::identifier::parse_identifier;
 use crate::parse::{block, strings};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Expr, Number, Value};
+use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{digit1, space0};
 use nom::combinator::map;
 use nom::multi::separated_list0;
 use nom::sequence::delimited;
-use nom::Parser;
 
 pub fn parse_word(input: Span) -> KResult<Value> {
     // parse an identifier

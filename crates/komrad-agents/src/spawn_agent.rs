@@ -1,10 +1,8 @@
 use crate::registry_agent::RegistryAgent;
-use komrad_agent::{AgentBehavior, AgentLifecycle};
+use komrad_agent::AgentBehavior;
 use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
-use komrad_ast::scope::Scope;
 use komrad_macros::agent_lifecycle_impl;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tracing::debug;
 
 /// SpawnAgent is a syntax proxy bound as `spawn`.
@@ -72,7 +70,7 @@ mod tests {
         let spawn_agent = SpawnAgent::new(registry.clone());
         let spawn_chan = spawn_agent.clone().spawn();
 
-        let (reply_chan, mut reply_listener) = Channel::new(10);
+        let (reply_chan, reply_listener) = Channel::new(10);
         let msg = Message::new(vec![Value::Word("Bob".into())], Some(reply_chan.clone()));
         spawn_chan.send(msg).await.unwrap();
 
@@ -91,7 +89,7 @@ mod tests {
         let spawn_agent = SpawnAgent::new(registry.clone());
         let spawn_chan = spawn_agent.clone().spawn();
 
-        let (reply_chan, mut reply_listener) = Channel::new(10);
+        let (reply_chan, reply_listener) = Channel::new(10);
 
         // Send a properly formatted "spawn agent" message with an undefined agent.
         let msg = Message::new(

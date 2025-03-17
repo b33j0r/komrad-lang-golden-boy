@@ -4,11 +4,11 @@ use crate::parse::lines::{parse_blank_line, parse_comment};
 use crate::parse::{expressions, fields, identifier};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::Statement;
+use nom::Parser;
 use nom::branch::alt;
 use nom::character::complete::space0;
 use nom::combinator::map;
 use nom::sequence::{delimited, preceded, separated_pair};
-use nom::Parser;
 
 /// Parse a single statement: possible forms are:
 /// - "IDENT: Type = expression" (field)

@@ -1,10 +1,10 @@
 use ollama_rs::{
+    Ollama,
     generation::{
         completion::request::GenerationRequest,
         options::GenerationOptions,
         parameters::{FormatType, JsonSchema, JsonStructure},
     },
-    Ollama,
 };
 use serde::Deserialize;
 

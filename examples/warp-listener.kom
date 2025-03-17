@@ -20,7 +20,7 @@ agent Server {
 
 [main] {
 	server = spawn Server {}
-	listener = spawn HttpListener {
+	listener = spawn WarpListener {
 		host = "0.0.0.0"
 		port = 9898
 		delegate = server

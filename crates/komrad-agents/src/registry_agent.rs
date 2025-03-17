@@ -15,7 +15,7 @@ use komrad_web::AxumListenerFactory;
 use komrad_web::ActixListenerFactory;
 
 #[cfg(feature = "warp")]
-use komrad_web::HttpListenerFactory;
+use komrad_web::WarpListenerFactory;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -47,8 +47,8 @@ impl RegistryAgent {
         );
         #[cfg(feature = "warp")]
         initial_registry.insert(
-            "HttpListener".to_string(),
-            RegistryFactory::FromFactory(Arc::new(HttpListenerFactory)),
+            "WarpListener".to_string(),
+            RegistryFactory::FromFactory(Arc::new(WarpListenerFactory)),
         );
         #[cfg(feature = "actix-web")]
         initial_registry.insert(

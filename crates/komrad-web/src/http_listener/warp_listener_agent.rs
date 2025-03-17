@@ -196,7 +196,7 @@ fn build_route(
     )
 }
 
-pub struct HttpListenerAgent {
+pub struct WarpListenerAgent {
     _name: String,
     scope: Arc<Mutex<Scope>>,
     channel: Channel,
@@ -205,7 +205,7 @@ pub struct HttpListenerAgent {
     warp_shutdown: CancellationToken,
 }
 
-impl HttpListenerAgent {
+impl WarpListenerAgent {
     pub fn new(name: &str, initial_scope: Scope) -> Arc<Self> {
         error!("Creating HttpListenerAgent");
         let (channel, listener) = Channel::new(32);
@@ -256,7 +256,7 @@ impl HttpListenerAgent {
 }
 
 #[async_trait::async_trait]
-impl AgentLifecycle for HttpListenerAgent {
+impl AgentLifecycle for WarpListenerAgent {
     async fn init(self: Arc<Self>, scope: &mut Scope) {
         debug!("Initializing HttpListenerAgent");
         let (address, port, delegate) = {
@@ -301,18 +301,18 @@ impl AgentLifecycle for HttpListenerAgent {
 }
 
 #[async_trait::async_trait]
-impl AgentBehavior for HttpListenerAgent {
+impl AgentBehavior for WarpListenerAgent {
     async fn handle_message(&self, _msg: Message) -> bool {
         true
     }
 }
 
-impl Agent for HttpListenerAgent {}
+impl Agent for WarpListenerAgent {}
 
-pub struct HttpListenerFactory;
+pub struct WarpListenerFactory;
 
-impl AgentFactory for HttpListenerFactory {
+impl AgentFactory for WarpListenerFactory {
     fn create_agent(&self, name: &str, initial_scope: Scope) -> Arc<dyn Agent> {
-        HttpListenerAgent::new(name, initial_scope)
+        WarpListenerAgent::new(name, initial_scope)
     }
 }

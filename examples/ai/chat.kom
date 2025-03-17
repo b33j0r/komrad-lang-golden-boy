@@ -1,34 +1,54 @@
+agent ChatHistory {
+	messages = []
+
+	[chat _role _msg] {
+		messages add msg
+		Io println role + ": " + msg
+		next chat role msg
+	}
+}
+
 agent ChatWebSocket {
+	server: Channel
+
 	[websocket _ws] {
-		Io println "WebSocket connection established"
-		ws send "Welcome to the chat server!"
+
 	}
 }
 
 agent ChatServer {
 	connections = []
 
-	[http _response GET "/ws"] {
+	[http _response GET "ws"] {
 		Io println "WebSocket connection request"
 		ws = spawn ChatWebSocket {
 			server = me
 		}
-		response websocket ws
 		connections add ws
+		response websocket ws
 	}
-}
 
-agent ChatHistory {
-	messages = []
-
-	[chat _role _msg] {
-		messages add [role msg]
-		Io println role + ": " + msg
-		next chat role msg
+	[http _response GET] {
+		Io println "HTTP connection request"
+		templates = spawn Tera {
+            base_dir = "./examples/ai/templates"
+        }
+        rendered = templates render "chat.html" {
+          title = "Komrad"
+        }
+        response write rendered
+        response finish
 	}
 }
 
 [main] {
 	history = spawn ChatHistory {}
-	step chat "user" "Hello, how are you?"
+	server = spawn ChatServer {
+		history = history
+	}
+	listener = spawn HttpListener {
+		host = "0.0.0.0"
+		port = 9898
+		delegate = server
+	}
 }

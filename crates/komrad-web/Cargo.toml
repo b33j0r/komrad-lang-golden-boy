@@ -28,7 +28,8 @@ tower-http = { version = "0.6.2", features = ["trace", "cors"], optional = true 
 
 [features]
 web = []
-default = ["axum", "templates"]
+
+default = ["warp", "templates"]
 
 templates = ["dep:tera"]
 
@@ -37,5 +38,8 @@ axum = ["web", "hyper", "dep:axum", "dep:tower-http"]
 actix-web = ["web", "dep:actix-web", "dep:actix-ws"]
 
 warp = ["web", "dep:warp", "hyper-util"]
-hyper-util = ["dep:http-body-util", "dep:hyper-util"]
+
 hyper = ["web", "dep:hyper", "hyper-util"]
+
+hyper-util = ["dep:http-body-util", "dep:hyper-util"]
+

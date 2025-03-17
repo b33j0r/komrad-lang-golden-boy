@@ -7,9 +7,9 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use warp::http::{self, Response};
-use warp::{Filter, Rejection, Reply, hyper};
+use warp::{hyper, Filter, Rejection, Reply};
 
 /// Converts the final list-based response (expected [status, headers, cookies, body])
 /// into a Warp `Response<hyper::Body>`. All branches return the same type.
@@ -258,7 +258,7 @@ impl HttpListenerAgent {
 #[async_trait::async_trait]
 impl AgentLifecycle for HttpListenerAgent {
     async fn init(self: Arc<Self>, scope: &mut Scope) {
-        info!("Initializing HttpListenerAgent");
+        debug!("Initializing HttpListenerAgent");
         let (address, port, delegate) = {
             let address = scope
                 .get("host")

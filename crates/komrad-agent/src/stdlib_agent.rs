@@ -1,63 +1,15 @@
 use crate::AgentBehavior;
 use async_trait::async_trait;
-use komrad_ast::prelude::{Channel, ChannelListener, Message, MessageBuilder, Number, Value};
+use komrad_ast::agent::Agent;
+use komrad_ast::prelude::{
+    AgentFactory, Channel, ChannelListener, Message, MessageBuilder, Number, Value,
+};
 use komrad_ast::scope::Scope;
 use komrad_macros::{agent_stateful_impl, agent_stateless_impl};
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tracing::{debug, error};
 
-//
-// ------------------ StdLibAgent (Stateless) ------------------
-//
-pub struct StdLibAgent {
-    channel: Channel,
-    listener: Arc<ChannelListener>,
-}
-
-agent_stateless_impl!(StdLibAgent);
-
-impl StdLibAgent {
-    /// Creates a new `ListAgent` from the message’s terms and returns its channel.
-    /// The first term is typically `"list"`, and the remaining are the initial items.
-    pub fn make_new_list_agent(&self, msg: &Message) -> Channel {
-        let items = msg.rest().to_vec();
-        let agent = ListAgent::new(items);
-        // `spawn()` returns the new agent’s Channel, so we can return that to the caller
-        agent.spawn()
-    }
-}
-
-/// The `StdLibAgent` interprets the first term of a message:
-/// - If it’s `"list"`, spawns a new ListAgent and replies with its channel.
-/// - Otherwise, logs an unknown command.
-#[async_trait]
-impl AgentBehavior for StdLibAgent {
-    async fn handle_message(&self, msg: Message) -> bool {
-        if let Some(cmd) = msg.first_word() {
-            if cmd == "List" {
-                if let Some(reply_chan) = msg.reply_to() {
-                    let list_chan = self.make_new_list_agent(&msg);
-                    let reply = Message::default().with_terms(vec![Value::Channel(list_chan)]);
-                    if reply_chan.send(reply).await.is_err() {
-                        error!("StdLibAgent: failed to reply with new list agent");
-                    }
-                } else {
-                    error!("StdLibAgent: 'list' command requires a reply channel");
-                }
-            } else {
-                debug!("StdLibAgent: unknown command '{cmd}'");
-            }
-        } else {
-            debug!("StdLibAgent: no command in message");
-        }
-        true
-    }
-}
-
-//
-// ------------------ ListAgent (Stateful) ------------------
-//
 pub struct ListAgent {
     channel: Channel,
     listener: Arc<ChannelListener>,
@@ -197,7 +149,7 @@ impl AgentBehavior for ListAgent {
 mod tests {
     use super::*;
     use komrad_ast::prelude::{Channel, Message, MessageBuilder, Number, Value};
-    use tokio::time::{Duration, sleep};
+    use tokio::time::{sleep, Duration};
     use tracing::info;
 
     #[tokio::test]
@@ -323,5 +275,21 @@ mod tests {
             .await
             .expect("Should receive 'get' reply");
         assert_eq!(reply_get.terms().get(0).unwrap(), &Value::from("b"));
+    }
+}
+
+impl Agent for ListAgent {}
+
+pub struct ListAgentFactory;
+
+impl ListAgentFactory {
+    pub fn new() -> Arc<ListAgent> {
+        ListAgent::new(vec![])
+    }
+}
+
+impl AgentFactory for ListAgentFactory {
+    fn create_agent(&self, _name: &str, _initial_scope: Scope) -> Arc<dyn Agent> {
+        ListAgent::new(vec![])
     }
 }

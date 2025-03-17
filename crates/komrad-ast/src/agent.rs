@@ -3,9 +3,9 @@ use crate::prelude::{
 };
 use crate::scope::Scope;
 use async_trait::async_trait;
-use std::sync::{Arc, mpsc};
+use std::sync::{mpsc, Arc};
 use tokio::select;
-use tokio::sync::{Mutex, watch};
+use tokio::sync::{watch, Mutex};
 use tracing::{debug, error, info, trace};
 
 pub enum AgentControl {
@@ -93,7 +93,7 @@ pub trait AgentBehavior: AgentLifecycle {
         {
             let scope = self.clone().get_scope().await;
             let mut scope = scope.lock().await;
-            debug!("Initializing agent");
+            trace!("Initializing agent");
             self.clone().init(&mut scope).await
         };
 

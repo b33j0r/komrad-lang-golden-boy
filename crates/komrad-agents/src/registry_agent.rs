@@ -1,5 +1,6 @@
 use crate::dynamic_agent::DynamicAgent;
 use komrad_agent::execute::Execute;
+use komrad_agent::stdlib_agent::ListAgentFactory;
 use komrad_agent::{AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
 use komrad_ast::scope::Scope;
@@ -35,6 +36,10 @@ impl RegistryAgent {
             RegistryFactory::FromFactory(Arc::new(TeraAgentFactory {
                 base_dir: PathBuf::from("."),
             })),
+        );
+        initial_registry.insert(
+            "List".to_string(),
+            RegistryFactory::FromFactory(Arc::new(ListAgentFactory)),
         );
         let registry = RwLock::new(initial_registry);
 

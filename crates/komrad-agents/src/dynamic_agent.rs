@@ -7,7 +7,7 @@ use komrad_ast::prelude::{
 use komrad_ast::scope::Scope;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
-use tracing::debug;
+use tracing::{debug, trace};
 
 /// A universal dynamic "module" or "agent" that handles an AST block.
 pub struct DynamicAgent {
@@ -30,7 +30,7 @@ impl DynamicAgent {
             .set("me".to_string(), Value::Channel(channel.clone()))
             .await;
         for (name, channel) in default_channels.get_channels() {
-            debug!(
+            trace!(
                 "DynamicAgent: adding default channel {} -> {:?}",
                 name, channel
             );

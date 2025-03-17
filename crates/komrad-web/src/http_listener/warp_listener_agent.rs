@@ -1,3 +1,4 @@
+use crate::http_listener::config::parse_server_config_from_scope;
 use crate::http_listener::http_response_agent::HttpResponseAgent;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, Value};
@@ -259,16 +260,7 @@ impl WarpListenerAgent {
 impl AgentLifecycle for WarpListenerAgent {
     async fn init(self: Arc<Self>, scope: &mut Scope) {
         debug!("Initializing HttpListenerAgent");
-        let (address, port, delegate) = {
-            let address = scope
-                .get("host")
-                .unwrap_or(Value::String("0.0.0.0".to_string()));
-            let port = scope
-                .get("port")
-                .unwrap_or(Value::Number(Number::UInt(3033)));
-            let delegate = scope.get("delegate").unwrap_or(Value::Empty);
-            (address, port, delegate)
-        };
+        let (address, port, delegate) = parse_server_config_from_scope(scope);
         self.warp_handle
             .lock()
             .await

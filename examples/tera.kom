@@ -1,5 +1,5 @@
 agent Server {
-	[http GET] {
+	[http _response GET] {
 		Io println "GET /"
 		templates = spawn Tera {
 			base_dir = "./examples/templates"
@@ -7,7 +7,14 @@ agent Server {
 		rendered = templates render "banner.html" {
 		  title = "Komrad"
 		}
-		rendered
+		response write rendered
+		response finish
+	}
+
+	[http _response GET "static" _path] {
+		Io println "GET /static/" + path
+		content = Fs read-all-binary "./examples/static/" + path
+		response binary content
 	}
 
 	[http GET "about"] {

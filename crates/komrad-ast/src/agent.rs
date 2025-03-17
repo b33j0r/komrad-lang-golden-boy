@@ -3,7 +3,10 @@ use crate::prelude::{
 };
 use crate::scope::Scope;
 use async_trait::async_trait;
+use std::future::Pending;
+use std::pin::Pin;
 use std::sync::{mpsc, Arc};
+use tokio::net::TcpListener;
 use tokio::select;
 use tokio::sync::{watch, Mutex};
 use tracing::{debug, error, info, trace};
@@ -82,6 +85,13 @@ pub trait AgentBehavior: AgentLifecycle {
         chan
     }
 
+    async fn extra_event_source(&self) -> Option<Message> {
+        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+        None
+    }
+
+    async fn handle_extra_message(&self, msg: Message) {}
+
     async fn actor_loop(self: Arc<Self>, _chan: Channel) {
         debug!(
             "Starting actor loop for agent {}",
@@ -101,7 +111,15 @@ pub trait AgentBehavior: AgentLifecycle {
             // The listener has internal locking that allows us to await
             // both recv and recv_control without deadlocking.
             let listener = self.listener().clone();
+            let extra_event_source = self.extra_event_source();
             select! {
+                msg = extra_event_source => {
+                    if let Some(msg) = msg {
+                        // Handle the extra event source message
+                        trace!("Received extra event source message: {:?}", msg);
+                        self.handle_extra_message(msg).await;
+                    }
+                }
                 // Receive a komrad message from the channel
                 msg = listener.recv() => match msg {
                     Ok(msg) => {

@@ -1,10 +1,10 @@
-#[cfg(feature = "warp")]
+#[cfg(feature = "web")]
 mod http_listener;
+
+#[cfg(feature = "web")]
+pub use http_listener::*;
 #[cfg(feature = "templates")]
 mod tera_agent;
-
-#[cfg(feature = "warp")]
-pub use http_listener::*;
 
 #[cfg(feature = "templates")]
 pub use tera_agent::*;

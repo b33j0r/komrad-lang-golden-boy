@@ -1,0 +1,28 @@
+agent Server {
+    [http _response GET] {
+        rendered = templates render "banner.html" {
+          title = "Komrad"
+        }
+        response write rendered
+        response finish
+    }
+
+    [http _response GET "static" _path] {
+		content = Fs read-all-binary "./examples/static/" + path
+		response binary content
+	}
+}
+
+[main] {
+	tera = spawn Tera {
+		base_dir = "./examples/templates"
+	}
+    server = spawn Server {
+        templates = tera
+    }
+    listener = spawn ActixListener {
+        host = "0.0.0.0"
+        port = 3033
+        delegate = server
+    }
+}

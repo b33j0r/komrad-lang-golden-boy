@@ -4,7 +4,16 @@ use komrad_agent::stdlib_agent::ListAgentFactory;
 use komrad_agent::{AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
 use komrad_ast::scope::Scope;
-use komrad_web::{HttpListenerFactory, TeraAgentFactory};
+
+#[cfg(feature = "templates")]
+use komrad_web::TeraAgentFactory;
+
+#[cfg(feature = "actix-web")]
+use komrad_web::ActixListenerFactory;
+
+#[cfg(feature = "warp")]
+use komrad_web::HttpListenerFactory;
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -27,9 +36,16 @@ impl RegistryAgent {
     pub fn new() -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
         let mut initial_registry: HashMap<String, RegistryFactory> = HashMap::new();
+
+        #[cfg(feature = "warp")]
         initial_registry.insert(
             "HttpListener".to_string(),
             RegistryFactory::FromFactory(Arc::new(HttpListenerFactory)),
+        );
+        #[cfg(feature = "actix-web")]
+        initial_registry.insert(
+            "ActixListener".to_string(),
+            RegistryFactory::FromFactory(Arc::new(ActixListenerFactory)),
         );
         initial_registry.insert(
             "Tera".to_string(),

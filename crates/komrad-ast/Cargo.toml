@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 tokio.workspace = true
 async-trait.workspace = true
+dashmap.workspace = true
 thiserror.workspace = true
 miette.workspace = true
 uuid.workspace = true

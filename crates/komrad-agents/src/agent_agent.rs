@@ -1,9 +1,8 @@
 use crate::registry_agent::RegistryAgent;
-use komrad_agent::scope::Scope;
-use komrad_agent::{AgentBehavior, AgentLifecycle};
+use komrad_agent::AgentBehavior;
 use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
+use komrad_macros::agent_lifecycle_impl;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tracing::debug;
 
 /// AgentAgent is a syntax proxy bound as `agent`.
@@ -29,21 +28,7 @@ impl AgentAgent {
     }
 }
 
-#[async_trait::async_trait]
-impl AgentLifecycle for AgentAgent {
-    async fn get_scope(&self) -> Arc<Mutex<Scope>> {
-        // We don't have a specific scope for this agent, but we can return a new one.
-        Arc::new(Mutex::new(Scope::new()))
-    }
-
-    fn channel(&self) -> &Channel {
-        &self.channel
-    }
-
-    fn listener(&self) -> Arc<ChannelListener> {
-        self.listener.clone()
-    }
-}
+agent_lifecycle_impl!(AgentAgent);
 
 #[async_trait::async_trait]
 impl AgentBehavior for AgentAgent {

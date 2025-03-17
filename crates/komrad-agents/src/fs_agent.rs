@@ -1,11 +1,12 @@
-use komrad_agent::scope::Scope;
 use komrad_agent::{Agent, AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, Value};
+use komrad_ast::scope::Scope;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{error, warn};
 
 // Use Tokio's async FS API and stream utilities.
+use komrad_macros::agent_stateless_impl;
 use tokio::fs;
 use tokio_stream::wrappers::ReadDirStream;
 use tokio_stream::StreamExt;
@@ -15,16 +16,9 @@ pub struct FsAgent {
     listener: Arc<ChannelListener>,
 }
 
-impl FsAgent {
-    /// Create a new FsAgent.
-    pub fn new() -> Arc<Self> {
-        let (channel, listener) = Channel::new(32);
-        Arc::new(Self {
-            channel,
-            listener: Arc::new(listener),
-        })
-    }
+agent_stateless_impl!(FsAgent);
 
+impl FsAgent {
     /// Handler for "read-all" command.
     async fn handle_read_all(&self, msg: &Message) {
         if msg.terms().len() < 2 {
@@ -130,19 +124,6 @@ impl FsAgent {
                 }
             }
         }
-    }
-}
-
-#[async_trait::async_trait]
-impl AgentLifecycle for FsAgent {
-    async fn get_scope(&self) -> Arc<Mutex<Scope>> {
-        Arc::new(Mutex::new(Scope::new()))
-    }
-    fn channel(&self) -> &Channel {
-        &self.channel
-    }
-    fn listener(&self) -> Arc<ChannelListener> {
-        self.listener.clone()
     }
 }
 

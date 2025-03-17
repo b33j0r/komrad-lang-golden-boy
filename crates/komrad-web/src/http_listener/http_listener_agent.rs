@@ -1,7 +1,7 @@
 use crate::http_listener::http_response_agent::HttpResponseAgent;
-use komrad_agent::scope::Scope;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, Value};
+use komrad_ast::scope::Scope;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::Mutex;

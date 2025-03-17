@@ -1,10 +1,8 @@
-use crate::scope::Scope;
 use crate::AgentBehavior;
 use async_trait::async_trait;
-use futures::task::SpawnExt;
-use komrad_ast::prelude::{
-    Channel, ChannelListener, ControlMessage, Message, MessageBuilder, Number, RuntimeError, Value,
-};
+use komrad_ast::prelude::{Channel, ChannelListener, Message, MessageBuilder, Number, Value};
+use komrad_ast::scope::Scope;
+use komrad_macros::{agent_stateful_impl, agent_stateless_impl};
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tracing::{debug, error};
@@ -17,7 +15,7 @@ pub struct StdLibAgent {
     listener: Arc<ChannelListener>,
 }
 
-stateless_agent_impl!(StdLibAgent);
+agent_stateless_impl!(StdLibAgent);
 
 impl StdLibAgent {
     /// Creates a new `ListAgent` from the message’s terms and returns its channel.
@@ -67,7 +65,7 @@ pub struct ListAgent {
     items: Arc<RwLock<Vec<Value>>>, // agent's internal data
 }
 
-stateful_agent_impl!(ListAgent);
+agent_stateful_impl!(ListAgent);
 
 impl ListAgent {
     /// Custom constructor (required for a stateful agent).

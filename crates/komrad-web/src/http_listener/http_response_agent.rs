@@ -1,7 +1,7 @@
 use async_trait::async_trait;
-use komrad_agent::scope::Scope;
 use komrad_agent::{Agent, AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, ControlMessage, Message, Number, Value};
+use komrad_ast::scope::Scope;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tracing::{debug, error, info, warn};

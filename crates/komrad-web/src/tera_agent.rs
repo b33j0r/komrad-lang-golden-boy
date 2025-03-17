@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use komrad_agent::execute::Execute;
-use komrad_agent::scope::Scope;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, ToSexpr, Value};
+use komrad_ast::scope::Scope;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tera::Tera;

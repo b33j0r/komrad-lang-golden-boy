@@ -1620,6 +1620,7 @@ dependencies = [
  "dashmap",
  "futures",
  "komrad-ast",
+ "komrad-macros",
  "log",
  "tokio",
  "tokio-util",
@@ -1634,6 +1635,7 @@ dependencies = [
  "async-trait",
  "komrad-agent",
  "komrad-ast",
+ "komrad-macros",
  "komrad-web",
  "quote",
  "tokio",
@@ -1663,6 +1665,7 @@ name = "komrad-ast"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "dashmap",
  "hex",
  "miette",
  "nom",
@@ -1703,6 +1706,13 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "komrad-macros"
+version = "0.1.0"
+dependencies = [
+ "komrad-ast",
 ]
 
 [[package]]

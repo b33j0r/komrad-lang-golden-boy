@@ -1,6 +1,6 @@
-use crate::scope::Scope;
 use async_trait::async_trait;
 use komrad_ast::prelude::{ComparisonOp, Message, Number, Pattern, TypeExpr, Typed, Value};
+use komrad_ast::scope::Scope;
 
 #[async_trait]
 pub trait TryBind {
@@ -118,8 +118,8 @@ impl TryBind for Pattern {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scope::Scope;
     use komrad_ast::prelude::Number;
+    use komrad_ast::scope::Scope;
     use tokio;
 
     /// Test binding a pattern composed entirely of holes.

@@ -1,6 +1,6 @@
-use crate::scope::Scope;
 use async_trait::async_trait;
 use komrad_ast::prelude::{BinaryExpr, Block, CallExpr, Expr, Statement, Value};
+use komrad_ast::scope::Scope;
 
 #[async_trait]
 pub trait Closure {

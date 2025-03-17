@@ -1,10 +1,10 @@
 use komrad_agent::execute::Execute;
-use komrad_agent::scope::Scope;
 use komrad_agent::try_bind::TryBind;
 use komrad_agent::{AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::{
     Block, Channel, ChannelListener, Handler, Message, Statement, ToSexpr, Value,
 };
+use komrad_ast::scope::Scope;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tracing::debug;

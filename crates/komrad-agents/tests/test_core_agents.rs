@@ -106,7 +106,7 @@ mod tests {
 
         // Pre-register Bob with a dummy block (for example, one that prints a message).
         let bob_block = Block::new(vec![Statement::Expr(Expr::Call(CallExpr::new(
-            Expr::Variable("IO".into()),
+            Expr::Variable("Io".into()),
             vec![
                 Expr::Variable("println".into()).into(),
                 Expr::Value(Value::String("Bob started".into())).into(),
@@ -122,14 +122,7 @@ mod tests {
         let spawn_chan = spawn_agent.clone().spawn();
 
         let (reply_chan, mut reply_listener) = Channel::new(10);
-        let msg = Message::new(
-            vec![
-                Value::Word("spawn".into()),
-                Value::Word("agent".into()),
-                Value::Word("Bob".into()),
-            ],
-            Some(reply_chan.clone()),
-        );
+        let msg = Message::new(vec![Value::Word("Bob".into())], Some(reply_chan.clone()));
         spawn_chan.send(msg).await.unwrap();
 
         let reply = reply_listener.recv().await.unwrap();
@@ -149,7 +142,7 @@ mod tests {
         // Pre-register Bob with a block that (for this test) simulates handling a "foo" message.
         let bob_block = Block::new(vec![Statement::Expr(Expr::Call(CallExpr::new(
             // Simulate Bob "handling" the foo call by printing a message.
-            Expr::Variable("IO".into()),
+            Expr::Variable("Io".into()),
             vec![
                 Expr::Variable("println".into()).into(),
                 Expr::Value(Value::String("Bob received foo".into())).into(),
@@ -205,11 +198,7 @@ mod tests {
         let spawn_chan = spawn_agent.clone().spawn();
         let (reply_chan_bob, mut reply_listener_bob) = Channel::new(10);
         let msg_spawn_bob = Message::new(
-            vec![
-                Value::Word("spawn".into()),
-                Value::Word("agent".into()),
-                Value::Word("Bob".into()),
-            ],
+            vec![Value::Word("Bob".into())],
             Some(reply_chan_bob.clone()),
         );
         spawn_chan.send(msg_spawn_bob).await.unwrap();

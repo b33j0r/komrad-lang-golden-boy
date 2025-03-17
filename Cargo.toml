@@ -19,7 +19,7 @@ tracing-subscriber.workspace = true
 
 [workspace]
 resolver = "2"
-members = [".", "crates/komrad-agent", "crates/komrad-agents", "crates/komrad-ai", "crates/komrad-ast", "crates/komrad-cli", "crates/komrad-parser", "crates/komrad-vm", "crates/komrad-web"]
+members = [".", "crates/komrad-agent", "crates/komrad-agents", "crates/komrad-ai", "crates/komrad-ast", "crates/komrad-cli", "crates/komrad-macros", "crates/komrad-parser", "crates/komrad-vm", "crates/komrad-web"]
 
 [workspace.dependencies]
 async-trait = "0.1.87"

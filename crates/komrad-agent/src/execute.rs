@@ -1,5 +1,4 @@
 use crate::closure::Closure;
-use crate::scope::Scope;
 use crate::stdlib_agent::ListAgent;
 use crate::AgentBehavior;
 use async_trait::async_trait;
@@ -7,6 +6,7 @@ use komrad_ast::prelude::{
     BinaryExpr, BinaryOp, Block, CallExpr, Channel, Expr, Message, RuntimeError, Statement,
     ToSexpr, Typed, Value,
 };
+use komrad_ast::scope::Scope;
 use tracing::{error, info};
 // TODO
 // pub enum ExecutionResult<T, E> {
@@ -79,10 +79,7 @@ impl Execute for Statement {
             Statement::Expr(expr) => expr.execute(scope).await,
             Statement::NoOp => Value::Empty,
             Statement::Comment(_comment_text) => Value::Empty,
-            Statement::Handler(handler) => {
-                scope.add_handler(handler.clone()).await;
-                Value::Empty
-            }
+            Statement::Handler(_handler) => Value::Empty,
             Statement::Field(name, typ, expr) => {
                 if let Some(expr) = expr {
                     let value = expr.execute(scope).await;
@@ -103,8 +100,11 @@ impl Execute for Statement {
                 let name = expr.execute(scope).await;
                 match name {
                     Value::Word(name) => match scope.get(name.as_str()) {
-                        Some(value) => {
-                            unreachable!("Expander should not be called with a bound variable")
+                        Some(_value) => {
+                            unreachable!(
+                                "Expander should not be called with a bound variable: {:}",
+                                name
+                            );
                         }
                         None => {
                             // If the name is not found, return an error

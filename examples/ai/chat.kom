@@ -1,20 +1,34 @@
-agent ChatWorkflow {
-	[chat _role _msg] {
-		Io println role + ": " + msg
-		next chat role msg
+agent ChatWebSocket {
+	[websocket _ws] {
+		Io println "WebSocket connection established"
+		ws send "Welcome to the chat server!"
+	}
+}
+
+agent ChatServer {
+	connections = []
+
+	[http _response GET "/ws"] {
+		Io println "WebSocket connection request"
+		ws = spawn ChatWebSocket {
+			server = me
+		}
+		response websocket ws
+		connections add ws
 	}
 }
 
 agent ChatHistory {
-	messages = new List
+	messages = []
 
 	[chat _role _msg] {
+		messages add [role msg]
 		Io println role + ": " + msg
 		next chat role msg
 	}
 }
 
 [main] {
-	step = spawn ChatWorkflow {}
+	history = spawn ChatHistory {}
 	step chat "user" "Hello, how are you?"
 }

@@ -1,8 +1,8 @@
-use crate::scope::Scope;
-use async_trait::async_trait;
-use komrad_ast::prelude::{
+use crate::prelude::{
     Channel, ChannelListener, ControlMessage, Message, RuntimeError, ToSexpr, Value,
 };
+use crate::scope::Scope;
+use async_trait::async_trait;
 use std::sync::{mpsc, Arc};
 use tokio::select;
 use tokio::sync::{watch, Mutex};

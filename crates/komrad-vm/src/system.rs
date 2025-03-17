@@ -1,8 +1,8 @@
 use dashmap::DashMap;
-use komrad_agent::scope::Scope;
 use komrad_agent::{AgentBehavior, AgentLifecycle};
 use komrad_agents::prelude::DynamicAgent;
 use komrad_ast::prelude::{Block, Channel};
+use komrad_ast::scope::Scope;
 use std::sync::Arc;
 
 // system.rs

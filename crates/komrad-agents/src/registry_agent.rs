@@ -1,8 +1,8 @@
 use crate::dynamic_agent::DynamicAgent;
 use komrad_agent::execute::Execute;
-use komrad_agent::scope::Scope;
 use komrad_agent::{AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Block, Channel, ChannelListener, Message, RuntimeError, ToSexpr, Value};
+use komrad_ast::scope::Scope;
 use komrad_web::{HttpListenerFactory, TeraAgentFactory};
 use std::collections::HashMap;
 use std::path::PathBuf;

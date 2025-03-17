@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 komrad-ast = { path = "../komrad-ast" }
+komrad-macros = { path = "../komrad-macros" }
 
 async-trait.workspace = true
 dashmap.workspace = true

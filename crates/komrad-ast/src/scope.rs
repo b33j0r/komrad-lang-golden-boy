@@ -1,14 +1,12 @@
+use crate::prelude::Value;
 use dashmap::DashMap;
-use komrad_ast::prelude::{Handler, Value};
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 #[derive(Clone)]
 pub struct Scope {
     parent: Option<Box<Scope>>,
     bindings: Arc<DashMap<String, Value>>,
-    handlers: Arc<RwLock<Vec<Arc<Handler>>>>,
     dirty: bool,
 }
 
@@ -17,7 +15,6 @@ impl Scope {
         Scope {
             parent: None,
             bindings: Arc::new(DashMap::new()),
-            handlers: Arc::new(RwLock::new(Vec::new())),
             dirty: false,
         }
     }
@@ -26,7 +23,6 @@ impl Scope {
         Scope {
             parent: Some(Box::new(parent)),
             bindings: Arc::new(DashMap::new()),
-            handlers: Arc::new(RwLock::new(Vec::new())),
             dirty: false,
         }
     }
@@ -48,22 +44,6 @@ impl Scope {
     pub async fn set(&mut self, name: String, value: Value) {
         self.bindings.insert(name, value);
         self.dirty = true;
-    }
-
-    pub async fn add_handler(&mut self, handler: Arc<Handler>) {
-        self.handlers.write().await.push(handler);
-        self.dirty = true;
-    }
-
-    pub async fn get_handlers(&self) -> Vec<Arc<Handler>> {
-        let mut handlers = self.handlers.read().await.clone();
-        let mut current_scope = self.parent.as_deref();
-        while let Some(scope) = current_scope {
-            let parent_handlers = scope.handlers.read().await.clone();
-            handlers.extend(parent_handlers);
-            current_scope = scope.parent.as_deref();
-        }
-        handlers
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (String, Value)> {
@@ -103,7 +83,7 @@ impl Display for Scope {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use komrad_ast::prelude::*;
+    use crate::prelude::*;
 
     #[tokio::test]
     async fn test_scope() {

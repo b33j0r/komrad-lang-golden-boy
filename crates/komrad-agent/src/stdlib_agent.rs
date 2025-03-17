@@ -5,10 +5,10 @@ use komrad_ast::prelude::{
     AgentFactory, Channel, ChannelListener, Message, MessageBuilder, Number, Value,
 };
 use komrad_ast::scope::Scope;
-use komrad_macros::{agent_stateful_impl, agent_stateless_impl};
+use komrad_macros::agent_stateful_impl;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
-use tracing::{debug, error};
+use tracing::error;
 
 pub struct ListAgent {
     channel: Channel,

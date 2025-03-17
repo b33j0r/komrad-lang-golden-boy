@@ -13,11 +13,11 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
+use crate::http_listener::config;
+use crate::http_listener::http_response_agent::HttpResponseAgent;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, Value};
 use komrad_ast::scope::Scope;
-
-use crate::http_listener::http_response_agent::HttpResponseAgent;
 
 /// Convert `[ [status, headers, cookies, body] ]` into an Actix `HttpResponse`.
 fn actix_response_from_komrad(terms: &[Value]) -> HttpResponse {
@@ -230,28 +230,14 @@ impl ActixListenerAgent {
 impl AgentLifecycle for ActixListenerAgent {
     async fn init(self: Arc<Self>, scope: &mut Scope) {
         debug!("Initializing HttpListenerAgent with Actix Web");
-        let host_val = scope.get("host").unwrap_or(Value::String("0.0.0.0".into()));
-        let port_val = scope
-            .get("port")
-            .unwrap_or(Value::Number(Number::UInt(8080)));
-        let delegate_val = scope.get("delegate").unwrap_or(Value::Empty);
-
-        let host_str = match host_val {
-            Value::String(ref s) => s.clone(),
-            _ => "0.0.0.0".to_string(),
-        };
-        let port_u16 = match port_val {
-            Value::Number(Number::UInt(u)) => u as u16,
-            Value::Number(Number::Int(i)) if i > 0 => i as u16,
-            _ => 8080,
-        };
-        let delegate_chan = if let Value::Channel(c) = delegate_val {
+        let config = config::parse_server_config_from_scope(scope);
+        let delegate_chan = if let Value::Channel(c) = config.delegate {
             Some(c)
         } else {
             None
         };
 
-        let handle = self.start_server(host_str, port_u16, delegate_chan);
+        let handle = self.start_server(config.address, config.port, delegate_chan);
         self.actix_handle.lock().await.replace(handle);
     }
 

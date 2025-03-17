@@ -215,19 +215,8 @@ impl WarpListenerAgent {
         })
     }
 
-    fn start_server(&self, address: Value, port: Value, delegate: Value) -> JoinHandle<()> {
+    fn start_server(&self, addr_str: String, port_num: u16, delegate: Value) -> JoinHandle<()> {
         error!("Starting Warp HTTP server");
-
-        // Parse the message
-        let addr_str = match address {
-            Value::String(s) => s,
-            _ => "0.0.0.0".to_string(),
-        };
-        let port_num = match port {
-            Value::Number(Number::UInt(n)) => n,
-            _ => 3033,
-        };
-
         let delegate_channel = match delegate {
             Value::Channel(c) => Some(c),
             _ => None,
@@ -259,11 +248,12 @@ impl WarpListenerAgent {
 impl AgentLifecycle for WarpListenerAgent {
     async fn init(self: Arc<Self>, scope: &mut Scope) {
         debug!("Initializing HttpListenerAgent");
-        let (address, port, delegate) = parse_server_config_from_scope(scope);
-        self.warp_handle
-            .lock()
-            .await
-            .replace(self.start_server(address, port, delegate));
+        let config = parse_server_config_from_scope(scope);
+        self.warp_handle.lock().await.replace(self.start_server(
+            config.address,
+            config.port,
+            config.delegate,
+        ));
     }
 
     async fn get_scope(&self) -> Arc<Mutex<Scope>> {

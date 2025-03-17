@@ -3,10 +3,8 @@ use crate::prelude::{
 };
 use crate::scope::Scope;
 use async_trait::async_trait;
-use std::future::Pending;
-use std::pin::Pin;
+
 use std::sync::{mpsc, Arc};
-use tokio::net::TcpListener;
 use tokio::select;
 use tokio::sync::{watch, Mutex};
 use tracing::{debug, error, info, trace};
@@ -90,7 +88,7 @@ pub trait AgentBehavior: AgentLifecycle {
         None
     }
 
-    async fn handle_extra_message(&self, msg: Message) {}
+    async fn handle_extra_message(&self, _msg: Message) {}
 
     async fn actor_loop(self: Arc<Self>, _chan: Channel) {
         debug!(

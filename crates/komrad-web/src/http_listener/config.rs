@@ -1,6 +1,12 @@
 use komrad_ast::prelude::{Number, Scope, Value};
 
-pub fn parse_server_config_from_scope(scope: &mut Scope) -> (Value, Value, Value) {
+pub struct ServerConfig {
+    pub address: String,
+    pub port: u16,
+    pub delegate: Value,
+}
+
+pub fn parse_server_config_from_scope(scope: &mut Scope) -> ServerConfig {
     let address = scope
         .get("host")
         .unwrap_or(Value::String("0.0.0.0".to_string()));
@@ -8,5 +14,38 @@ pub fn parse_server_config_from_scope(scope: &mut Scope) -> (Value, Value, Value
         .get("port")
         .unwrap_or(Value::Number(Number::UInt(3000)));
     let delegate = scope.get("delegate").unwrap_or(Value::Empty);
-    (address, port, delegate)
+    ServerConfig {
+        address: address.to_string(),
+        port: match port {
+            Value::Number(Number::UInt(p)) => p as u16,
+            Value::Number(Number::Int(p)) => p as u16,
+            _ => 3000,
+        },
+        delegate,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use komrad_ast::prelude::{Channel, Scope};
+
+    #[tokio::test]
+    async fn test_parse_server_config_from_scope() {
+        let mut scope = Scope::new();
+        let channel = Channel::new(1).0;
+        scope
+            .set("host".to_string(), Value::String("1.0.0.0".to_string()))
+            .await;
+        scope
+            .set("port".to_string(), Value::Number(Number::UInt(4300)))
+            .await;
+        scope
+            .set("delegate".to_string(), Value::Channel(channel.clone()))
+            .await;
+        let config = parse_server_config_from_scope(&mut scope);
+        assert_eq!(config.address, "1.0.0.0");
+        assert_eq!(config.port, 4300);
+        assert_eq!(config.delegate, Value::Channel(channel));
+    }
 }

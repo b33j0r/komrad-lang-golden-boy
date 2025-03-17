@@ -25,6 +25,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
 use crate::http_listener::config;
+use crate::http_listener::config::ServerConfig;
 use crate::http_listener::http_response_agent::HttpResponseAgent;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, Value, ValueType};
@@ -365,8 +366,10 @@ impl AxumListenerAgent {
 impl AgentLifecycle for AxumListenerAgent {
     async fn init(self: Arc<Self>, scope: &mut Scope) {
         debug!("Initializing AxumListenerAgent: {}", self.name);
-        let (address, port, delegate) = config::parse_server_config_from_scope(scope);
-        let handle = self.clone().start_server(address, port, delegate);
+        let config = config::parse_server_config_from_scope(scope);
+        let handle = self
+            .clone()
+            .start_server(config.address, config.port, config.delegate);
         self.server_handle.lock().await.replace(handle);
     }
 

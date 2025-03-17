@@ -19,7 +19,8 @@ tokio-stream.workspace = true
 quote = "1.0.39"
 
 [features]
-default = ["actix-web", "templates"]
+default = ["axum", "templates"]
+axum = ["komrad-web/axum"]
 actix-web = ["komrad-web/actix-web"]
 warp = ["komrad-web/warp"]
 templates = ["komrad-web/templates"]

@@ -206,6 +206,7 @@ impl ActixListenerAgent {
             .bind(bind_addr)
             .expect("Could not bind to address")
             .shutdown_timeout(0) // so it stops quickly
+            .workers(4)
             .run();
 
             // Listen for shutdown
@@ -215,6 +216,7 @@ impl ActixListenerAgent {
             tokio::select! {
                 _ = actix_shutdown.cancelled() => {
                     info!("Actix shutdown requested");
+                    srv_handle.abort();
                 },
                 res = &mut srv_handle => {
                     error!("Server ended unexpectedly: {:?}", res);

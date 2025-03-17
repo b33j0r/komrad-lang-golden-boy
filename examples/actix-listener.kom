@@ -24,5 +24,7 @@ agent Server {
         host = "0.0.0.0"
         port = 3033
         delegate = server
+        
     }
+    Io println "Server started on http://0.0.0.0:3033"
 }

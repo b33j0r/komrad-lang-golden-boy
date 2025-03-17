@@ -8,6 +8,9 @@ use komrad_ast::scope::Scope;
 #[cfg(feature = "templates")]
 use komrad_web::TeraAgentFactory;
 
+#[cfg(feature = "axum")]
+use komrad_web::AxumListenerFactory;
+
 #[cfg(feature = "actix-web")]
 use komrad_web::ActixListenerFactory;
 
@@ -37,6 +40,11 @@ impl RegistryAgent {
         let (channel, listener) = Channel::new(32);
         let mut initial_registry: HashMap<String, RegistryFactory> = HashMap::new();
 
+        #[cfg(feature = "axum")]
+        initial_registry.insert(
+            "AxumListener".to_string(),
+            RegistryFactory::FromFactory(Arc::new(AxumListenerFactory)),
+        );
         #[cfg(feature = "warp")]
         initial_registry.insert(
             "HttpListener".to_string(),

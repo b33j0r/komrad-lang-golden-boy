@@ -158,7 +158,6 @@ fn build_response_from_komrad(terms: &[Value]) -> Response<BoxBody<Bytes, hyper:
                     Number::Int(i) => *i as u16,
                     Number::UInt(i) => *i as u16,
                     Number::Float(f) => *f as u16,
-                    _ => 200,
                 },
                 _ => 200,
             };

@@ -2,13 +2,13 @@ use crate::parse::identifier::parse_identifier;
 use crate::parse::{block, strings};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Expr, Number, Value};
+use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::{char, digit1, one_of, space0};
-use nom::combinator::{opt, recognize};
-use nom::multi::{many1, separated_list0};
-use nom::sequence::{delimited, pair, preceded};
-use nom::Parser;
+use nom::character::complete::{digit1, space0};
+use nom::combinator::map;
+use nom::multi::separated_list0;
+use nom::sequence::delimited;
 
 pub fn parse_word(input: Span) -> KResult<Value> {
     // parse an identifier
@@ -25,43 +25,12 @@ pub fn parse_boolean(input: Span) -> KResult<Value> {
 }
 
 pub fn parse_number(input: Span) -> KResult<Number> {
-    alt((float, signed_decimal, unsigned_decimal)).parse(input)
-}
-
-fn float(input: Span) -> KResult<Number> {
-    alt((
-        // Case one: .42
-        recognize((
-            char('.'),
-            unsigned_decimal,
-            opt((one_of("eE"), opt(one_of("+-")), unsigned_decimal)),
-        )), // Case two: 42e42 and 42.42e42
-        recognize((
-            unsigned_decimal,
-            opt(preceded(char('.'), unsigned_decimal)),
-            one_of("eE"),
-            opt(one_of("+-")),
-            unsigned_decimal,
-        )), // Case three: 42. and 42.42
-        recognize((unsigned_decimal, char('.'), opt(unsigned_decimal))),
-    ))
-    .map(|s: Span| s.fragment().to_string())
-    .map(|s| Number::Float(s.parse().unwrap()))
+    map(digit1, |digits: Span| {
+        let txt = digits.fragment();
+        let unsigned_value = txt.parse::<u64>().unwrap_or_default();
+        Number::UInt(unsigned_value)
+    })
     .parse(input)
-}
-
-fn unsigned_decimal(input: Span) -> KResult<Number> {
-    recognize(many1(one_of("0123456789")))
-        .map(|s: Span| s.to_string())
-        .map(|s| Number::Int(s.parse().unwrap()))
-        .parse(input)
-}
-
-fn signed_decimal(input: Span) -> KResult<Number> {
-    recognize(pair(one_of("+-"), many1(digit1)))
-        .map(|s: Span| s.to_string())
-        .map(|s| Number::Int(s.parse().unwrap()))
-        .parse(input)
 }
 
 pub fn parse_list_part(input: Span) -> KResult<Expr> {

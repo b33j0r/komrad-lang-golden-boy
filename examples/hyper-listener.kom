@@ -16,11 +16,6 @@ agent Server {
 		response redirect "/"
 	}
 
-	[http _request _response POST "decrement"] {
-		count = count - 1
-		response redirect "/"
-	}
-
 	[http _response GET "static" _name] {
 		file_name = "./examples/static/" + name
 	  image = Fs read-all-binary file_name
@@ -31,7 +26,7 @@ agent Server {
 
 [main] {
 	server = spawn Server {
-		count = -1
+		count = 0
 	}
 	listener = spawn HyperListener {
 		host = "0.0.0.0"

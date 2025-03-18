@@ -1,6 +1,6 @@
 use crate::error::RuntimeError;
 use crate::message::Message;
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
 const CHANNEL_DIGEST_LEN: usize = 8;
@@ -14,6 +14,15 @@ pub struct Channel {
     uuid: Uuid,
     sender: mpsc::Sender<Message>,
     control_sender: mpsc::Sender<ControlMessage>,
+}
+
+impl Channel {
+    pub async fn send_and_recv(&self, msg: Message) -> Result<Message, RuntimeError> {
+        let (response_sender, response_receiver) = Channel::new(1);
+        let msg_with_response = Message::new(msg.terms().clone(), Some(response_sender));
+        self.send(msg_with_response).await?;
+        response_receiver.recv().await
+    }
 }
 
 impl std::fmt::Debug for Channel {

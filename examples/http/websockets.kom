@@ -1,6 +1,7 @@
-agent WsConnection {
+agent WsHandler {
 	[ws _socket connected] {
 		Io println "Connected: " + socket
+		socket send "Hello from Komrad!"
 	}
 
 	[ws _socket disconnected] {
@@ -27,14 +28,17 @@ agent Server {
 
 	[http _request _response GET "ws"] {
 		Io println "WebSocket connection request"
-		client_id = "brian"
-		client = spawn WsConnection {
-            server = me
-            client_id = client_id
-        }
+		client = [1 2 3 4 5]
 		clients add client
-		response text "Added client " + client_id
+		count = clients length
+		Io println "Added client " + count
+		response websocket me
 	}
+
+	[ws _socket connected] {
+        Io println "Connected: " + socket
+        socket send "connected"
+    }
 }
 
 [main] {

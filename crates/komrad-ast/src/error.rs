@@ -138,4 +138,7 @@ pub enum RuntimeError {
 
     #[error("Name not found in scope: {0}")]
     NameNotFound(String),
+
+    #[error("No handler found for message: {0}")]
+    HandlerNotFound(String),
 }

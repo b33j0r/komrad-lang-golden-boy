@@ -10,5 +10,8 @@ mod tera_agent;
 pub use tera_agent::*;
 
 mod http_request_agent;
+mod http_response_agent;
 pub mod request;
 mod response;
+// Used by all the http listeners
+mod config;

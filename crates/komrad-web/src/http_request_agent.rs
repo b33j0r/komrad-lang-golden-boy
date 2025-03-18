@@ -17,8 +17,9 @@ pub struct RequestData {
     pub cookies: HashMap<String, String>,
 }
 
-/// HttpRequestAgent encapsulates an HTTP request so the delegate can query its URL, method,
-/// body, headers, query parameters, and cookies.
+/// HttpRequestAgent encapsulates an HTTP request so
+/// the delegate can query its URL, method, body,
+/// headers, query parameters, and cookies.
 pub struct HttpRequestAgent {
     name: String,
     channel: Channel,

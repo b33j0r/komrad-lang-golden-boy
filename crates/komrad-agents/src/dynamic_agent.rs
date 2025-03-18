@@ -2,7 +2,7 @@ use komrad_agent::execute::Execute;
 use komrad_agent::try_bind::TryBind;
 use komrad_agent::{AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::{
-    Block, Channel, ChannelListener, Handler, Message, Statement, ToSexpr, Value,
+    Block, Channel, ChannelListener, Handler, Message, RuntimeError, Statement, ToSexpr, Value,
 };
 use komrad_ast::scope::Scope;
 use std::sync::Arc;
@@ -123,7 +123,25 @@ impl AgentBehavior for DynamicAgent {
             }
         }
 
-        // No match -> do nothing
+        // Check if there is a reply_to channel
+        if let Some(reply_to) = msg.reply_to() {
+            // If there is a reply_to channel, send an empty message
+            let msg_str = msg.to_sexpr().format(0);
+            let reply_msg = Message::new(
+                vec![Value::Error(RuntimeError::HandlerNotFound(msg_str))],
+                None,
+            );
+            match reply_to.send(reply_msg).await {
+                Ok(_) => {
+                    debug!("DynamicAgent {} -> empty reply sent", self.name);
+                }
+                Err(e) => {
+                    debug!("DynamicAgent {} -> empty reply error: {:?}", self.name, e);
+                }
+            }
+        }
+
+        // No match, but keep running
         true
     }
 }

@@ -1,7 +1,7 @@
-use crate::http_listener::config::{parse_server_config_from_scope, ServerConfig};
-use crate::http_listener::http_response_agent::HttpResponseAgent;
+use crate::config::{parse_server_config_from_scope, ServerConfig};
 use crate::http_request_agent::HttpRequestAgent;
-use crate::request::{full, KomradRequest};
+use crate::http_response_agent::HttpResponseAgent;
+use crate::request::full;
 use crate::response;
 use bytes::Bytes;
 use http::{Request, Response, StatusCode};

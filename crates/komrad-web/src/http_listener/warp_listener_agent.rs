@@ -1,5 +1,5 @@
-use crate::http_listener::config::parse_server_config_from_scope;
-use crate::http_listener::http_response_agent::HttpResponseAgent;
+use crate::config::parse_server_config_from_scope;
+use crate::http_response_agent::HttpResponseAgent;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, Value};
 use komrad_ast::scope::Scope;

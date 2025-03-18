@@ -24,9 +24,9 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
-use crate::http_listener::config;
-use crate::http_listener::config::ServerConfig;
-use crate::http_listener::http_response_agent::HttpResponseAgent;
+use crate::config;
+use crate::config::ServerConfig;
+use crate::http_response_agent::HttpResponseAgent;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, Value, ValueType};
 use komrad_ast::scope::Scope;

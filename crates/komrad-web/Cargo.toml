@@ -35,8 +35,6 @@ templates = ["dep:tera"]
 
 axum = ["web", "hyper", "dep:axum", "dep:tower-http"]
 
-actix-web = ["web", "dep:actix-web", "dep:actix-ws"]
-
 warp = ["web", "dep:warp", "hyper-util"]
 
 hyper = ["web", "dep:hyper", "hyper-util"]

@@ -14,9 +14,6 @@ use komrad_web::HyperListenerFactory;
 #[cfg(feature = "axum")]
 use komrad_web::AxumListenerFactory;
 
-#[cfg(feature = "actix-web")]
-use komrad_web::ActixListenerFactory;
-
 #[cfg(feature = "warp")]
 use komrad_web::WarpListenerFactory;
 
@@ -59,11 +56,7 @@ impl RegistryAgent {
             "WarpListener".to_string(),
             RegistryFactory::FromFactory(Arc::new(WarpListenerFactory)),
         );
-        #[cfg(feature = "actix-web")]
-        initial_registry.insert(
-            "ActixListener".to_string(),
-            RegistryFactory::FromFactory(Arc::new(ActixListenerFactory)),
-        );
+        #[cfg(feature = "templates")]
         initial_registry.insert(
             "Tera".to_string(),
             RegistryFactory::FromFactory(Arc::new(TeraAgentFactory {

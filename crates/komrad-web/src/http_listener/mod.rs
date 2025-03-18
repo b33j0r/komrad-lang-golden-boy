@@ -16,13 +16,6 @@ pub use axum_listener_agent::*;
 #[cfg(feature = "axum")]
 mod axum_listener_agent;
 
-// Actix
-#[cfg(feature = "actix-web")]
-mod actix_listener_agent;
-
-#[cfg(feature = "actix-web")]
-pub use actix_listener_agent::*;
-
 // Warp
 #[cfg(feature = "warp")]
 mod warp_listener_agent;

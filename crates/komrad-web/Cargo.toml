@@ -14,6 +14,7 @@ tera = { version = "1.20.0", optional = true }
 hyper = { version = "1.6.0", optional = true, features = ["full", "server"] }
 http-body-util = { version = "0.1", optional = true, features = ["full"] }
 hyper-util = { version = "0.1", optional = true, features = ["full"] }
+hyper-tungstenite = { version = "0.17.0", optional = true }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 thiserror.workspace = true
@@ -27,6 +28,8 @@ axum = { version = "0.8.1", optional = true, features = ["ws", "tokio", "json"] 
 tower-http = { version = "0.6.2", features = ["trace", "cors"], optional = true }
 tokio-tungstenite.workspace = true
 tokio-stream.workspace = true
+sha1 = "0.11.0-pre.5"
+base64 = "0.22.1"
 
 [features]
 web = []
@@ -37,8 +40,7 @@ templates = ["dep:tera"]
 
 axum = ["web", "hyper", "dep:axum", "dep:tower-http"]
 
-warp = ["web", "dep:warp", "hyper-util"]
+warp = ["web", "dep:warp", "dep:hyper-util", "dep:http-body-util"]
 
-hyper = ["web", "dep:hyper", "hyper-util"]
+hyper = ["web", "dep:hyper", "dep:hyper-util", "dep:hyper-tungstenite", "dep:http-body-util"]
 
-hyper-util = ["dep:http-body-util", "dep:hyper-util"]

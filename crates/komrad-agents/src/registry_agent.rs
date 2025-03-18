@@ -243,9 +243,13 @@ impl AgentBehavior for RegistryAgent {
                         // Invoke the correct factory method
                         let agent_chan = match reg.get(&agent_name).unwrap() {
                             RegistryFactory::FromBlock(block) => {
-                                let agent =
-                                    DynamicAgent::from_block(&agent_name, block, initial_scope)
-                                        .await;
+                                let agent = DynamicAgent::from_block(
+                                    &agent_name,
+                                    block,
+                                    initial_scope,
+                                    self.channel.clone(),
+                                )
+                                .await;
                                 info!("RegistryAgent: spawning agent {} from block", agent_name);
                                 agent.clone().spawn()
                             }

@@ -12,13 +12,13 @@ use tracing::debug;
 ///    define agent Alice { ... }
 /// to the RegistryAgent.
 pub struct AgentAgent {
-    registry: Arc<RegistryAgent>,
+    registry: Channel,
     channel: Channel,
     listener: Arc<ChannelListener>,
 }
 
 impl AgentAgent {
-    pub fn new(registry: Arc<RegistryAgent>) -> Arc<Self> {
+    pub fn new(registry: Channel) -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
         Arc::new(Self {
             registry,
@@ -57,9 +57,9 @@ mod tests {
     #[tokio::test]
     async fn test_agent_agent_define_forwarding() {
         let registry = RegistryAgent::new();
-        let _ = registry.clone().spawn();
+        let registry_channel = registry.clone().spawn();
 
-        let agent_agent = AgentAgent::new(registry.clone());
+        let agent_agent = AgentAgent::new(registry_channel.clone());
         let agent_chan = agent_agent.clone().spawn();
 
         let (reply_chan, reply_listener) = Channel::new(10);

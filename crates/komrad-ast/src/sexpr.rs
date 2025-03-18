@@ -122,7 +122,6 @@ impl ToSexpr for Value {
                 Sexpr::Atom(b.to_string()),
             ]),
             Value::Word(w) => Sexpr::Atom(w.clone()),
-            Value::String(s) => Sexpr::Atom(format!("\"{}\"", s)),
             Value::Number(n) => Sexpr::List(vec![
                 Sexpr::Atom("number".to_string()),
                 Sexpr::Atom(n.to_string()),
@@ -150,6 +149,23 @@ impl ToSexpr for Value {
                 Sexpr::List(vec![
                     Sexpr::Atom("bytes".to_string()),
                     Sexpr::Atom(digest.to_string()),
+                ])
+            }
+            Value::String(s) => {
+                const MAX_STRING: usize = 256;
+                const MAX_STRING_DISPLAY: usize = 128;
+                let digest = if s.len() > MAX_STRING {
+                    format!(
+                        "{}\n...\n{}",
+                        &s[0..MAX_STRING_DISPLAY],
+                        &s[s.len() - MAX_STRING_DISPLAY..]
+                    )
+                } else {
+                    s.clone()
+                };
+                Sexpr::List(vec![
+                    Sexpr::Atom("string".to_string()),
+                    Sexpr::Atom(format!("\"{}\"", digest)),
                 ])
             }
             Value::Embedded(eb) => {

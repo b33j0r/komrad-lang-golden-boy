@@ -1,3 +1,4 @@
+pub(crate) use crate::request::empty;
 pub(crate) use crate::request::full;
 use bytes::Bytes;
 use http::{Response, StatusCode};
@@ -11,71 +12,61 @@ pub fn build_hyper_response_from_komrad(terms: &[Value]) -> Response<BoxBody<Byt
         return Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
             .header("Content-Type", "text/plain")
-            .body(full("Empty response"))
+            .body(empty())
             .unwrap();
     }
 
-    match &terms[0] {
-        Value::List(list_of_5) if list_of_5.len() == 5 => {
-            let status_code = match &list_of_5[0] {
-                Value::Number(n) => match n {
-                    Number::Int(i) => *i as u16,
-                    Number::UInt(i) => *i as u16,
-                    Number::Float(f) => *f as u16,
-                },
-                _ => 200,
-            };
+    let status_code = match &terms[0] {
+        Value::Number(n) => match n {
+            Number::Int(i) => *i as u16,
+            Number::UInt(i) => *i as u16,
+            Number::Float(f) => *f as u16,
+        },
+        _ => 200,
+    };
 
-            let mut builder = Response::builder().status(status_code);
-            if let Value::List(header_list) = &list_of_5[1] {
-                for hpair in header_list {
-                    if let Value::List(pair) = hpair {
-                        if pair.len() == 2 {
-                            if let (Value::String(k), Value::String(v)) = (&pair[0], &pair[1]) {
-                                builder = builder.header(k.as_str(), v.as_str());
-                            }
-                        }
+    let mut builder = Response::builder().status(status_code);
+
+    if let Value::List(header_list) = &terms[1] {
+        for hpair in header_list {
+            if let Value::List(pair) = hpair {
+                if pair.len() == 2 {
+                    if let (Value::String(k), Value::String(v)) = (&pair[0], &pair[1]) {
+                        builder = builder.header(k.as_str(), v.as_str());
                     }
                 }
             }
+        }
+    }
 
-            if let Value::List(cookie_list) = &list_of_5[2] {
-                for cpair in cookie_list {
-                    if let Value::List(pair) = cpair {
-                        if pair.len() == 2 {
-                            if let (Value::String(k), Value::String(v)) = (&pair[0], &pair[1]) {
-                                builder = builder.header("Set-Cookie", format!("{}={}", k, v));
-                            }
-                        }
+    if let Value::List(cookie_list) = &terms[2] {
+        for cpair in cookie_list {
+            if let Value::List(pair) = cpair {
+                if pair.len() == 2 {
+                    if let (Value::String(k), Value::String(v)) = (&pair[0], &pair[1]) {
+                        builder = builder.header("Set-Cookie", format!("{}={}", k, v));
                     }
                 }
             }
+        }
+    }
 
-            let body_bytes = match &list_of_5[3] {
-                Value::Bytes(b) => b.clone(),
-                Value::String(s) => s.as_bytes().to_vec(),
-                other => format!("{:?}", other).into_bytes(),
-            };
-            builder
-                .body(full(Bytes::from(body_bytes)))
-                .unwrap_or_else(|_| {
-                    Response::builder()
-                        .status(StatusCode::INTERNAL_SERVER_ERROR)
-                        .body(full("Error building response"))
-                        .unwrap()
-                })
-        }
-        other => {
-            let text = match other {
-                Value::String(s) => s.clone(),
-                Value::Number(n) => n.to_string(),
-                _ => format!("Unsupported response type: {:?}", other),
-            };
-            Response::builder()
-                .status(StatusCode::OK)
-                .header("Content-Type", "text/plain")
-                .body(full(Bytes::from(text)))
-                .unwrap()
-        }
+    if status_code == 101 {
+        // For a websocket handshake, return an empty body with no Content-Length.
+        builder.body(empty()).unwrap()
+    } else {
+        let body_bytes = match &terms[3] {
+            Value::Bytes(b) => b.clone(),
+            Value::String(s) => s.as_bytes().to_vec(),
+            other => format!("{:?}", other).into_bytes(),
+        };
+        builder
+            .body(full(Bytes::from(body_bytes)))
+            .unwrap_or_else(|_| {
+                Response::builder()
+                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .body(full("Error building response"))
+                    .unwrap()
+            })
     }
 }

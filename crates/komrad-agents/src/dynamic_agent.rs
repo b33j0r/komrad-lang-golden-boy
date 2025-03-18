@@ -1,3 +1,4 @@
+use crate::prelude::RegistryAgent;
 use komrad_agent::execute::Execute;
 use komrad_agent::try_bind::TryBind;
 use komrad_agent::{AgentBehavior, AgentLifecycle};
@@ -8,6 +9,7 @@ use komrad_ast::scope::Scope;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tracing::{debug, trace};
+use tracing_subscriber::registry;
 
 /// A universal dynamic "module" or "agent" that handles an AST block.
 pub struct DynamicAgent {
@@ -21,10 +23,16 @@ pub struct DynamicAgent {
 impl DynamicAgent {
     /// Construct from an AST Block, collecting any Handler statements
     /// and optionally executing others in the scope.
-    pub async fn from_block(name: &str, block: &Block, scope: Scope) -> Arc<Self> {
+    pub async fn from_block(
+        name: &str,
+        block: &Block,
+        scope: Scope,
+        registry_channel: Channel,
+    ) -> Arc<Self> {
         let mut scope = scope.clone();
         let (channel, listener) = Channel::new(32);
-        let (_default_agents, default_channels) = crate::default_agents::DefaultAgents::new();
+        let (_default_agents, default_channels) =
+            crate::default_agents::DefaultAgents::new(registry_channel.clone());
 
         scope
             .set("me".to_string(), Value::Channel(channel.clone()))

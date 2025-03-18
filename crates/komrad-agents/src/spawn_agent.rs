@@ -12,14 +12,14 @@ use tracing::debug;
 ///    spawn agent Bob { ... }
 /// to the RegistryAgent.
 pub struct SpawnAgent {
-    registry: Arc<RegistryAgent>,
+    registry: Channel,
     channel: Channel,
     listener: Arc<ChannelListener>,
 }
 
 impl SpawnAgent {
     /// Creates a new SpawnAgent.
-    pub fn new(registry: Arc<RegistryAgent>) -> Arc<Self> {
+    pub fn new(registry: Channel) -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
         Arc::new(Self {
             registry,
@@ -58,7 +58,7 @@ mod tests {
     #[tokio::test]
     async fn test_spawn_agent_forwarding_defined() {
         let registry = RegistryAgent::new();
-        let _ = registry.clone().spawn();
+        let registry_channel = registry.clone().spawn();
 
         // Predefine an agent "Bob" in the registry with a dummy block.
         let block = komrad_ast::prelude::Block::new(vec![]);
@@ -67,7 +67,7 @@ mod tests {
             reg_map.insert("Bob".to_string(), RegistryFactory::FromBlock(block.clone()));
         }
 
-        let spawn_agent = SpawnAgent::new(registry.clone());
+        let spawn_agent = SpawnAgent::new(registry_channel.clone());
         let spawn_chan = spawn_agent.clone().spawn();
 
         let (reply_chan, reply_listener) = Channel::new(10);
@@ -84,9 +84,9 @@ mod tests {
     #[tokio::test]
     async fn test_spawn_agent_forwarding_not_defined() {
         let registry = RegistryAgent::new();
-        let _ = registry.clone().spawn();
+        let registry_channel = registry.clone().spawn();
 
-        let spawn_agent = SpawnAgent::new(registry.clone());
+        let spawn_agent = SpawnAgent::new(registry_channel.clone());
         let spawn_chan = spawn_agent.clone().spawn();
 
         let (reply_chan, reply_listener) = Channel::new(10);
@@ -107,7 +107,9 @@ mod tests {
         // Expect an error return because the agent "NonExistent" is not defined.
         assert_eq!(
             reply.terms(),
-            &[Value::Error(RuntimeError::AgentNotRegistered)]
+            &[Value::Error(RuntimeError::AgentNotRegistered(
+                "NonExistent".to_string(),
+            ))]
         );
     }
 }

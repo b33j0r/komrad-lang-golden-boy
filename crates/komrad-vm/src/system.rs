@@ -1,6 +1,6 @@
 use dashmap::DashMap;
 use komrad_agent::{AgentBehavior, AgentLifecycle};
-use komrad_agents::prelude::DynamicAgent;
+use komrad_agents::prelude::{DynamicAgent, RegistryAgent};
 use komrad_ast::prelude::{Block, Channel};
 use komrad_ast::scope::Scope;
 use std::sync::Arc;
@@ -20,7 +20,10 @@ impl System {
     }
 
     pub async fn create_agent(&self, name: &str, block: &Block) -> Channel {
-        let agent = DynamicAgent::from_block(name, block, Scope::new()).await;
+        let registry = RegistryAgent::new();
+        let registry_channel = registry.clone().spawn();
+
+        let agent = DynamicAgent::from_block(name, block, Scope::new(), registry_channel).await;
         let chan = agent.clone().spawn();
         self.agents.insert(name.into(), agent);
         chan

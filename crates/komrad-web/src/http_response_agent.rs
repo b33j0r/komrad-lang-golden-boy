@@ -148,14 +148,14 @@ impl HttpResponseAgent {
                 Value::Empty
             };
 
-            let all = Value::List(vec![
+            let all = vec![
                 status_val,
                 headers_val,
                 cookies_val,
                 body_val,
                 websocket_delegate,
-            ]);
-            let msg = Message::new(vec![all], None);
+            ];
+            let msg = Message::new(all, None);
             let _ = futures::executor::block_on(reply_chan.send(msg));
         }
 
@@ -269,9 +269,6 @@ impl ResponseFinalizerProtocol for HttpResponseAgent {
     fn websocket(&self, client: Value) {
         let mut st = self.state.lock().unwrap();
         st.websocket_delegate = Some(client);
-        self.set_status(101);
-        self.set_header("Upgrade".to_string(), "websocket".to_string());
-        self.set_header("Connection".to_string(), "Upgrade".to_string());
         drop(st);
         self.send_final();
     }
@@ -452,4 +449,17 @@ fn to_string(val: &Value) -> String {
         Value::Embedded(e) => e.text().clone(),
         other => format!("{:?}", other),
     }
+}
+
+use base64::engine::general_purpose;
+use base64::Engine as _;
+use sha1::{Digest, Sha1};
+
+fn compute_accept_key(key: &str) -> String {
+    let mut hasher = Sha1::new();
+    hasher.update(key.as_bytes());
+    // The magic GUID as per the RFC 6455 specification.
+    hasher.update(b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
+    let result = hasher.finalize();
+    general_purpose::STANDARD.encode(result)
 }

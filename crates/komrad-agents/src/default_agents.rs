@@ -2,7 +2,6 @@ use crate::agent_agent::AgentAgent;
 use crate::fs_agent::FsAgent;
 use crate::io_agent::IoAgent;
 use crate::prelude::StdIo;
-use crate::registry_agent::RegistryAgent;
 use crate::spawn_agent::SpawnAgent;
 use komrad_agent::AgentBehavior;
 use komrad_ast::prelude::Channel;
@@ -12,7 +11,6 @@ use std::sync::Arc;
 pub struct DefaultAgents {
     pub io_agent: Arc<IoAgent>,
     pub fs_agent: Arc<FsAgent>,
-    pub registry_agent: Arc<RegistryAgent>,
     pub agent_agent: Arc<AgentAgent>,
     pub spawn_agent: Arc<SpawnAgent>,
 }
@@ -39,16 +37,14 @@ pub struct DefaultAgentChannels {
 /// One future direction is to use a configuration system to enable
 /// or disable certain agents. (I like the way starlark does this.)
 impl DefaultAgents {
-    pub fn new() -> (Self, DefaultAgentChannels) {
+    pub fn new(registry_channel: Channel) -> (Self, DefaultAgentChannels) {
         let io_agent = IoAgent::new(Arc::new(tokio::sync::RwLock::new(StdIo)));
         let fs_agent = FsAgent::new();
-        let registry_agent = RegistryAgent::new();
-        let agent_agent = AgentAgent::new(registry_agent.clone());
-        let spawn_agent = SpawnAgent::new(registry_agent.clone());
+        let agent_agent = AgentAgent::new(registry_channel.clone());
+        let spawn_agent = SpawnAgent::new(registry_channel.clone());
 
         let io_agent_channel = io_agent.clone().spawn();
         let fs_agent_channel = fs_agent.clone().spawn();
-        let registry_agent_channel = registry_agent.clone().spawn();
         let agent_agent_channel = agent_agent.clone().spawn();
         let spawn_agent_channel = spawn_agent.clone().spawn();
 
@@ -56,14 +52,13 @@ impl DefaultAgents {
             Self {
                 io_agent,
                 fs_agent,
-                registry_agent,
                 agent_agent,
                 spawn_agent,
             },
             DefaultAgentChannels {
                 io_agent: io_agent_channel,
                 fs_agent: fs_agent_channel,
-                registry_agent: registry_agent_channel,
+                registry_agent: registry_channel,
                 agent_agent: agent_agent_channel,
                 spawn_agent: spawn_agent_channel,
             },

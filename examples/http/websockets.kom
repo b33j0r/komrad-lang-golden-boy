@@ -10,6 +10,12 @@ agent WsHandler {
 
 	[ws _socket text _message] {
 		Io println "Message: " + socket + ": " + message
+		1337
+	}
+
+	[test _text] {
+		Io println "Test: " + text
+		42
 	}
 }
 
@@ -26,19 +32,24 @@ agent Server {
 		response html rendered
 	}
 
-	[http _request _response GET "ws"] {
+	[websocket upgrade] {
 		Io println "WebSocket connection request"
-		client = [1 2 3 4 5]
+		client = spawn WsHandler {
+			server = me
+		}
 		clients add client
 		count = clients length
 		Io println "Added client " + count
-		response websocket me
+		// Test the client
+		client
 	}
 
-	[ws _socket connected] {
-        Io println "Connected: " + socket
-        socket send "connected"
-    }
+	[http _request _response GET "favicon.ico"] {
+		Io println "GET /favicon.ico"
+		content = Fs read-all-binary "./examples/static/tape.ico"
+		response binary content
+	}
+
 }
 
 [main] {

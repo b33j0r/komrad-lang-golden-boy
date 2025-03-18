@@ -261,8 +261,10 @@ impl AgentBehavior for RegistryAgent {
                         }
                     } else {
                         if let Some(reply_chan) = msg.reply_to() {
-                            let reply =
-                                Message::new(vec![Value::Error(RuntimeError::AgentNotFound)], None);
+                            let reply = Message::new(
+                                vec![Value::Error(RuntimeError::AgentNotRegistered(agent_name))],
+                                None,
+                            );
                             let _ = reply_chan.send(reply).await;
                         }
                     }
@@ -391,6 +393,9 @@ mod tests {
         reg_chan.send(msg).await.unwrap();
 
         let reply = reply_listener.recv().await.unwrap();
-        assert_eq!(reply.terms(), &[Value::Error(RuntimeError::AgentNotFound)]);
+        assert_eq!(
+            reply.terms(),
+            &[Value::Error(RuntimeError::AgentNotRegistered)]
+        );
     }
 }

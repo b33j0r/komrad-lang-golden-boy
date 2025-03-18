@@ -27,9 +27,13 @@ agent Server {
 
 	[http _request _response GET "ws"] {
 		Io println "WebSocket connection request"
-		client = ["unnamed" 1]
+		client_id = "brian"
+		client = spawn WsConnection {
+            server = me
+            client_id = client_id
+        }
 		clients add client
-		response text "Added client"
+		response text "Added client " + client_id
 	}
 }
 

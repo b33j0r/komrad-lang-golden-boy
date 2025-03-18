@@ -105,6 +105,9 @@ mod tests {
         let reply = reply_listener.recv().await.unwrap();
 
         // Expect an error return because the agent "NonExistent" is not defined.
-        assert_eq!(reply.terms(), &[Value::Error(RuntimeError::AgentNotFound)]);
+        assert_eq!(
+            reply.terms(),
+            &[Value::Error(RuntimeError::AgentNotRegistered)]
+        );
     }
 }

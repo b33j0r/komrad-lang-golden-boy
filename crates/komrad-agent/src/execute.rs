@@ -51,6 +51,10 @@ impl Execute for Block {
                     last_value = statement.execute(scope).await;
                 }
             }
+            if let Value::Error(_) = last_value {
+                error!("{:} -> {:}", statement.to_sexpr().format(0), last_value);
+                break;
+            }
         }
 
         last_value

@@ -121,8 +121,8 @@ pub enum RuntimeError {
     #[error("Invalid agent definition")]
     InvalidAgentDefinition,
 
-    #[error("Agent not found")]
-    AgentNotFound,
+    #[error("Agent not registered: {0}")]
+    AgentNotRegistered(String),
 
     #[error("Type mismatch: {0}")]
     TypeMismatch(String),

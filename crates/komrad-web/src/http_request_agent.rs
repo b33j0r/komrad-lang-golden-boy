@@ -26,7 +26,6 @@ pub struct HttpRequestAgent {
     data: RequestData,
 }
 
-#[allow(dead_code)]
 impl HttpRequestAgent {
     pub fn name(&self) -> &str {
         &self.name

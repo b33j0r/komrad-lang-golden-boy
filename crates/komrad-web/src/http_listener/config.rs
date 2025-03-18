@@ -5,6 +5,7 @@ pub struct ServerConfig {
     pub address: String,
     pub port: u16,
     pub delegate: Value,
+    pub websocket_path: Option<String>,
 }
 
 pub fn parse_server_config_from_scope(scope: &Scope) -> ServerConfig {
@@ -15,7 +16,7 @@ pub fn parse_server_config_from_scope(scope: &Scope) -> ServerConfig {
         .get("port")
         .unwrap_or(Value::Number(Number::UInt(3000)));
     let delegate = scope.get("delegate").unwrap_or(Value::Empty);
-
+    let websocket_path = scope.get("websocket_path").unwrap_or(Value::Empty);
     ServerConfig {
         address: address.to_string(),
         port: match port {
@@ -24,6 +25,10 @@ pub fn parse_server_config_from_scope(scope: &Scope) -> ServerConfig {
             _ => 3000,
         },
         delegate,
+        websocket_path: match websocket_path {
+            Value::String(path) => Some(path.to_string()),
+            _ => None,
+        },
     }
 }
 

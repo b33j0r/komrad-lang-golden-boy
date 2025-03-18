@@ -1,7 +1,7 @@
 use crate::http_listener::config::{parse_server_config_from_scope, ServerConfig};
 use crate::http_listener::http_response_agent::HttpResponseAgent;
 use crate::http_request_agent::HttpRequestAgent;
-use crate::request::full;
+use crate::request::{full, KomradRequest};
 use crate::response;
 use bytes::Bytes;
 use http::{Request, Response, StatusCode};
@@ -10,7 +10,7 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper_util::rt::TokioIo;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
-use komrad_ast::prelude::{Channel, ChannelListener, Message, Scope, Value};
+use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, Scope, Value};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;

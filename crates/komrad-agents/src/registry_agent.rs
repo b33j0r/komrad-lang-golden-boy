@@ -11,6 +11,15 @@ use komrad_web::TeraAgentFactory;
 #[cfg(feature = "hyper")]
 use komrad_web::HyperListenerFactory;
 
+#[cfg(feature = "axum")]
+use komrad_web::AxumListenerFactory;
+
+#[cfg(feature = "actix-web")]
+use komrad_web::ActixListenerFactory;
+
+#[cfg(feature = "warp")]
+use komrad_web::WarpListenerFactory;
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -40,14 +49,27 @@ impl RegistryAgent {
             RegistryFactory::FromFactory(Arc::new(HyperListenerFactory)),
         );
 
-        #[cfg(feature = "templates")]
+        #[cfg(feature = "axum")]
+        initial_registry.insert(
+            "AxumListener".to_string(),
+            RegistryFactory::FromFactory(Arc::new(AxumListenerFactory)),
+        );
+        #[cfg(feature = "warp")]
+        initial_registry.insert(
+            "WarpListener".to_string(),
+            RegistryFactory::FromFactory(Arc::new(WarpListenerFactory)),
+        );
+        #[cfg(feature = "actix-web")]
+        initial_registry.insert(
+            "ActixListener".to_string(),
+            RegistryFactory::FromFactory(Arc::new(ActixListenerFactory)),
+        );
         initial_registry.insert(
             "Tera".to_string(),
             RegistryFactory::FromFactory(Arc::new(TeraAgentFactory {
                 base_dir: PathBuf::from("."),
             })),
         );
-
         initial_registry.insert(
             "List".to_string(),
             RegistryFactory::FromFactory(Arc::new(ListAgentFactory)),

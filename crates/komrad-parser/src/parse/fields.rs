@@ -1,4 +1,4 @@
-use crate::parse::expressions::expression;
+use crate::parse::expressions::parse_expression;
 use crate::parse::identifier::parse_identifier;
 use crate::parse::value_type;
 use crate::span::{KResult, Span};
@@ -17,7 +17,7 @@ pub fn parse_field_definition(input: Span) -> KResult<Statement> {
         space0,
         opt(preceded(
             pair(tag("="), space0),
-            expression::parse_expression,
+            parse_expression::parse_expression,
         )),
     )
         .parse(input)?;

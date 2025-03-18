@@ -1,5 +1,5 @@
 // statements.rs
-use crate::parse::expressions::expression;
+use crate::parse::expressions::parse_expression;
 use crate::parse::handlers::parse_handler_statement;
 use crate::parse::lines::{parse_blank_line, parse_comment};
 use crate::parse::{fields, identifier};
@@ -27,7 +27,7 @@ pub fn parse_statement(input: Span) -> KResult<Statement> {
         parse_assignment_statement,
         parse_handler_statement,
         parse_expander_statement,
-        map(expression::parse_expression, Statement::Expr),
+        map(parse_expression::parse_expression, Statement::Expr),
         parse_blank_line,
         parse_comment,
     ))
@@ -41,7 +41,7 @@ pub fn parse_assignment_statement(input: Span) -> KResult<Statement> {
     let assignment_parser = separated_pair(
         identifier::parse_identifier,
         delimited(space0, nom::bytes::complete::tag("="), space0),
-        expression::parse_expression,
+        parse_expression::parse_expression,
     );
 
     map(assignment_parser, |(name, expr)| {
@@ -52,7 +52,10 @@ pub fn parse_assignment_statement(input: Span) -> KResult<Statement> {
 
 /// A minimal expander parser: "*IDENT"
 pub fn parse_expander_statement(input: Span) -> KResult<Statement> {
-    let expander_parser = preceded(nom::bytes::complete::tag("*"), expression::parse_expression);
+    let expander_parser = preceded(
+        nom::bytes::complete::tag("*"),
+        parse_expression::parse_expression,
+    );
 
     map(expander_parser, |name| Statement::Expander(name)).parse(input)
 }

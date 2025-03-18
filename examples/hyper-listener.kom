@@ -12,7 +12,7 @@ agent Server {
 	}
 
 	[http _request _response POST "increment"] {
-		count = 1 + count
+		count = count + 1
 		response redirect "/"
 	}
 

@@ -1,6 +1,6 @@
-use crate::parse::embedded_block::parse_embedded_block_value;
+use crate::parse::expressions::parse_expression;
 use crate::parse::identifier::parse_identifier;
-use crate::parse::{block, expressions};
+use crate::parse::{block, embedded_block};
 use crate::span::KResult;
 use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr, Span};
 use nom::branch::alt;
@@ -42,9 +42,9 @@ fn parse_primary(input: Span) -> KResult<Expr> {
     alt((
         //expressions::parse_call_expression,
         block::parse_block_expression,
-        expressions::parse_number_expression,
-        expressions::parse_string_expression,
-        map(parse_embedded_block_value, Expr::Value),
+        parse_expression::parse_number_expression,
+        parse_expression::parse_string_expression,
+        map(embedded_block::parse_embedded_block_value, Expr::Value),
         map(parse_identifier, Expr::Variable),
     ))
     .parse(input)
@@ -56,30 +56,21 @@ fn parse_primary(input: Span) -> KResult<Expr> {
 /// has a precedence higher than or equal to `min_prec`, it consumes the operator and recursively
 /// parses the right-hand side expression with a higher minimum precedence (to enforce left associativity).
 fn parse_binary_expr_prec(input: Span, min_prec: u8) -> KResult<Expr> {
-    // Parse the left-hand side as a primary expression.
     let (mut input, mut lhs) = parse_primary(input)?;
+
     loop {
-        // Attempt to parse an operator (allowing for surrounding whitespace).
         let (next_input, op_opt) =
             opt(delimited(space0, parse_binary_operator, space0)).parse(input.clone())?;
         match op_opt {
             Some(op) => {
                 let op_prec = precedence(&op);
-                // If the operator’s precedence is lower than the current minimum, break out.
                 if op_prec < min_prec {
                     break;
                 }
                 input = next_input;
-                // For left associativity, the next minimum precedence is one higher.
                 let next_min_prec = op_prec + 1;
-                // Parse the right-hand side expression recursively.
                 let (after_rhs, rhs) = parse_binary_expr_prec(input, next_min_prec)?;
-                // Combine the left-hand side and right-hand side into a binary expression.
-                lhs = Expr::Binary(BinaryExpr {
-                    left: Box::new(lhs),
-                    op,
-                    right: Box::new(rhs),
-                });
+                lhs = Expr::Binary(BinaryExpr::new(lhs, op, rhs));
                 input = after_rhs;
             }
             None => break,

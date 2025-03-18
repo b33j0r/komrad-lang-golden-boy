@@ -3,11 +3,11 @@ use crate::parse::identifier::parse_identifier;
 use crate::parse::value_type;
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{Statement, TypeExpr};
-use nom::Parser;
 use nom::bytes::complete::tag;
 use nom::character::complete::space0;
 use nom::combinator::opt;
 use nom::sequence::{pair, preceded};
+use nom::Parser;
 
 pub fn parse_field_definition(input: Span) -> KResult<Statement> {
     let (remaining, field) = (
@@ -15,7 +15,10 @@ pub fn parse_field_definition(input: Span) -> KResult<Statement> {
         space0,
         preceded(pair(tag(":"), space0), value_type::parse_value_type),
         space0,
-        opt(preceded(pair(tag("="), space0), parse_expression)),
+        opt(preceded(
+            pair(tag("="), space0),
+            parse_expression::parse_expression,
+        )),
     )
         .parse(input)?;
 

@@ -1,106 +1,87 @@
-#![deny(warnings)]
-
-use std::net::SocketAddr;
-
 use bytes::Bytes;
-use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};
-use hyper::body::Frame;
+use http::StatusCode;
+use http_body_util::combinators::BoxBody;
+use hyper::body::Body;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
-use hyper::{body::Body, Method, Request, Response, StatusCode};
+use hyper::{Request, Response};
+use hyper_util::rt::TokioIo;
+use komrad_web::request;
+use komrad_web::request::KomradRequest;
+use std::net::SocketAddr;
 use tokio::net::TcpListener;
+use tokio::select;
+use tokio_util::sync::CancellationToken;
 
-/// This is our service handler. It receives a Request, routes on its
-/// path, and returns a Future of a Response.
 async fn echo(
     req: Request<hyper::body::Incoming>,
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
-    match (req.method(), req.uri().path()) {
-        // Serve some instructions at /
-        (&Method::GET, "/") => Ok(Response::new(full(
-            "Try POSTing data to /echo such as: `curl localhost:3000/echo -XPOST -d \"hello world\"`",
-        ))),
+    let komrad_req = KomradRequest::from_request(req).await;
+    let path = komrad_req.path.join("/");
 
-        // Simply echo the body back to the client.
-        (&Method::POST, "/echo") => Ok(Response::new(req.into_body().boxed())),
-
-        // Convert to uppercase before sending back to client using a stream.
-        (&Method::POST, "/echo/uppercase") => {
-            let frame_stream = req.into_body().map_frame(|frame| {
-                let frame = if let Ok(data) = frame.into_data() {
-                    data.iter()
-                        .map(|byte| byte.to_ascii_uppercase())
-                        .collect::<Bytes>()
-                } else {
-                    Bytes::new()
-                };
-
-                Frame::data(frame)
-            });
-
-            Ok(Response::new(frame_stream.boxed()))
-        }
-
-        // Reverse the entire body before sending back to the client.
-        //
-        // Since we don't know the end yet, we can't simply stream
-        // the chunks as they arrive as we did with the above uppercase endpoint.
-        // So here we do `.await` on the future, waiting on concatenating the full body,
-        // then afterwards the content can be reversed. Only then can we return a `Response`.
-        (&Method::POST, "/echo/reversed") => {
-            // To protect our server, reject requests with bodies larger than
-            // 64kbs of data.
-            let max = req.body().size_hint().upper().unwrap_or(u64::MAX);
-            if max > 1024 * 64 {
-                let mut resp = Response::new(full("Body too big"));
-                *resp.status_mut() = hyper::StatusCode::PAYLOAD_TOO_LARGE;
-                return Ok(resp);
+    match komrad_req.method.as_str() {
+        "GET" => {
+            // Check for a delegate channel
+            if komrad_req.delegate.is_none() {
+                return Ok(Response::new(request::full("No delegate channel found")));
             }
-
-            let whole_body = req.collect().await?.to_bytes();
-
-            let reversed_body = whole_body.iter().rev().cloned().collect::<Vec<u8>>();
-            Ok(Response::new(full(reversed_body)))
+            Ok(Response::new(request::full(format!("Hello, {}!", path))))
         }
-
-        // Return the 404 Not Found for other routes.
+        "POST" => {
+            //
+            Ok(Response::new(request::full(komrad_req.body)))
+        }
+        // Return 404 Not Found for other routes.
         _ => {
-            let mut not_found = Response::new(empty());
+            let mut not_found = Response::new(request::empty());
             *not_found.status_mut() = StatusCode::NOT_FOUND;
             Ok(not_found)
         }
     }
 }
 
-fn empty() -> BoxBody<Bytes, hyper::Error> {
-    Empty::<Bytes>::new()
-        .map_err(|never| match never {})
-        .boxed()
-}
-
-fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
-    Full::new(chunk.into())
-        .map_err(|never| match never {})
-        .boxed()
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-
+    let graceful = CancellationToken::new();
+    // We create a TcpListener and bind it to 127.0.0.1:3000
     let listener = TcpListener::bind(addr).await?;
-    println!("Listening on http://{}", addr);
-    loop {
-        let (stream, _) = listener.accept().await?;
-        let io = tokio::new(stream);
 
-        tokio::task::spawn(async move {
-            if let Err(err) = http1::Builder::new()
-                .serve_connection(io, service_fn(echo))
-                .await
-            {
-                println!("Error serving connection: {:?}", err);
+    // We start a loop to continuously accept incoming connections
+    loop {
+        select! {
+            accept_result = listener.accept() => {
+                if let Ok((stream, _)) = accept_result {
+                    // Use an adapter to access something implementing `tokio::io` traits as if they implement
+                    // `hyper::rt` IO traits.
+                    let io = TokioIo::new(stream);
+
+                    // Spawn a tokio task to serve multiple connections concurrently
+                    tokio::task::spawn(async move {
+                        // Finally, we bind the incoming connection to our `hello` service
+                        if let Err(err) = http1::Builder::new()
+                            // `service_fn` converts our function in a `Service`
+                            .serve_connection(io, service_fn(echo))
+                            .await
+                        {
+                            eprintln!("Error serving connection: {:?}", err);
+                        }
+                    });
+                } else {
+                    eprintln!("Failed to accept connection: {:?}", accept_result);
+                }
             }
-        });
+            // Catch ctrl-c to trigger graceful shutdown
+            _ = tokio::signal::ctrl_c() => {
+                println!("Ctrl-C received, shutting down...");
+                graceful.cancel();
+            }
+            // If the graceful shutdown token is triggered, we break the loop
+            _ = graceful.cancelled() => {
+                println!("Shutting down gracefully...");
+                break;
+            }
+        }
     }
+    Ok(())
 }

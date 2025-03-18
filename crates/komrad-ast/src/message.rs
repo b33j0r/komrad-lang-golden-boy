@@ -31,16 +31,23 @@ impl Message {
 pub trait MessageBuilder {
     fn with_terms(self, terms: Vec<Value>) -> Self;
     fn with_reply_to(self, reply_to: Option<Channel>) -> Self;
+
+    fn with_term(self, term: Value) -> Self;
 }
 
 impl MessageBuilder for Message {
     fn with_terms(mut self, terms: Vec<Value>) -> Self {
-        self.terms = terms;
+        self.terms.extend(terms);
         self
     }
 
     fn with_reply_to(mut self, reply_to: Option<Channel>) -> Self {
         self.reply_to = reply_to;
+        self
+    }
+
+    fn with_term(mut self, term: Value) -> Self {
+        self.terms.push(term);
         self
     }
 }

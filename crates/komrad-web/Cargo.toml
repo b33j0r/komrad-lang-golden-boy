@@ -29,7 +29,7 @@ tower-http = { version = "0.6.2", features = ["trace", "cors"], optional = true 
 [features]
 web = []
 
-default = ["warp", "templates"]
+default = ["hyper", "templates"]
 
 templates = ["dep:tera"]
 
@@ -42,4 +42,3 @@ warp = ["web", "dep:warp", "hyper-util"]
 hyper = ["web", "dep:hyper", "hyper-util"]
 
 hyper-util = ["dep:http-body-util", "dep:hyper-util"]
-

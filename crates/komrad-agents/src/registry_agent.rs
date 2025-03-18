@@ -8,6 +8,9 @@ use komrad_ast::scope::Scope;
 #[cfg(feature = "templates")]
 use komrad_web::TeraAgentFactory;
 
+#[cfg(feature = "hyper")]
+use komrad_web::HyperListenerFactory;
+
 #[cfg(feature = "axum")]
 use komrad_web::AxumListenerFactory;
 
@@ -39,6 +42,12 @@ impl RegistryAgent {
     pub fn new() -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
         let mut initial_registry: HashMap<String, RegistryFactory> = HashMap::new();
+
+        #[cfg(feature = "hyper")]
+        initial_registry.insert(
+            "HyperListener".to_string(),
+            RegistryFactory::FromFactory(Arc::new(HyperListenerFactory)),
+        );
 
         #[cfg(feature = "axum")]
         initial_registry.insert(

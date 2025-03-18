@@ -8,3 +8,5 @@ mod tera_agent;
 
 #[cfg(feature = "templates")]
 pub use tera_agent::*;
+
+pub mod request;

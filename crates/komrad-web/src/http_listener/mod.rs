@@ -1,5 +1,13 @@
 // Used by all the http listeners
+mod config;
 mod http_response_agent;
+
+#[cfg(feature = "hyper")]
+mod hyper_listener_agent;
+
+// Hyper
+#[cfg(feature = "hyper")]
+pub use hyper_listener_agent::*;
 
 // Axum
 #[cfg(feature = "axum")]
@@ -16,7 +24,6 @@ mod actix_listener_agent;
 pub use actix_listener_agent::*;
 
 // Warp
-mod config;
 #[cfg(feature = "warp")]
 mod warp_listener_agent;
 

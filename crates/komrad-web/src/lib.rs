@@ -15,3 +15,4 @@ pub mod request;
 mod response;
 // Used by all the http listeners
 mod config;
+mod websocket_agent;

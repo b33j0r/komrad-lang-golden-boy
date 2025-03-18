@@ -53,6 +53,8 @@ impl Execute for Block {
             }
             if let Value::Error(_) = last_value {
                 error!("{:} -> {:}", statement.to_sexpr().format(0), last_value);
+                // TODO: debateable whether to break. We don't have error
+                //       handling constructs yet, so break for now.
                 break;
             }
         }

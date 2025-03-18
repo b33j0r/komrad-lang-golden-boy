@@ -1,4 +1,4 @@
-use crate::request::full;
+pub(crate) use crate::request::full;
 use bytes::Bytes;
 use http::{Response, StatusCode};
 use http_body_util::combinators::BoxBody;
@@ -16,8 +16,8 @@ pub fn build_hyper_response_from_komrad(terms: &[Value]) -> Response<BoxBody<Byt
     }
 
     match &terms[0] {
-        Value::List(list_of_4) if list_of_4.len() == 4 => {
-            let status_code = match &list_of_4[0] {
+        Value::List(list_of_5) if list_of_5.len() == 5 => {
+            let status_code = match &list_of_5[0] {
                 Value::Number(n) => match n {
                     Number::Int(i) => *i as u16,
                     Number::UInt(i) => *i as u16,
@@ -27,7 +27,7 @@ pub fn build_hyper_response_from_komrad(terms: &[Value]) -> Response<BoxBody<Byt
             };
 
             let mut builder = Response::builder().status(status_code);
-            if let Value::List(header_list) = &list_of_4[1] {
+            if let Value::List(header_list) = &list_of_5[1] {
                 for hpair in header_list {
                     if let Value::List(pair) = hpair {
                         if pair.len() == 2 {
@@ -39,7 +39,7 @@ pub fn build_hyper_response_from_komrad(terms: &[Value]) -> Response<BoxBody<Byt
                 }
             }
 
-            if let Value::List(cookie_list) = &list_of_4[2] {
+            if let Value::List(cookie_list) = &list_of_5[2] {
                 for cpair in cookie_list {
                     if let Value::List(pair) = cpair {
                         if pair.len() == 2 {
@@ -51,7 +51,7 @@ pub fn build_hyper_response_from_komrad(terms: &[Value]) -> Response<BoxBody<Byt
                 }
             }
 
-            let body_bytes = match &list_of_4[3] {
+            let body_bytes = match &list_of_5[3] {
                 Value::Bytes(b) => b.clone(),
                 Value::String(s) => s.as_bytes().to_vec(),
                 other => format!("{:?}", other).into_bytes(),

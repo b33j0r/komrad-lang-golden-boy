@@ -1,21 +1,25 @@
 use crate::config::{parse_server_config_from_scope, ServerConfig};
 use crate::http_request_agent::HttpRequestAgent;
 use crate::http_response_agent::HttpResponseAgent;
-use crate::request::full;
 use crate::response;
+use crate::websocket_agent::WebSocketAgent;
 use bytes::Bytes;
 use http::{Request, Response, StatusCode};
 use http_body_util::combinators::BoxBody;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
+use hyper::upgrade::OnUpgrade;
 use hyper_util::rt::TokioIo;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
-use komrad_ast::prelude::{Channel, ChannelListener, Message, Number, Scope, Value};
+use komrad_ast::prelude::{Channel, ChannelListener, Message, Scope, Value};
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::select;
 use tokio::sync::Mutex;
+use tokio_tungstenite::tungstenite::protocol::Role;
+use tokio_tungstenite::WebSocketStream;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
@@ -88,67 +92,112 @@ impl HyperListenerAgent {
 }
 
 async fn handle_request(
-    req: Request<hyper::body::Incoming>,
+    mut req: Request<hyper::body::Incoming>,
     delegate_value: Value,
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
+    // Pre-emptively get the upgrade handle, because the req is consumed when we call collect()
+    // in the HttpRequestAgent
+    let on_upgrade: OnUpgrade = hyper::upgrade::on(&mut req);
+
+    // Build the ephemeral HttpRequestAgent
     let request_agent = HttpRequestAgent::new("Request", req).await;
+    let ephemeral_request_chan = request_agent.clone().spawn();
+
+    // Extract the method and path values
     let method = request_agent.method().to_string();
-    let path_values: Vec<Value> = request_agent
+    let path_values = request_agent
         .path()
         .iter()
         .map(|s| Value::String(s.to_string()))
-        .collect();
-    let ephemeral_request_chan = request_agent.spawn();
+        .collect::<Vec<_>>();
 
-    let delegate = match delegate_value {
-        Value::Channel(ref chan) => Some(chan.clone()),
-        _ => None,
+    // Extract the server's delegate channel
+    let delegate_chan = match delegate_value {
+        Value::Channel(chan) => chan,
+        _ => {
+            error!("Delegate is not a channel");
+            return Ok(Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(response::full("Delegate is not a channel"))
+                .unwrap());
+        }
     };
 
-    if delegate.is_none() {
-        return Ok(Response::builder()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .body(full("No delegate channel found"))
-            .unwrap());
-    }
-    let delegate_chan = delegate.unwrap();
-
-    // Spawn an ephemeral response agent so that the delegate knows where to send its reply.
+    // Build ephemeral HttpResponseAgent
     let (final_tx, final_rx) = Channel::new(1);
-    let response_agent = HttpResponseAgent::new("Response", Some(final_tx.clone()));
-    let ephemeral_chan = response_agent.spawn();
+    let response_agent = HttpResponseAgent::new("Response", Some(final_tx));
+    let ephemeral_response_chan = response_agent.spawn();
 
-    // MESSAGE FORMAT: http <request> <response> <method> <path_segments>
-    // Build message with ephemeral channel as the second term.
+    // Send [http requestChan responseChan method path...]
     let mut msg_terms = vec![
         Value::Word("http".into()),
         Value::Channel(ephemeral_request_chan),
-        Value::Channel(ephemeral_chan),
+        Value::Channel(ephemeral_response_chan),
         Value::Word(method.into()),
     ];
+    // Add the rest of the path components
     msg_terms.extend(path_values);
 
-    let msg = Message::new(msg_terms, None);
-    if let Err(e) = delegate_chan.send(msg).await {
-        error!("Failed to send message to delegate: {:?}", e);
+    // Send the message to the delegate
+    if let Err(e) = delegate_chan.send(Message::new(msg_terms, None)).await {
+        error!("Failed sending msg to delegate: {:?}", e);
         return Ok(Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .body(full("Error sending request"))
+            .body(response::full("Error sending request"))
             .unwrap());
     }
 
-    match final_rx.recv().await {
-        Ok(final_msg) => Ok(response::build_hyper_response_from_komrad(
-            final_msg.terms(),
-        )),
+    // Wait for the final [status, headers, cookies, body, websocketDelegate]
+    let final_msg = match final_rx.recv().await {
+        Ok(m) => m,
         Err(e) => {
-            error!("Failed to receive delegate response: {:?}", e);
-            Ok(Response::builder()
+            error!("Delegate recv error: {:?}", e);
+            return Ok(Response::builder()
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(full("Error receiving response"))
-                .unwrap())
+                .body(response::full("Error receiving delegate response"))
+                .unwrap());
         }
+    };
+
+    // Pull the terms from the final message
+    let terms = final_msg.terms();
+
+    // Check for a websocket upgrade
+    let ws_delegate_value = match terms.get(4) {
+        Some(Value::Channel(chan)) => Some(chan.clone()),
+        _ => None,
+    };
+
+    // Build an HTTP response from the 4 main fields
+    let resp = response::build_hyper_response_from_komrad(terms);
+
+    // If 5th element is a channel, we treat it as "websocket delegate"
+    if let Some(ws_delegate_value) = ws_delegate_value {
+        // We do the actual Hyper "upgrade" in a background task
+        tokio::spawn(async move {
+            match on_upgrade.await {
+                Ok(upgraded) => {
+                    // Wrap upgraded with .compat() so it implements AsyncRead + AsyncWrite
+                    let compat_stream = TokioIo::new(upgraded);
+
+                    // Use tungstenite to form a WebSocket
+                    let ws_stream =
+                        WebSocketStream::from_raw_socket(compat_stream, Role::Server, None).await;
+
+                    // Create the WebSocketAgent that will forward frames
+                    let ws_agent =
+                        WebSocketAgent::new("WsAgent", ws_stream, ws_delegate_value.clone());
+                    ws_agent.spawn();
+                    error!("WebSocket upgrade successful");
+                }
+                Err(err) => {
+                    error!("WebSocket upgrade failed: {:?}", err);
+                }
+            }
+        });
     }
+
+    Ok(resp)
 }
 
 #[async_trait::async_trait]

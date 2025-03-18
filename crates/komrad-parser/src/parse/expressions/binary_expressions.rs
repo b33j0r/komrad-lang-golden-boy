@@ -3,12 +3,12 @@ use crate::parse::identifier::parse_identifier;
 use crate::parse::{block, expressions};
 use crate::span::KResult;
 use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr, Span};
-use nom::Parser;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::space0;
 use nom::combinator::{map, opt};
 use nom::sequence::delimited;
+use nom::Parser;
 
 /// Returns the precedence value of a given binary operator.
 /// Higher numbers bind more tightly.
@@ -111,6 +111,22 @@ mod tests {
         // Expected AST: 1 + 2
         let expected = Expr::Binary(BinaryExpr {
             left: Box::new(Expr::Value(Value::Number(Number::UInt(1)))),
+            op: BinaryOp::Add,
+            right: Box::new(Expr::Value(Value::Number(Number::UInt(2)))),
+        });
+        assert_eq!(expr, expected);
+    }
+
+    #[test]
+    fn test_variable_addition() {
+        let input = new_span("count+2");
+        let (remaining, expr) = parse_binary_expression(input).expect("parse failed");
+        // Ensure all input was consumed.
+        assert!(remaining.fragment().is_empty());
+
+        // Expected AST: count + 2
+        let expected = Expr::Binary(BinaryExpr {
+            left: Box::new(Expr::Variable("count".to_string())),
             op: BinaryOp::Add,
             right: Box::new(Expr::Value(Value::Number(Number::UInt(2)))),
         });

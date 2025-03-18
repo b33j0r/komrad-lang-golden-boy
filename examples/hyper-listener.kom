@@ -1,13 +1,19 @@
 agent Server {
-	[http _response GET] {
+	[http _request _response GET] {
 		Io println "GET /"
 		templates = spawn Tera {
 			base_dir = "./examples/templates"
 		}
 		rendered = templates render "counter.html" {
 		  title = "Komrad"
+		  count = count
 		}
 		response html rendered
+	}
+
+	[http _request _response POST "increment"] {
+		count = 1 + count
+		response redirect "/"
 	}
 
 	[http _response GET "static" _name] {
@@ -19,7 +25,9 @@ agent Server {
 }
 
 [main] {
-	server = spawn Server {}
+	server = spawn Server {
+		count = 0
+	}
 	listener = spawn HyperListener {
 		host = "0.0.0.0"
 		port = 9898

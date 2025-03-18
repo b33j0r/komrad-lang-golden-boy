@@ -4,12 +4,12 @@ use crate::parse::primitives;
 use crate::parse::{block, identifier};
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{CallExpr, Expr, Value};
-use nom::Parser;
 use nom::branch::alt;
 use nom::character::complete::space1;
 use nom::combinator::map;
 use nom::multi::separated_list0;
 use nom::sequence::{pair, preceded};
+use nom::Parser;
 
 pub mod binary_expressions;
 
@@ -79,7 +79,8 @@ mod test_parse_expression {
     use crate::parse::statements::parse_statement;
     use crate::parse::strings::test_parse_string::full_span;
     use komrad_ast::prelude::{
-        Block, CallExpr, Expr, Handler, Number, Pattern, Statement, TypeExpr, Value,
+        BinaryExpr, BinaryOp, Block, CallExpr, Expr, Handler, Number, Pattern, Statement, TypeExpr,
+        Value,
     };
 
     #[test]
@@ -317,5 +318,29 @@ mod test_parse_expression {
                 ]
             )))
         )
+    }
+
+    #[test]
+    fn test_parse_agent_block_expression_with_symbolic_arithmetic() {
+        let input = full_span(
+            r#"
+ count = count + 1
+        "#
+            .trim(),
+        );
+
+        let result = parse_statement(input);
+        let (_remaining, stmt) = result.unwrap().clone();
+
+        let expected = Statement::Assignment(
+            "count".to_string(),
+            Expr::Binary(BinaryExpr::new(
+                Expr::Variable("count".to_string()),
+                BinaryOp::Add,
+                Expr::Value(Value::Number(Number::UInt(1))),
+            )),
+        );
+
+        assert_eq!(stmt, expected);
     }
 }

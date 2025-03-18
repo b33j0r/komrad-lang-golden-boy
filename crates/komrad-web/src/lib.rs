@@ -9,4 +9,6 @@ mod tera_agent;
 #[cfg(feature = "templates")]
 pub use tera_agent::*;
 
+mod http_request_agent;
 pub mod request;
+mod response;

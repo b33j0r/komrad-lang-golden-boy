@@ -40,7 +40,7 @@ pub fn parse_assignment_statement(input: Span) -> KResult<Statement> {
     separated_pair(
         crate::parse::identifier::parse_identifier,
         delimited(space0, tag("="), space0),
-        crate::parse::expressions::parse_expression::parse_expression,
+        crate::parse::expressions::expression::parse_expression,
     )
     .map(|(name, expr)| Statement::Assignment(name, expr))
     .parse(input)

@@ -1,4 +1,4 @@
-use crate::parse::expressions::parse_expression::parse_value_expression;
+use crate::parse::expressions::expression::parse_value_expression;
 use crate::parse::identifier::parse_identifier;
 use crate::parse::primitives;
 use crate::parse::value_type::parse_value_type;

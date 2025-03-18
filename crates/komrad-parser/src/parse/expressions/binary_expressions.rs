@@ -1,4 +1,4 @@
-use crate::parse::expressions::parse_expression;
+use crate::parse::expressions::expression;
 use crate::parse::identifier::parse_identifier;
 use crate::parse::{block, embedded_block};
 use crate::span::KResult;
@@ -42,8 +42,8 @@ fn parse_primary(input: Span) -> KResult<Expr> {
     alt((
         //expressions::parse_call_expression,
         block::parse_block_expression,
-        parse_expression::parse_number_expression,
-        parse_expression::parse_string_expression,
+        expression::parse_number_expression,
+        expression::parse_string_expression,
         map(embedded_block::parse_embedded_block_value, Expr::Value),
         map(parse_identifier, Expr::Variable),
     ))

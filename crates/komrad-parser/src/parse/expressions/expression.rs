@@ -52,7 +52,7 @@ pub fn parse_string_expression(input: Span) -> KResult<Expr> {
 
 #[cfg(test)]
 mod test_parse_expression {
-    use crate::parse::expressions::parse_expression::parse_value_expression;
+    use crate::parse::expressions::expression::parse_value_expression;
     use crate::parse::statements::parse_statement;
     use crate::parse::strings::test_parse_string::full_span;
     use komrad_ast::prelude::{

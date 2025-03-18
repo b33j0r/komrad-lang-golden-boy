@@ -1,4 +1,4 @@
-use crate::parse::expressions::parse_expression;
+use crate::parse::expressions::expression;
 use crate::parse::identifier;
 use crate::span::{KResult, Span};
 use komrad_ast::prelude::{CallExpr, Expr};
@@ -16,7 +16,7 @@ pub fn parse_call_expression(input: Span) -> KResult<Expr> {
         identifier::parse_identifier.map(|name| Expr::Variable(name)),
         preceded(
             space1,
-            separated_list1(space1, parse_expression::parse_value_expression),
+            separated_list1(space1, expression::parse_value_expression),
         ),
     )
     .map(|(target, args)| {

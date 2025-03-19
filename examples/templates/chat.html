@@ -5,10 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Komrad Chat Frontend</title>
     <style>
+      p, span, div, h1, h2, h3, h4, h5, h6 {
+        margin: 0;
+        padding: 0;
+      }
+
       * {
         box-sizing: border-box;
         margin: 0;
         padding: 0;
+      }
+
+      h1 {
+        font-size: 1.5em;
       }
 
       html, body {
@@ -60,11 +69,25 @@
       header, footer {
         background: #02042c;
         color: white;
-        padding: 1em;
+        padding: 0.5em;
+
+        button {
+          margin: 0;
+        }
       }
 
       header {
         border-bottom: #7eafd7 3px solid;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1em;
+      }
+
+      #user-info {
+        display: flex;
+        align-items: center;
+        gap: 1em;
       }
 
       footer {
@@ -91,17 +114,21 @@
         color: #0e093b;
       }
 
-      #sendButton {
-        padding: 1em;
+      button {
+        padding: 0.5em;
         border: 2px solid #ccc;
         background: #2653ef;
         color: white;
         cursor: pointer;
         transition: background 0.3s;
+
+        &:hover {
+          background: #1a3bbf;
+        }
       }
 
-      #sendButton:hover {
-        background: #1a3bbf;
+      #sendButton {
+        padding: 1em;
       }
 
       /* Media Queries for Responsive Design */
@@ -133,7 +160,17 @@
         </ul>
     </div>
     <div id="container">
-        <header>Chat</header>
+        <header>
+            <h1>Komrad Chat</h1>
+            <div id="user-info">
+                <span id="username">Guest</span>
+                <button id="logoutButton">Logout</button>
+            </div>
+            <div id="user-login">
+                <input type="text" id="usernameInput" placeholder="Enter your name"/>
+                <button id="loginButton">Login</button>
+            </div>
+        </header>
         <main id="chat"></main>
         <footer id="controls">
             <input type="text" id="messageInput" placeholder="..."/>

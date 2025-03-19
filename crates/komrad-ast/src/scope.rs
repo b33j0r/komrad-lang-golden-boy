@@ -7,7 +7,6 @@ use std::sync::Arc;
 pub struct Scope {
     parent: Option<Box<Scope>>,
     bindings: Arc<DashMap<String, Value>>,
-    dirty: bool,
 }
 
 impl Scope {
@@ -15,7 +14,6 @@ impl Scope {
         Scope {
             parent: None,
             bindings: Arc::new(DashMap::new()),
-            dirty: false,
         }
     }
 
@@ -23,12 +21,7 @@ impl Scope {
         Scope {
             parent: Some(Box::new(parent)),
             bindings: Arc::new(DashMap::new()),
-            dirty: false,
         }
-    }
-
-    pub fn is_dirty(&self) -> bool {
-        self.dirty
     }
 
     pub fn get(&self, name: &str) -> Option<Value> {
@@ -43,7 +36,6 @@ impl Scope {
 
     pub async fn set(&mut self, name: String, value: Value) {
         self.bindings.insert(name, value);
-        self.dirty = true;
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (String, Value)> {
@@ -65,7 +57,6 @@ impl Debug for Scope {
         f.debug_struct("Scope")
             .field("parent", &self.parent)
             // .field("bindings", &self.bindings)
-            .field("dirty", &self.dirty)
             .finish()
     }
 }
@@ -75,7 +66,6 @@ impl Display for Scope {
         f.debug_struct("Scope")
             .field("parent", &self.parent)
             .field("bindings", &self.bindings)
-            .field("dirty", &self.dirty)
             .finish()
     }
 }

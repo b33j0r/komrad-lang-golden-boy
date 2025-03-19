@@ -41,9 +41,14 @@ impl AgentBehavior for AgentAgent {
         for term in msg.terms() {
             new_terms.push(term.clone());
         }
-        let new_msg = Message::new(new_terms, msg.reply_to());
+        let (reply_chan, reply_chan_rx) = Channel::new(1);
+        let new_msg = Message::new(new_terms, Some(reply_chan));
         debug!("⏭️ AgentAgent {:}", new_msg.to_sexpr().format(0));
+
         let _ = self.registry.send(new_msg).await;
+        let reply_value = reply_chan_rx.recv().await.unwrap();
+        debug!("⏭️ Registry reply: {:}", reply_value.to_sexpr().format(0));
+
         true
     }
 }

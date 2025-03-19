@@ -18,4 +18,7 @@ agent User {
 
 	u1 introduce
 	u2 introduce
+
+	// Accessing fields directly
+	Io println "User 1: " + u1.name + ", Age: " + u1.age
 }

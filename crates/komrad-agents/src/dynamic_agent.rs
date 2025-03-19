@@ -6,6 +6,7 @@ use komrad_ast::prelude::{
     Block, Channel, ChannelListener, Handler, Message, RuntimeError, Statement, ToSexpr, Value,
 };
 use komrad_ast::scope::Scope;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tracing::{debug, trace};

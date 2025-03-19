@@ -2,130 +2,82 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Komrad Chat Frontend</title>
     <style>
       * {
         box-sizing: border-box;
-        font-size: 100%;
-      }
-
-      html {
-        width: 100dvw;
-        height: 100dvh;
         margin: 0;
         padding: 0;
-        background: #110867;
       }
 
-      body {
+      html, body {
         width: 100%;
         height: 100%;
-        margin: 0;
-        padding: 0;
         font-family: Arial, sans-serif;
-        display: flex;
-        flex-direction: column;
-      }
-
-      h1 {
-        margin: 0 1em;
-        font-size: 1em;
-        font-weight: bold;
       }
 
       #outer-container {
         display: flex;
-        flex-direction: row;
-        justify-content: space-evenly;
-        width: 100%;
+        flex-direction: column;
         height: 100%;
-        background: #110867;
       }
 
       #sidebar {
-        display: none;
+        display: none; /* Hide sidebar by default */
         width: 20%;
-        padding: 1em;
-        background: #02042c;
-        border-radius: 4px;
+        background: #10135e;
         color: white;
-        flex-direction: column;
-        justify-content: flex-start;
+        padding: 1em;
+        border-right: #7eafd7 1px solid;
+      }
 
-        ul {
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-start;
-          list-style-type: none;
-          padding: 1em 1em;
-          margin: 0;
-          font-size: 1em;
-          color: #cccee1;
-          border-radius: 4px;
-        }
+      #sidebar ul {
+        list-style-type: none;
+        padding: 0;
+      }
 
-        a {
-          text-decoration: none;
-          color: #9d9eb2;
-          padding: 0.5em 1em;
-          border-radius: 4px;
-          transition: background-color 0.3s;
+      #sidebar a {
+        text-decoration: none;
+        color: #9d9eb2;
+        padding: 0.5em 0;
+        display: block;
+        transition: background-color 0.3s;
+      }
 
-          &:hover {
-            background-color: #2653ef;
-            color: white;
-          }
-        }
+      #sidebar a:hover {
+        background-color: #2653ef;
+        color: white;
       }
 
       #container {
+        flex: 1;
         display: flex;
         flex-direction: column;
-        width: 100%;
-        height: 100%;
-
-        header, footer, main {
-          padding: 1em;
-          /*background: #02042c;*/
-          border-radius: 4px;
-          color: white;
-        }
       }
 
-      #container header {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-evenly;
-        align-items: center;
-        margin: 1em 0 0 0;
-        padding: 0;
+      header, footer {
+        background: #02042c;
+        color: white;
+        padding: 1em;
       }
 
-      #container main {
+      main {
         flex: 1;
-        margin: 1em;
+        padding: 1em;
         overflow-y: auto;
         background: #bdbee0;
-        border-radius: 4px;
         color: #241242;
       }
 
-      #container footer {
+      #controls {
         display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        margin: 0 1em 1em 1em;
-        padding: 0;
         gap: 1em;
       }
 
       #messageInput {
         flex: 1;
-        margin: 0;
         padding: 1em;
-        display: block;
-        font-size: 16px;
         border: 1px solid #ccc;
         border-radius: 4px;
         background: #040f31;
@@ -133,35 +85,52 @@
       }
 
       #sendButton {
-        display: block;
-        margin: 0;
-        padding: 1em 2em;
-        font-size: 16px;
+        padding: 1em;
         border: 1px solid #ccc;
         background: #2653ef;
         color: white;
         border-radius: 4px;
         cursor: pointer;
+        transition: background 0.3s;
+      }
 
-        &:hover {
-          background: #1a3bbf;
+      #sendButton:hover {
+        background: #1a3bbf;
+      }
+
+      /* Media Queries for Responsive Design */
+
+      /* For screens wider than 768px */
+      @media (min-width: 768px) {
+        #outer-container {
+          flex-direction: row;
+        }
+
+        #sidebar {
+          display: block; /* Show sidebar */
+        }
+
+        #container {
+          flex: 1;
         }
       }
+
     </style>
 </head>
 <body>
 <div id="outer-container">
     <div id="sidebar">
-        <h1>Komrad Chat</h1>
+        <h1>Rooms</h1>
         <ul>
             <li><a href="#lobby">Lobby</a></li>
+            <!-- Add more navigation items as needed -->
         </ul>
     </div>
     <div id="container">
         <header>Chat</header>
         <main id="chat"></main>
         <footer id="controls">
-            <input type="text" id="messageInput" placeholder="Type your message here..."/>
+            <input type="text" id="messageInput" placeholder="..."/>
             <button id="sendButton">Send</button>
         </footer>
     </div>
@@ -174,7 +143,7 @@
     const messageInput = document.getElementById("messageInput");
     const sendButton = document.getElementById("sendButton");
 
-    socket.addEventListener('open', function (event) {
+    socket.addEventListener('open', function () {
         appendMessage("System: Connected to chat server.");
     });
 
@@ -182,11 +151,11 @@
         appendMessage(event.data);
     });
 
-    socket.addEventListener('close', function (event) {
+    socket.addEventListener('close', function () {
         appendMessage("System: Disconnected from chat server.");
     });
 
-    socket.addEventListener('error', function (event) {
+    socket.addEventListener('error', function () {
         appendMessage("System: Error connecting to chat server.");
     });
 
@@ -200,7 +169,6 @@
     function sendMessage() {
         const message = messageInput.value.trim();
         if (message !== "") {
-            // Send the message to the server over the websocket.
             socket.send(message);
             messageInput.value = "";
         }
@@ -210,9 +178,9 @@
         const messageElem = document.createElement("div");
         messageElem.textContent = message;
         chatDiv.appendChild(messageElem);
-        // Auto-scroll to the latest message.
-        chatDiv.scrollTop = chatDiv.scrollHeight;
+        chatDiv.scrollTop = chatDiv.scrollHeight; // Auto-scroll to the latest message
     }
+
 </script>
 </body>
 </html>

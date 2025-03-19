@@ -1,16 +1,16 @@
-// for ws_stream.next()
+// websocket_agent.rs
+
 use async_trait::async_trait;
+use futures::stream::{SplitSink, SplitStream};
 use futures::SinkExt;
+use futures::StreamExt;
 use hyper::upgrade::Upgraded;
 use hyper_util::rt::TokioIo;
 use komrad_agent::{Agent, AgentBehavior, AgentLifecycle};
-use komrad_ast::prelude::{
-    Channel, ChannelListener, ControlMessage, Message, Number, Scope, Value,
-};
+use komrad_ast::prelude::{Channel, ChannelListener, ControlMessage, Message, Scope, Value};
 use std::sync::Arc;
 use tokio::select;
 use tokio::sync::Mutex;
-use tokio_stream::StreamExt;
 use tokio_tungstenite::tungstenite::protocol::Message as WsMessage;
 use tokio_tungstenite::WebSocketStream;
 use tokio_util::sync::CancellationToken;
@@ -20,22 +20,27 @@ pub struct WebSocketAgent {
     name: String,
     channel: Channel,
     listener: Arc<ChannelListener>,
-    // The tungstenite WebSocket stream
-    ws_stream: Arc<Mutex<WebSocketStream<TokioIo<Upgraded>>>>,
-    // The delegate that receives messages [ws myChannel text/disconnected/etc.]
+    // Writer half for sending messages concurrently.
+    ws_sink: Arc<Mutex<SplitSink<WebSocketStream<TokioIo<Upgraded>>, WsMessage>>>,
+    // Reader half for processing incoming messages.
+    ws_stream: Arc<Mutex<SplitStream<WebSocketStream<TokioIo<Upgraded>>>>>,
+    // Delegate channel for forwarding ws events.
     delegate: Arc<Mutex<Option<Channel>>>,
-    // Cancellation token for graceful shutdown
+    // Cancellation token for graceful shutdown.
     cancellation_token: CancellationToken,
 }
 
 impl WebSocketAgent {
-    pub fn new(name: &str, ws_stream: WebSocketStream<TokioIo<Upgraded>>) -> Arc<Self> {
+    pub fn new(name: &str, ws_stream_full: WebSocketStream<TokioIo<Upgraded>>) -> Arc<Self> {
+        // Use futures_util's split so that both halves come from the same crate.
+        let (sink, stream) = ws_stream_full.split();
         let (channel, listener) = Channel::new(32);
         Arc::new(Self {
             name: name.to_string(),
             channel,
             listener: Arc::new(listener),
-            ws_stream: Arc::new(Mutex::new(ws_stream)),
+            ws_sink: Arc::new(Mutex::new(sink)),
+            ws_stream: Arc::new(Mutex::new(stream)),
             delegate: Arc::new(Mutex::new(None)),
             cancellation_token: CancellationToken::new(),
         })
@@ -46,8 +51,7 @@ impl WebSocketAgent {
 impl AgentLifecycle for WebSocketAgent {
     async fn init(self: Arc<Self>, _scope: &mut Scope) {
         error!("WebSocketAgent init: {}", self.name);
-        // Immediately notify the Komrad delegate that we are "connected".
-        // e.g. [ws <myChannel> connected]
+        // Immediately notify the delegate that we are "connected".
         let msg = Message::new(
             vec![
                 Value::Word("ws".into()),
@@ -64,9 +68,7 @@ impl AgentLifecycle for WebSocketAgent {
                 self.name
             );
         }
-
-        // Spawn a background task to read from the socket and forward messages
-        // to the delegate
+        // Spawn the read loop task.
         let this = self.clone();
         let cancellation_token = self.cancellation_token.clone();
         tokio::spawn(async move {
@@ -79,10 +81,8 @@ impl AgentLifecycle for WebSocketAgent {
     }
 
     async fn stop(&self) {
-        // Optionally send a "disconnected" message if we're shutting down abruptly
         debug!("WebSocketAgent stopping: {}", self.name);
-        // Clean up, close the stream, etc.
-        let _ = self.cancellation_token.cancel();
+        self.cancellation_token.cancel();
     }
 
     fn channel(&self) -> &Channel {
@@ -97,7 +97,6 @@ impl AgentLifecycle for WebSocketAgent {
 #[async_trait]
 impl AgentBehavior for WebSocketAgent {
     async fn handle_message(&self, msg: Message) -> bool {
-        // Expect messages like [ send "some text" ], etc.
         let terms = msg.terms();
         if terms.is_empty() {
             return true;
@@ -111,8 +110,9 @@ impl AgentBehavior for WebSocketAgent {
                 // E.g. [ send "Hello there!" ]
                 if let Some(text_val) = terms.get(1) {
                     let text_str = text_val.to_string();
-                    let mut ws = self.ws_stream.lock().await;
-                    if let Err(e) = ws.send(WsMessage::Text(text_str.clone().into())).await {
+                    let mut sink = self.ws_sink.lock().await;
+                    // Convert the String into the type expected by WsMessage::Text
+                    if let Err(e) = sink.send(WsMessage::Text(text_str.clone().into())).await {
                         error!("Error sending text message via WebSocket: {:?}", e);
                     } else {
                         info!("Sent message via WebSocket: {:?}", text_str);
@@ -120,14 +120,13 @@ impl AgentBehavior for WebSocketAgent {
                 }
             }
             "set-delegate" => {
-                error!("WebSocketAgent delegate received {}", self.name);
                 // E.g. [ set-delegate channel ]
+                error!("WebSocketAgent delegate received {}", self.name);
                 if let Some(Value::Channel(channel)) = terms.get(1) {
                     self.delegate.lock().await.replace(channel.clone());
                     info!("WebSocketAgent {} set delegate to {:?}", self.name, channel);
                 }
             }
-            // You might add "close" or "ping" commands here, too.
             _ => {
                 debug!("WebSocketAgent ignoring unknown command: {:?}", cmd);
             }
@@ -140,13 +139,10 @@ impl Agent for WebSocketAgent {}
 
 impl WebSocketAgent {
     async fn read_loop(self: Arc<Self>, cancellation_token: CancellationToken) {
-        let mut ws = self.ws_stream.lock().await;
         loop {
             select! {
-                // Wait for cancellation
                 _ = cancellation_token.cancelled() => {
                     info!("WebSocketAgent {} cancelled", self.name);
-                    // Notify delegate of disconnection
                     let msg = Message::new(
                         vec![
                             Value::Word("ws".into()),
@@ -162,12 +158,13 @@ impl WebSocketAgent {
                     }
                     break;
                 }
-                // Read messages from the WebSocket
-                Some(msg_result) = ws.next() => {
-                    match msg_result {
-                        Ok(WsMessage::Text(text)) => {
-                            // Forward to the Komrad delegate:
-                            // [ws <myChannel> text <String>]
+                result = async {
+                    let mut stream_guard = self.ws_stream.lock().await;
+                    stream_guard.next().await
+                } => {
+                    match result {
+                        Some(Ok(WsMessage::Text(text))) => {
+                            // Convert the Utf8Bytes into a Rust String.
                             let msg = Message::new(
                                 vec![
                                     Value::Word("ws".into()),
@@ -178,20 +175,16 @@ impl WebSocketAgent {
                                 None,
                             );
                             if let Some(delegate) = self.delegate.lock().await.as_ref() {
-                                // Send the message to the delegate
                                 let _ = delegate.send(msg).await;
                                 info!("WebSocketAgent {} sent message to delegate: {:?}", self.name, text);
                             } else {
                                 warn!("No delegate set for WebSocketAgent {}. `ws _ text _` not sent.", self.name);
                             }
                         }
-                        Ok(WsMessage::Binary(bin)) => {
-                            // If you want to handle binary, do similarly:
-                            // [ws channel binary <Bytes>]
-                            // or ignore it.
+                        Some(Ok(WsMessage::Binary(_bin))) => {
+                            // Optionally handle binary messages here.
                         }
-                        Ok(WsMessage::Close(_frame)) => {
-                            // Notify delegate of disconnection, then stop
+                        Some(Ok(WsMessage::Close(_frame))) => {
                             let msg = Message::new(
                                 vec![
                                     Value::Word("ws".into()),
@@ -203,13 +196,20 @@ impl WebSocketAgent {
                             if let Some(delegate) = self.delegate.lock().await.as_ref() {
                                 let _ = delegate.send(msg).await;
                             } else {
-                                warn!("No delegate set for WebSocketAgent {}. `disconnected` on closed not sent.", self.name);
+                                warn!("No delegate set for WebSocketAgent {}. `disconnected` on close not sent.", self.name);
                             }
                             break;
                         }
-                        Err(e) => {
+                        Some(Ok(WsMessage::Ping(_))) => {
+                            info!("WebSocketAgent {} received ping", self.name);
+                            break;
+                        }
+                        Some(Ok(WsMessage::Pong(_))) => {
+                            info!("WebSocketAgent {} received pong", self.name);
+                            break;
+                        }
+                        Some(Err(e)) => {
                             error!("WebSocket read error: {:?}", e);
-                            // Possibly notify "disconnected"
                             let msg = Message::new(
                                 vec![
                                     Value::Word("ws".into()),
@@ -225,12 +225,14 @@ impl WebSocketAgent {
                             }
                             break;
                         }
-                        _ => {}
+                        None => break,
+                    Some(_) => {
+                            // Ignore other message types for now.
+                        }
                     }
                 }
             }
         }
-        // Once the loop finishes, stop the agent
         let _ = self.channel.control(ControlMessage::Stop).await;
     }
 }

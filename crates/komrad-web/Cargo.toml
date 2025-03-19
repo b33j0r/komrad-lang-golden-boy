@@ -28,6 +28,7 @@ tracing-subscriber.workspace = true
 tracing.workspace = true
 tungstenite = "0.26.2"
 warp = { version = "0.3", features = ["websocket", "multipart", "async-compression"], optional = true }
+futures-util = "0.3.31"
 
 [features]
 web = []

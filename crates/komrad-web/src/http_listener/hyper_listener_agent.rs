@@ -114,7 +114,7 @@ impl HyperListenerAgent {
                                 if let Err(err) = http1::Builder::new()
                                     .serve_connection(io, service_fn(move |req| {
                                         handle_request(req, delegate_value.clone())
-                                    }))
+                                    })).with_upgrades()
                                     .await {
                                     error!("Error serving connection: {:?}", err);
                                 }
@@ -194,7 +194,7 @@ async fn handle_request(
     delegate_value: Value,
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
     if is_websocket_request(&req) {
-        error!("WebSocket upgrade request detected");
+        error!("WebSocket upgrade request detected on {}", req.uri());
         let response = handle_websocket_upgrade(req, delegate_value).await;
         error!("WebSocket upgrade request handled: {:?}", response);
         response
@@ -252,8 +252,8 @@ async fn handle_request(
 
 /// Handles WebSocket upgrade requests using tokio-tungstenite directly.
 /// This function checks the required headers, builds the 101 response,
-/// spawns a task to upgrade the connection using Hyper's upgrade API,
-/// and then creates a WebSocketStream.
+/// captures the upgrade future before constructing the response,
+/// spawns a task to await the upgrade, and then creates a WebSocketStream.
 async fn handle_websocket_upgrade(
     mut req: Request<body::Incoming>,
     delegate_value: Value,
@@ -285,6 +285,9 @@ async fn handle_websocket_upgrade(
         .unwrap_or("");
     let accept_key = compute_accept_key(key);
 
+    // Capture the upgrade future BEFORE constructing the response.
+    let upgrade_future = hyper::upgrade::on(&mut req);
+
     // Build the WebSocket handshake response.
     let response = Response::builder()
         .status(StatusCode::SWITCHING_PROTOCOLS)
@@ -294,9 +297,9 @@ async fn handle_websocket_upgrade(
         .body(full(""))
         .unwrap();
 
-    // Spawn a task to handle the WebSocket connection after upgrading.
+    // Spawn a task to handle the upgrade once the connection is upgraded.
     tokio::spawn(async move {
-        match hyper::upgrade::on(&mut req).await {
+        match upgrade_future.await {
             Ok(upgraded) => {
                 let upgraded = TokioIo::new(upgraded);
                 let ws_stream =
@@ -322,7 +325,7 @@ async fn handle_websocket_upgrade(
         }
     });
 
-    // Convert the response body to BoxBody to match the expected return type.
+    // Convert the handshake response body to a BoxBody.
     let converted_response =
         response.map(|body| BoxBody::new(body.map_err(|_| panic!("Infallible error occurred"))));
     Ok(converted_response)

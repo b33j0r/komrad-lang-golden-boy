@@ -11,9 +11,8 @@ bytes = "1.10.1"
 futures.workspace = true
 http = "1.3.1"
 http-body-util = { version = "0.1", optional = true, features = ["full"] }
-hyper = { version = "1.6.0", optional = true, features = ["full", "server", "http2"] }
-hyper-tungstenite = { version = "0.17.0", optional = true }
-hyper-util = { version = "0.1", optional = true, features = ["full", "server", "http2"] }
+hyper = { version = "1.6", optional = true, features = ["full", "server", "http1"] }
+hyper-util = { version = "0.1", optional = true, features = ["full", "server", "http1"] }
 komrad-agent = { path = "../komrad-agent" }
 komrad-ast = { path = "../komrad-ast" }
 komrad-parser = { path = "../komrad-parser" }
@@ -41,5 +40,5 @@ axum = ["web", "hyper", "dep:axum", "dep:tower-http"]
 
 warp = ["web", "dep:warp", "dep:hyper-util", "dep:http-body-util"]
 
-hyper = ["web", "dep:hyper", "dep:hyper-util", "dep:hyper-tungstenite", "dep:http-body-util"]
+hyper = ["web", "dep:hyper", "dep:hyper-util", "dep:http-body-util"]
 

@@ -2,6 +2,7 @@ agent WsHandler {
 	[ws _socket connected] {
 		Io println "Connected: " + socket
 		socket send "Hello from Komrad!"
+		socket send "From here we can send messages to the client."
 	}
 
 	[ws _socket disconnected] {
@@ -9,13 +10,13 @@ agent WsHandler {
 	}
 
 	[ws _socket text _message] {
-		Io println "Message: " + socket + ": " + message
+		server broadcast message
 		1337
 	}
 
-	[test _text] {
-		Io println "Test: " + text
-		42
+	[send _message] {
+		Io println "Sending: " + message
+		socket send message
 	}
 }
 
@@ -32,13 +33,20 @@ agent Server {
 		response html rendered
 	}
 
-	[ws _socket connected] {
-		socket send "message" "Hello from Komrad!"
+	[ws _socket connect] {
+		socket send "Hello from Komrad server!"
 		client = spawn WsHandler {
-			socket = socket
+			server = me
 		}
+		socket set-delegate client
 		clients add client
-		Io println "Connected: " + socket
+	}
+
+	[broadcast _message] {
+		Io println message
+		client = clients get 0
+		Io println client
+		client send message
 	}
 
 	[http _request _response GET "favicon.ico"] {
@@ -46,7 +54,6 @@ agent Server {
 		content = Fs read-all-binary "./examples/static/tape.ico"
 		response binary content
 	}
-
 }
 
 [main] {

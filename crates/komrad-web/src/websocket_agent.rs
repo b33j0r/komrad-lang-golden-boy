@@ -23,24 +23,20 @@ pub struct WebSocketAgent {
     // The tungstenite WebSocket stream
     ws_stream: Arc<Mutex<WebSocketStream<TokioIo<Upgraded>>>>,
     // The delegate that receives messages [ws myChannel text/disconnected/etc.]
-    delegate: Channel,
+    delegate: Arc<Mutex<Option<Channel>>>,
     // Cancellation token for graceful shutdown
     cancellation_token: CancellationToken,
 }
 
 impl WebSocketAgent {
-    pub fn new(
-        name: &str,
-        ws_stream: WebSocketStream<TokioIo<Upgraded>>,
-        delegate: Channel,
-    ) -> Arc<Self> {
+    pub fn new(name: &str, ws_stream: WebSocketStream<TokioIo<Upgraded>>) -> Arc<Self> {
         let (channel, listener) = Channel::new(32);
         Arc::new(Self {
             name: name.to_string(),
             channel,
             listener: Arc::new(listener),
             ws_stream: Arc::new(Mutex::new(ws_stream)),
-            delegate,
+            delegate: Arc::new(Mutex::new(None)),
             cancellation_token: CancellationToken::new(),
         })
     }
@@ -60,7 +56,14 @@ impl AgentLifecycle for WebSocketAgent {
             ],
             None,
         );
-        let _ = self.delegate.send(msg).await;
+        if let Some(delegate) = self.delegate.lock().await.as_ref() {
+            let _ = delegate.send(msg).await;
+        } else {
+            warn!(
+                "No delegate set for WebSocketAgent {}. `connected` not sent.",
+                self.name
+            );
+        }
 
         // Spawn a background task to read from the socket and forward messages
         // to the delegate
@@ -109,11 +112,19 @@ impl AgentBehavior for WebSocketAgent {
                 if let Some(text_val) = terms.get(1) {
                     let text_str = text_val.to_string();
                     let mut ws = self.ws_stream.lock().await;
-                    if let Err(e) = ws.send(WsMessage::Text(text_str.into())).await {
+                    if let Err(e) = ws.send(WsMessage::Text(text_str.clone().into())).await {
                         error!("Error sending text message via WebSocket: {:?}", e);
                     } else {
                         info!("Sent message via WebSocket: {:?}", text_str);
                     }
+                }
+            }
+            "set-delegate" => {
+                error!("WebSocketAgent delegate received {}", self.name);
+                // E.g. [ set-delegate channel ]
+                if let Some(Value::Channel(channel)) = terms.get(1) {
+                    self.delegate.lock().await.replace(channel.clone());
+                    info!("WebSocketAgent {} set delegate to {:?}", self.name, channel);
                 }
             }
             // You might add "close" or "ping" commands here, too.
@@ -144,6 +155,11 @@ impl WebSocketAgent {
                         ],
                         None,
                     );
+                    if let Some(delegate) = self.delegate.lock().await.as_ref() {
+                        let _ = delegate.send(msg).await;
+                    } else {
+                        warn!("No delegate set for WebSocketAgent {}. `disconnected` not sent.", self.name);
+                    }
                     break;
                 }
                 // Read messages from the WebSocket
@@ -161,7 +177,13 @@ impl WebSocketAgent {
                                 ],
                                 None,
                             );
-                            let _ = self.delegate.send(msg).await;
+                            if let Some(delegate) = self.delegate.lock().await.as_ref() {
+                                // Send the message to the delegate
+                                let _ = delegate.send(msg).await;
+                                info!("WebSocketAgent {} sent message to delegate: {:?}", self.name, text);
+                            } else {
+                                warn!("No delegate set for WebSocketAgent {}. `ws _ text _` not sent.", self.name);
+                            }
                         }
                         Ok(WsMessage::Binary(bin)) => {
                             // If you want to handle binary, do similarly:
@@ -178,7 +200,11 @@ impl WebSocketAgent {
                                 ],
                                 None,
                             );
-                            let _ = self.delegate.send(msg).await;
+                            if let Some(delegate) = self.delegate.lock().await.as_ref() {
+                                let _ = delegate.send(msg).await;
+                            } else {
+                                warn!("No delegate set for WebSocketAgent {}. `disconnected` on closed not sent.", self.name);
+                            }
                             break;
                         }
                         Err(e) => {
@@ -192,7 +218,11 @@ impl WebSocketAgent {
                                 ],
                                 None,
                             );
-                            let _ = self.delegate.send(msg).await;
+                            if let Some(delegate) = self.delegate.lock().await.as_ref() {
+                                let _ = delegate.send(msg).await;
+                            } else {
+                                warn!("No delegate set for WebSocketAgent {}. `disconnected` on error not sent.", self.name);
+                            }
                             break;
                         }
                         _ => {}

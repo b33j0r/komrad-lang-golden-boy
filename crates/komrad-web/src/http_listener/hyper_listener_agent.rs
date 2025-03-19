@@ -13,7 +13,7 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper_util::rt::TokioIo;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
-use komrad_ast::prelude::{Channel, ChannelListener, Message, Scope, Value};
+use komrad_ast::prelude::{Channel, ChannelListener, Message, MessageBuilder, Scope, Value};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -304,19 +304,55 @@ async fn handle_websocket_upgrade(
                 let upgraded = TokioIo::new(upgraded);
                 let ws_stream =
                     WebSocketStream::from_raw_socket(upgraded, Role::Server, None).await;
-                let ws_agent =
-                    WebSocketAgent::new("WebSocket", ws_stream, delegate_channel.clone());
+                let ws_agent = WebSocketAgent::new("WebSocket", ws_stream);
                 let ws_channel = ws_agent.spawn();
+                let ws_channel_clone = ws_channel.clone();
+
+                let (ephemeral_onboarding_channel, ephemeral_onboarding_listener) = Channel::new(1);
+
                 let msg = Message::new(
                     vec![
                         Value::Word("ws".into()),
                         Value::Channel(ws_channel),
-                        Value::Word("connected".into()),
+                        Value::Word("connect".into()),
                     ],
-                    None,
+                    Some(ephemeral_onboarding_channel),
                 );
                 if let Err(e) = delegate_channel.send(msg).await {
                     error!("Failed to send message to delegate: {:?}", e);
+                } else {
+                    // THe onboarding message is expected to be a delegate channel for the connection
+                    // to send messages to the delegate.
+                    match ephemeral_onboarding_listener.recv().await {
+                        Ok(onboarding_msg) => {
+                            let onboarding_terms = onboarding_msg.terms();
+                            if onboarding_terms.len() == 1 {
+                                if let Some(Value::Channel(websocket_delegate_channel)) =
+                                    onboarding_terms.get(0)
+                                {
+                                    match ws_channel_clone
+                                        .send(Message::default().with_terms(vec![
+                                            Value::Word("set-delegate".into()),
+                                            Value::Channel(websocket_delegate_channel.clone()),
+                                        ]))
+                                        .await
+                                    {
+                                        Ok(_) => {
+                                            info!("WebSocket agent connected to delegate channel");
+                                        }
+                                        Err(e) => {
+                                            error!("Failed to set delegate channel: {:?}", e);
+                                        }
+                                    }
+                                }
+                            } else {
+                                error!("Invalid onboarding message: {:?}", onboarding_terms);
+                            }
+                        }
+                        Err(e) => {
+                            error!("Failed to receive onboarding message: {:?}", e);
+                        }
+                    }
                 }
             }
             Err(e) => {

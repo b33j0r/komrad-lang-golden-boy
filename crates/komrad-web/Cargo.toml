@@ -11,9 +11,9 @@ async-trait.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 tera = { version = "1.20.0", optional = true }
-hyper = { version = "1.6.0", optional = true, features = ["full", "server"] }
+hyper = { version = "1.6.0", optional = true, features = ["full", "server", "http2", "nightly"] }
 http-body-util = { version = "0.1", optional = true, features = ["full"] }
-hyper-util = { version = "0.1", optional = true, features = ["full"] }
+hyper-util = { version = "0.1", optional = true, features = ["full", "http2", "server"] }
 hyper-tungstenite = { version = "0.17.0", optional = true }
 tracing.workspace = true
 tracing-subscriber.workspace = true
@@ -22,14 +22,13 @@ futures.workspace = true
 http = "1.3.1"
 warp = { version = "0.3", features = ["websocket", "multipart", "async-compression"], optional = true }
 bytes = "1.10.1"
-actix-web = { version = "4.10.2", optional = true, features = ["unicode", "cookies", "http2"] }
-actix-ws = { version = "0.3.0", optional = true }
 axum = { version = "0.8.1", optional = true, features = ["ws", "tokio", "json"] }
 tower-http = { version = "0.6.2", features = ["trace", "cors"], optional = true }
 tokio-tungstenite.workspace = true
 tokio-stream.workspace = true
 sha1 = "0.11.0-pre.5"
 base64 = "0.22.1"
+tungstenite = "0.26.2"
 
 [features]
 web = []

@@ -5,8 +5,10 @@ use crate::request::empty;
 use crate::response::{self, full};
 use crate::websocket_agent::WebSocketAgent;
 use bytes::Bytes;
+use futures::SinkExt;
 use http::{Request, Response, StatusCode};
 use http_body_util::combinators::BoxBody;
+use http_body_util::BodyExt;
 use hyper::body;
 use hyper::body::Body;
 use hyper::server::conn::http1;
@@ -26,6 +28,7 @@ use tokio_tungstenite::tungstenite::protocol::Role;
 use tokio_tungstenite::WebSocketStream;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
+use tungstenite::protocol::Message as WsMessage;
 
 /// Computes the Sec-WebSocket-Accept header value as specified in RFC 6455.
 fn compute_accept_key(key: &str) -> String {
@@ -220,7 +223,7 @@ async fn handle_request(
 /// Once the response is flushed, the on_upgrade future resolves. We then wrap the upgraded stream with TokioIo,
 /// create a WebSocketStream, and spawn a WebSocketAgent.
 async fn handle_websocket_upgrade(
-    mut req: Request<body::Incoming>,
+    req: Request<body::Incoming>,
     delegate_value: Value,
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
     let delegate_channel = match delegate_value {
@@ -234,24 +237,49 @@ async fn handle_websocket_upgrade(
         }
     };
 
-    error!("Got delegate channel: {:?}", delegate_channel);
-
     let sec_key = req.headers().clone();
     let sec_key = sec_key
         .get("Sec-WebSocket-Key")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
 
-    tokio::spawn(async move {
-        let (response, websocket) = hyper_tungstenite::upgrade(req, None).unwrap();
-        error!("Got websocket: {:?}", websocket);
-    });
+    if let Ok((response, websocket)) = upgrade(req, None) {
+        tokio::spawn(async move {
+            match websocket.await {
+                Ok(ws_stream) => {
+                    let ws_agent =
+                        WebSocketAgent::new("WebSocket", ws_stream, delegate_channel.clone());
+                    let ws_channel = ws_agent.spawn();
 
-    Ok(Response::builder()
-        .status(StatusCode::SWITCHING_PROTOCOLS)
-        .header("Upgrade", "websocket")
-        .header("Connection", "Upgrade")
-        .header("Sec-WebSocket-Accept", compute_accept_key(sec_key))
-        .body(full("Switching Protocols"))
-        .unwrap())
+                    let msg = Message::new(
+                        vec![
+                            Value::Word("ws".into()),
+                            Value::Channel(ws_channel),
+                            Value::Word("connected".into()),
+                        ],
+                        None,
+                    );
+                    if let Err(e) = delegate_channel.send(msg).await {
+                        error!("Failed to send message to delegate: {:?}", e);
+                    }
+                }
+                Err(e) => {
+                    error!("WebSocket upgrade error: {:?}", e);
+                }
+            }
+        });
+
+        let converted_response = response.map(|body| {
+            let boxed_body = BoxBody::new(body.map_err(|_| panic!("Infallible error occurred")));
+            boxed_body
+        });
+
+        Ok(converted_response)
+    } else {
+        error!("WebSocket upgrade failed");
+        Ok(Response::builder()
+            .status(StatusCode::BAD_REQUEST)
+            .body(full("WebSocket upgrade failed"))
+            .unwrap())
+    }
 }

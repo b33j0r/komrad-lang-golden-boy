@@ -1,11 +1,9 @@
 use crate::config::{parse_server_config_from_scope, ServerConfig};
 use crate::http_request_agent::HttpRequestAgent;
 use crate::http_response_agent::HttpResponseAgent;
-use crate::request::empty;
 use crate::response::{self, full};
 use crate::websocket_agent::WebSocketAgent;
 use bytes::Bytes;
-use futures::SinkExt;
 use http::{Request, Response, StatusCode};
 use http_body_util::combinators::BoxBody;
 use http_body_util::BodyExt;
@@ -13,13 +11,11 @@ use hyper::body;
 use hyper::body::Body;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
-use hyper_tungstenite::{is_upgrade_request, upgrade};
 use hyper_util::rt::TokioIo;
 use komrad_agent::{Agent, AgentBehavior, AgentFactory, AgentLifecycle};
 use komrad_ast::prelude::{Channel, ChannelListener, Message, Scope, Value};
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpListener;
 use tokio::select;
 use tokio::sync::Mutex;
@@ -40,6 +36,40 @@ fn compute_accept_key(key: &str) -> String {
     hasher.update(b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
     let result = hasher.finalize();
     general_purpose::STANDARD.encode(result)
+}
+
+/// Checks if the request contains the required headers for a WebSocket upgrade.
+fn is_websocket_request(req: &Request<body::Incoming>) -> bool {
+    // Check the "upgrade" header.
+    if let Some(upgrade) = req.headers().get("upgrade") {
+        if upgrade
+            .to_str()
+            .map(|s| !s.eq_ignore_ascii_case("websocket"))
+            .unwrap_or(true)
+        {
+            return false;
+        }
+    } else {
+        return false;
+    }
+    // Check the "connection" header for "Upgrade".
+    if let Some(conn) = req.headers().get("connection") {
+        if let Ok(conn_str) = conn.to_str() {
+            if !conn_str.to_ascii_lowercase().contains("upgrade") {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+    // Check for the presence of the Sec-WebSocket-Key and Version headers.
+    req.headers().contains_key("sec-websocket-key")
+        && req
+            .headers()
+            .get("sec-websocket-version")
+            .map_or(false, |v| v == "13")
 }
 
 pub struct HyperListenerAgent {
@@ -163,9 +193,11 @@ async fn handle_request(
     mut req: Request<body::Incoming>,
     delegate_value: Value,
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
-    if is_upgrade_request(&req) {
+    if is_websocket_request(&req) {
         error!("WebSocket upgrade request detected");
-        handle_websocket_upgrade(req, delegate_value).await
+        let response = handle_websocket_upgrade(req, delegate_value).await;
+        error!("WebSocket upgrade request handled: {:?}", response);
+        response
     } else {
         let request_agent = HttpRequestAgent::new("Request", req).await;
         let ephemeral_request_chan = request_agent.clone().spawn();
@@ -218,12 +250,12 @@ async fn handle_request(
     }
 }
 
-/// Handles WebSocket upgrade requests.
-/// This function uses hyper_tungstenite::upgrade to generate a 101 response and an on_upgrade future.
-/// Once the response is flushed, the on_upgrade future resolves. We then wrap the upgraded stream with TokioIo,
-/// create a WebSocketStream, and spawn a WebSocketAgent.
+/// Handles WebSocket upgrade requests using tokio-tungstenite directly.
+/// This function checks the required headers, builds the 101 response,
+/// spawns a task to upgrade the connection using Hyper's upgrade API,
+/// and then creates a WebSocketStream.
 async fn handle_websocket_upgrade(
-    req: Request<body::Incoming>,
+    mut req: Request<body::Incoming>,
     delegate_value: Value,
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
     let delegate_channel = match delegate_value {
@@ -237,49 +269,61 @@ async fn handle_websocket_upgrade(
         }
     };
 
-    let sec_key = req.headers().clone();
-    let sec_key = sec_key
-        .get("Sec-WebSocket-Key")
-        .and_then(|v| v.to_str().ok())
+    if !is_websocket_request(&req) {
+        error!("Invalid WebSocket upgrade request");
+        return Ok(Response::builder()
+            .status(StatusCode::BAD_REQUEST)
+            .body(full("Invalid WebSocket upgrade request"))
+            .unwrap());
+    }
+
+    // Extract the Sec-WebSocket-Key header and compute the accept key.
+    let key = req
+        .headers()
+        .get("sec-websocket-key")
+        .and_then(|val| val.to_str().ok())
         .unwrap_or("");
+    let accept_key = compute_accept_key(key);
 
-    if let Ok((response, websocket)) = upgrade(req, None) {
-        tokio::spawn(async move {
-            match websocket.await {
-                Ok(ws_stream) => {
-                    let ws_agent =
-                        WebSocketAgent::new("WebSocket", ws_stream, delegate_channel.clone());
-                    let ws_channel = ws_agent.spawn();
+    // Build the WebSocket handshake response.
+    let response = Response::builder()
+        .status(StatusCode::SWITCHING_PROTOCOLS)
+        .header("Upgrade", "websocket")
+        .header("Connection", "Upgrade")
+        .header("Sec-WebSocket-Accept", accept_key)
+        .body(full(""))
+        .unwrap();
 
-                    let msg = Message::new(
-                        vec![
-                            Value::Word("ws".into()),
-                            Value::Channel(ws_channel),
-                            Value::Word("connected".into()),
-                        ],
-                        None,
-                    );
-                    if let Err(e) = delegate_channel.send(msg).await {
-                        error!("Failed to send message to delegate: {:?}", e);
-                    }
-                }
-                Err(e) => {
-                    error!("WebSocket upgrade error: {:?}", e);
+    // Spawn a task to handle the WebSocket connection after upgrading.
+    tokio::spawn(async move {
+        match hyper::upgrade::on(&mut req).await {
+            Ok(upgraded) => {
+                let upgraded = TokioIo::new(upgraded);
+                let ws_stream =
+                    WebSocketStream::from_raw_socket(upgraded, Role::Server, None).await;
+                let ws_agent =
+                    WebSocketAgent::new("WebSocket", ws_stream, delegate_channel.clone());
+                let ws_channel = ws_agent.spawn();
+                let msg = Message::new(
+                    vec![
+                        Value::Word("ws".into()),
+                        Value::Channel(ws_channel),
+                        Value::Word("connected".into()),
+                    ],
+                    None,
+                );
+                if let Err(e) = delegate_channel.send(msg).await {
+                    error!("Failed to send message to delegate: {:?}", e);
                 }
             }
-        });
+            Err(e) => {
+                error!("WebSocket upgrade error: {:?}", e);
+            }
+        }
+    });
 
-        let converted_response = response.map(|body| {
-            let boxed_body = BoxBody::new(body.map_err(|_| panic!("Infallible error occurred")));
-            boxed_body
-        });
-
-        Ok(converted_response)
-    } else {
-        error!("WebSocket upgrade failed");
-        Ok(Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .body(full("WebSocket upgrade failed"))
-            .unwrap())
-    }
+    // Convert the response body to BoxBody to match the expected return type.
+    let converted_response =
+        response.map(|body| BoxBody::new(body.map_err(|_| panic!("Infallible error occurred"))));
+    Ok(converted_response)
 }

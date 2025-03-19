@@ -4,31 +4,31 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-komrad-parser = { path = "../komrad-parser" }
-komrad-ast = { path = "../komrad-ast" }
-komrad-agent = { path = "../komrad-agent" }
 async-trait.workspace = true
-tokio.workspace = true
-tokio-util.workspace = true
-tera = { version = "1.20.0", optional = true }
-hyper = { version = "1.6.0", optional = true, features = ["full", "server", "http2", "nightly"] }
-http-body-util = { version = "0.1", optional = true, features = ["full"] }
-hyper-util = { version = "0.1", optional = true, features = ["full", "http2", "server"] }
-hyper-tungstenite = { version = "0.17.0", optional = true }
-tracing.workspace = true
-tracing-subscriber.workspace = true
-thiserror.workspace = true
+axum = { version = "0.8.1", optional = true, features = ["ws", "tokio", "json"] }
+base64 = "0.22.1"
+bytes = "1.10.1"
 futures.workspace = true
 http = "1.3.1"
-warp = { version = "0.3", features = ["websocket", "multipart", "async-compression"], optional = true }
-bytes = "1.10.1"
-axum = { version = "0.8.1", optional = true, features = ["ws", "tokio", "json"] }
-tower-http = { version = "0.6.2", features = ["trace", "cors"], optional = true }
-tokio-tungstenite.workspace = true
-tokio-stream.workspace = true
+http-body-util = { version = "0.1", optional = true, features = ["full"] }
+hyper = { version = "1.6.0", optional = true, features = ["full", "server", "http2"] }
+hyper-tungstenite = { version = "0.17.0", optional = true }
+hyper-util = { version = "0.1", optional = true, features = ["full", "server", "http2"] }
+komrad-agent = { path = "../komrad-agent" }
+komrad-ast = { path = "../komrad-ast" }
+komrad-parser = { path = "../komrad-parser" }
 sha1 = "0.11.0-pre.5"
-base64 = "0.22.1"
+tera = { version = "1.20.0", optional = true }
+thiserror.workspace = true
+tokio-stream.workspace = true
+tokio-tungstenite.workspace = true
+tokio-util.workspace = true
+tokio.workspace = true
+tower-http = { version = "0.6.2", features = ["trace", "cors"], optional = true }
+tracing-subscriber.workspace = true
+tracing.workspace = true
 tungstenite = "0.26.2"
+warp = { version = "0.3", features = ["websocket", "multipart", "async-compression"], optional = true }
 
 [features]
 web = []

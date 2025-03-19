@@ -51,23 +51,6 @@ impl WebSocketAgent {
 impl AgentLifecycle for WebSocketAgent {
     async fn init(self: Arc<Self>, _scope: &mut Scope) {
         error!("WebSocketAgent init: {}", self.name);
-        // Immediately notify the delegate that we are "connected".
-        let msg = Message::new(
-            vec![
-                Value::Word("ws".into()),
-                Value::Channel(self.channel.clone()),
-                Value::Word("connected".into()),
-            ],
-            None,
-        );
-        if let Some(delegate) = self.delegate.lock().await.as_ref() {
-            let _ = delegate.send(msg).await;
-        } else {
-            warn!(
-                "No delegate set for WebSocketAgent {}. `connected` not sent.",
-                self.name
-            );
-        }
         // Spawn the read loop task.
         let this = self.clone();
         let cancellation_token = self.cancellation_token.clone();
@@ -125,6 +108,24 @@ impl AgentBehavior for WebSocketAgent {
                 if let Some(Value::Channel(channel)) = terms.get(1) {
                     self.delegate.lock().await.replace(channel.clone());
                     info!("WebSocketAgent {} set delegate to {:?}", self.name, channel);
+
+                    let msg = Message::new(
+                        vec![
+                            Value::Word("ws".into()),
+                            Value::Channel(self.channel.clone()),
+                            Value::Word("connected".into()),
+                        ],
+                        None,
+                    );
+
+                    if let Some(delegate) = self.delegate.lock().await.as_ref() {
+                        let _ = delegate.send(msg).await;
+                    } else {
+                        warn!(
+                            "No delegate set for WebSocketAgent {}. `connected` not sent.",
+                            self.name
+                        );
+                    }
                 }
             }
             _ => {

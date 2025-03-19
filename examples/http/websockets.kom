@@ -1,10 +1,8 @@
-
-
 agent WsHandler {
+
 	[ws _socket connected] {
 		Io println "Connected: " + socket
-		socket send "Hello from Komrad!"
-		socket send "From here we can send messages to the client."
+		socket send "Hello from Komrad client!"
 	}
 
 	[ws _socket disconnected] {
@@ -12,7 +10,8 @@ agent WsHandler {
 	}
 
 	[ws _socket text _message] {
-		server broadcast message
+		name = "Brian" + ": "
+		server broadcast name message
 		1337
 	}
 
@@ -44,11 +43,11 @@ agent Server {
 		clients add client
 	}
 
-	[broadcast _message] {
-		Io println message
-		client = clients get 0
-		Io println client
-		client send message
+	[broadcast _sender _message] {
+		clients foreach x {
+		    text = sender + message
+			x send text
+		}
 	}
 
 	[http _request _response GET "favicon.ico"] {

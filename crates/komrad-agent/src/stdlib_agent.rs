@@ -1,3 +1,4 @@
+use crate::execute::Execute;
 use crate::AgentBehavior;
 use async_trait::async_trait;
 use komrad_ast::agent::Agent;
@@ -66,6 +67,24 @@ impl AgentBehavior for ListAgent {
                     }
                 } else {
                     error!("ListAgent: 'items' command requires a reply channel");
+                }
+            }
+            Some("foreach") => {
+                // `array each _x _{block}`
+                let items = self.items.read().await.clone();
+                let variable = msg.rest().get(0).cloned();
+                let block = msg.rest().get(1).cloned();
+
+                if let Some(Value::Block(block)) = block {
+                    for item in items {
+                        let mut new_scope = self.scope.lock().await.clone();
+                        if let Some(Value::Word(variable)) = variable.clone() {
+                            new_scope.set(variable, item).await;
+                            block.execute(&mut new_scope).await;
+                        } else {
+                            error!("ListAgent: 'each' command requires a variable");
+                        }
+                    }
                 }
             }
             Some("add") => {

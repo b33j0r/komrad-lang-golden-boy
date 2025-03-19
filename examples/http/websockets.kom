@@ -32,16 +32,13 @@ agent Server {
 		response html rendered
 	}
 
-	[websocket upgrade] {
-		Io println "WebSocket connection request"
+	[ws _socket connected] {
+		socket send "message" "Hello from Komrad!"
 		client = spawn WsHandler {
-			server = me
+			socket = socket
 		}
 		clients add client
-		count = clients length
-		Io println "Added client " + count
-		// Test the client
-		client
+		Io println "Connected: " + socket
 	}
 
 	[http _request _response GET "favicon.ico"] {

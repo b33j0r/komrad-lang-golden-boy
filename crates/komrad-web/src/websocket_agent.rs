@@ -111,6 +111,8 @@ impl AgentBehavior for WebSocketAgent {
                     let mut ws = self.ws_stream.lock().await;
                     if let Err(e) = ws.send(WsMessage::Text(text_str.into())).await {
                         error!("Error sending text message via WebSocket: {:?}", e);
+                    } else {
+                        info!("Sent message via WebSocket: {:?}", text_str);
                     }
                 }
             }

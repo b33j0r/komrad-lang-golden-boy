@@ -1,0 +1,21 @@
+agent User {
+	name: String = "Unknown"
+	age: Int = 0
+
+	[introduce] {
+		Io println "Hello, my name is " + name + " and I am " + age + " years old."
+	}
+}
+
+[main] {
+	u1 = spawn User {
+		name = "Alice"
+		age = 30
+	}
+	u2 = spawn User {
+		age = 25
+	}
+
+	u1 introduce
+	u2 introduce
+}

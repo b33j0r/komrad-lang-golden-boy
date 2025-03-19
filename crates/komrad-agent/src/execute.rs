@@ -88,9 +88,13 @@ impl Execute for Statement {
             Statement::Handler(_handler) => Value::Empty,
             Statement::Field(name, typ, expr) => {
                 if let Some(expr) = expr {
-                    let value = expr.execute(scope).await;
+                    // If a non-default value was provided for the field, use that.
+                    let value = match scope.get(name) {
+                        Some(value) => value.clone(),
+                        None => expr.execute(scope).await,
+                    };
                     let value_type = value.get_type_expr();
-                    if value_type.is_subtype_of(typ) {
+                    if !value_type.is_subtype_of(typ) {
                         return Value::Error(RuntimeError::TypeMismatch(format!(
                             "Expected type {:?}, found {:?}",
                             typ, value_type

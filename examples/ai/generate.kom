@@ -1,0 +1,9 @@
+[main] {
+	model = "gemma3:latest"
+	ai = spawn Ollama {
+		model = model
+	}
+	Io println "Generating text with AI model " + model
+	response = ai generate "Write a poem about going to the store for snacks"
+	Io println response
+}

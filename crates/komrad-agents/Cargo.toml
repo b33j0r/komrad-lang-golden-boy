@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 komrad-ast = { path = "../komrad-ast" }
+komrad-ai = { path = "../komrad-ai" }
 komrad-agent = { path = "../komrad-agent" }
 komrad-web = { path = "../komrad-web" }
 komrad-macros = { path = "../komrad-macros" }
@@ -19,8 +20,9 @@ tokio-stream.workspace = true
 quote = "1.0.39"
 
 [features]
-default = ["hyper", "templates"]
+default = ["hyper", "templates", "ollama"]
 axum = ["komrad-web/axum"]
 hyper = ["komrad-web/hyper"]
 warp = ["komrad-web/warp"]
 templates = ["komrad-web/templates"]
+ollama = ["komrad-ai/ollama"]

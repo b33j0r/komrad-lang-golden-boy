@@ -115,8 +115,6 @@ async fn run_file_once(file: &PathBuf) -> Option<komrad_vm::System> {
                     let system = komrad_vm::System::new();
                     let agent = system.create_agent("main", &block).await;
 
-                    tokio::time::sleep(tokio::time::Duration::from_millis(0)).await;
-
                     match agent
                         .send(Message::new(vec![Value::Word("main".into())], None))
                         .await

@@ -25,6 +25,11 @@ impl System {
 
         let agent = DynamicAgent::from_block(name, block, Scope::new(), registry_channel).await;
         let chan = agent.clone().spawn();
+
+        // Make sure the agent is fully initialized
+        // TODO: is there a better way to do this?
+        tokio::time::sleep(tokio::time::Duration::from_millis(0)).await;
+
         self.agents.insert(name.into(), agent);
         chan
     }

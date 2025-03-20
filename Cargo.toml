@@ -23,6 +23,7 @@ members = [".", "crates/komrad-agent", "crates/komrad-agents", "crates/komrad-ai
 
 [workspace.dependencies]
 async-trait = "0.1.87"
+bytes = { version = "1.10.1", features = ["std"] }
 chrono = { version = "0.4", features = ["alloc", "clock", "serde", "iana-time-zone"] }
 dashmap = "7.0.0-rc2"
 futures = { version = "0.3.31", features = [] }

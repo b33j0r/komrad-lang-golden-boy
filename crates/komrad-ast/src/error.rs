@@ -141,4 +141,7 @@ pub enum RuntimeError {
 
     #[error("No handler found for message: {0}")]
     HandlerNotFound(String),
+
+    #[error("External service error")]
+    ExternalServiceError,
 }

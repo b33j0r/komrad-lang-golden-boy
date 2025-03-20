@@ -40,6 +40,12 @@ impl RegistryAgent {
         let (channel, listener) = Channel::new(32);
         let mut initial_registry: HashMap<String, RegistryFactory> = HashMap::new();
 
+        #[cfg(feature = "ollama")]
+        initial_registry.insert(
+            "Ollama".to_string(),
+            RegistryFactory::FromFactory(Arc::new(komrad_ai::OllamaAgentFactory)),
+        );
+
         #[cfg(feature = "hyper")]
         initial_registry.insert(
             "HyperListener".to_string(),

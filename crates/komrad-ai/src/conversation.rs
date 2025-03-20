@@ -7,18 +7,6 @@ pub struct Timeframe {
 }
 
 #[derive(Debug, Clone)]
-pub struct Conversation {
-    pub id: String,
-    pub timestamp: Timeframe,
-    pub events: Vec<ConversationEvent>,
-}
-
-#[derive(Debug, Clone)]
-pub enum ConversationEvent {
-    Message(ConversationMessage),
-}
-
-#[derive(Debug, Clone)]
 pub enum ParticipantRole {
     System,
     User,
@@ -33,6 +21,18 @@ pub struct Participant {
 }
 
 #[derive(Debug, Clone)]
+pub struct Conversation {
+    pub id: String,
+    pub timestamp: Timeframe,
+    pub events: Vec<ConversationEvent>,
+}
+
+#[derive(Debug, Clone)]
+pub enum ConversationEvent {
+    Message(ConversationMessage),
+}
+
+#[derive(Debug, Clone)]
 pub struct ConversationMessage {
     pub id: String,
     pub timestamp: Timeframe,
@@ -44,7 +44,7 @@ pub struct ConversationMessage {
 pub enum ConversationContent {
     Text(String),
     Code(String),
-    Image(String),
+    Image(bytes::Bytes),
 }
 
 #[cfg(test)]

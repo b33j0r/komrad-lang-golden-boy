@@ -7,9 +7,11 @@ edition = "2024"
 komrad-ast = { path = "../komrad-ast" }
 komrad-agent = { path = "../komrad-agent" }
 
+async-trait.workspace = true
+tracing.workspace = true
 chrono.workspace = true
 tokio.workspace = true
-
+bytes.workspace = true
 ollama-rs = { version = "0.2.6", features = ["macros", "stream", "regex", "tool-implementations", "headers", "http", "scraper"], optional = true }
 serde.workspace = true
 serde_json.workspace = true

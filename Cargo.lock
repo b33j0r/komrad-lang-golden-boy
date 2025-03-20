@@ -1769,6 +1769,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "komrad-agent",
+ "komrad-ai",
  "komrad-ast",
  "komrad-macros",
  "komrad-web",
@@ -1785,6 +1786,8 @@ dependencies = [
 name = "komrad-ai"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "bytes",
  "chrono",
  "komrad-agent",
  "komrad-ast",
@@ -1793,6 +1796,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

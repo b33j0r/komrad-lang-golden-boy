@@ -1,9 +1,3 @@
-agent LoginState {
-	[commmand login] {
-		Io println "Login command received"
-	}
-}
-
 agent WsHandler {
 	name = "Unknown"
 

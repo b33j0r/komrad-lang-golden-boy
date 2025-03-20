@@ -3,9 +3,7 @@ agent WsHandler {
 
 	[ws _socket connected] {
 		Io println "Connected: " + socket
-		socket send ```
-		["WsHandler", "Hello!"]
-		```
+		socket send "[\"WsHandler\", \"Hello!\"]"
 	}
 
 	[ws _socket disconnected] {

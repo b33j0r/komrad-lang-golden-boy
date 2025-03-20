@@ -110,6 +110,14 @@
         color: #0e093b;
       }
 
+      #chat .message {
+        margin: 0.5em 0;
+        padding: 0.5em;
+        border: 1px solid #984141;
+        color: black;
+        border-radius: 0.5em;
+      }
+
       input[type="text"] {
         padding: 0.5em;
         border: 2px solid #ccc;
@@ -281,6 +289,7 @@
     function appendMessage(data) {
         let {username, message} = data;
         const messageElem = document.createElement("div");
+        messageElem.className = "message";
         const usernameElem = document.createElement("strong");
         const textElem = document.createElement("span");
         usernameElem.textContent = username + ": ";

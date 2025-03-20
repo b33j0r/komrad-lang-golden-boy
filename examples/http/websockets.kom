@@ -24,6 +24,8 @@ agent WsHandler {
 }
 
 agent Server {
+
+
 	[http _request _response GET] {
 		Io println "GET /"
 		templates = spawn Tera {
@@ -43,11 +45,16 @@ agent Server {
 		client = spawn WsHandler {
 			server = me
 		}
+		messages foreach x {
+			Io println "Previous message: " + x
+			socket send x
+		}
 		socket set-delegate client
 		clients add client
 	}
 
 	[broadcast _sender _message] {
+		messages add message
 		clients foreach x {
 			x send message
 		}
@@ -63,6 +70,7 @@ agent Server {
 [main] {
 	server = spawn Server {
 		clients = []
+		messages = []
 	}
 	listener = spawn HyperListener {
 		host = "0.0.0.0"

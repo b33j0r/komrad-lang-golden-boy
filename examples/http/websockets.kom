@@ -9,7 +9,9 @@ agent WsHandler {
 
 	[ws _socket connected] {
 		Io println "Connected: " + socket
-		socket send "Hello from Komrad client!"
+		socket send ```
+		["WsHandler", "Hello!"]
+		```
 	}
 
 	[ws _socket disconnected] {
@@ -41,7 +43,9 @@ agent Server {
 	}
 
 	[ws _socket connect] {
-		socket send "Hello from Komrad server!"
+		socket send ```
+		["Server", "Hello!"]
+		```
 		client = spawn WsHandler {
 			server = me
 		}
@@ -51,8 +55,7 @@ agent Server {
 
 	[broadcast _sender _message] {
 		clients foreach x {
-		    text = sender + ": " + message
-			x send text
+			x send message
 		}
 	}
 

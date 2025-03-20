@@ -70,10 +70,6 @@
         background: #02042c;
         color: white;
         padding: 0.5em;
-
-        button {
-          margin: 0;
-        }
       }
 
       header {
@@ -81,13 +77,13 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 1em;
+        gap: 0.5em;
       }
 
-      #user-info {
+      #user-info, #user-login {
         display: flex;
         align-items: center;
-        gap: 1em;
+        gap: 0.5em;
       }
 
       footer {
@@ -114,6 +110,13 @@
         color: #0e093b;
       }
 
+      input[type="text"] {
+        padding: 0.5em;
+        border: 2px solid #ccc;
+        background: #edf8fd;
+        color: #0e093b;
+      }
+
       button {
         padding: 0.5em;
         border: 2px solid #ccc;
@@ -121,10 +124,10 @@
         color: white;
         cursor: pointer;
         transition: background 0.3s;
+      }
 
-        &:hover {
-          background: #1a3bbf;
-        }
+      button:hover {
+        background: #1a3bbf;
       }
 
       #sendButton {
@@ -132,8 +135,6 @@
       }
 
       /* Media Queries for Responsive Design */
-
-      /* For screens wider than 768px */
       @media (min-width: 768px) {
         #outer-container {
           flex-direction: row;
@@ -147,38 +148,72 @@
           flex: 1;
         }
       }
-
     </style>
 </head>
 <body>
-<div id="outer-container">
-    <div id="sidebar">
-        <h1>Rooms</h1>
-        <ul>
-            <li><a href="#lobby">Lobby</a></li>
-            <!-- Add more navigation items as needed -->
-        </ul>
-    </div>
-    <div id="container">
-        <header>
-            <h1>Komrad Chat</h1>
-            <div id="user-info">
-                <span id="username">Guest</span>
-                <button id="logoutButton">Logout</button>
-            </div>
-            <div id="user-login">
-                <input type="text" id="usernameInput" placeholder="Enter your name"/>
-                <button id="loginButton">Login</button>
-            </div>
-        </header>
-        <main id="chat"></main>
-        <footer id="controls">
-            <input type="text" id="messageInput" placeholder="..."/>
-            <button id="sendButton">Send</button>
-        </footer>
-    </div>
-</div>
-<script>
+
+<script type="module">
+    class UserName extends HTMLElement {
+        constructor() {
+            super();
+            this.username = "";
+        }
+
+        connectedCallback() {
+            // Render when the element is attached to the DOM
+            this.render();
+        }
+
+        setUsername(username) {
+            this.username = username;
+            this.render();
+        }
+
+        render() {
+            if (this.username) {
+                // Display user information with logout option
+                this.innerHTML = `
+          <form id="user-info" action="/logout">
+            <span id="username">${this.username}</span>
+            <button id="logoutButton" type="button">Logout</button>
+          </form>
+        `;
+                // Add event listener for logout
+                const logoutForm = this.querySelector("#user-info");
+                logoutForm.addEventListener("submit", (e) => {
+                    e.preventDefault();
+                });
+                const logoutButton = this.querySelector("#logoutButton");
+                logoutButton.addEventListener("click", () => {
+                    // For demo purposes, simply clear the username.
+                    this.username = "";
+                    this.render();
+                });
+            } else {
+                // Display login form for setting username
+                this.innerHTML = `
+          <form id="user-login" action="/login" autocomplete="off">
+            <input type="text" id="nameInput" placeholder="" required/>
+            <button id="loginButton" type="submit">Login</button>
+          </form>
+        `;
+                // Add event listener for login
+                const loginForm = this.querySelector("#user-login");
+                loginForm.addEventListener("submit", (e) => {
+                    e.preventDefault();
+                    const input = this.querySelector("#nameInput");
+                    const newName = input.value.trim();
+                    if (newName) {
+                        this.setUsername(newName);
+                    }
+                });
+            }
+        }
+    }
+
+    customElements.define('user-name', UserName);
+
+    // Chat functionality remains unchanged
     const wsUrl = "ws://localhost:9898/ws/";
     const socket = new WebSocket(wsUrl);
 
@@ -187,19 +222,35 @@
     const sendButton = document.getElementById("sendButton");
 
     socket.addEventListener('open', function () {
-        appendMessage("System: Connected to chat server.");
+        appendMessage({
+            username: "System",
+            message: "Connected to chat server."
+        });
     });
 
     socket.addEventListener('message', function (event) {
-        appendMessage(event.data);
+        const data = JSON.parse(event.data);
+        const username = data[0];
+        const message = data[1];
+
+        appendMessage({
+            username: username,
+            message: message
+        });
     });
 
     socket.addEventListener('close', function () {
-        appendMessage("System: Disconnected from chat server.");
+        appendMessage({
+            username: "System",
+            message: "Disconnected from chat server."
+        });
     });
 
     socket.addEventListener('error', function () {
-        appendMessage("System: Error connecting to chat server.");
+        appendMessage({
+            username: "System",
+            message: "Error connecting to chat server."
+        });
     });
 
     sendButton.addEventListener('click', sendMessage);
@@ -212,18 +263,55 @@
     function sendMessage() {
         const message = messageInput.value.trim();
         if (message !== "") {
-            socket.send(message);
+            let username = document.querySelector("user-name").username;
+            if (!username) {
+                username = "Anonymous";
+            }
+
+            let jsonMessage = JSON.stringify([
+                username,
+                message
+            ]);
+
+            socket.send(jsonMessage);
             messageInput.value = "";
         }
     }
 
-    function appendMessage(message) {
+    function appendMessage(data) {
+        let {username, message} = data;
         const messageElem = document.createElement("div");
-        messageElem.textContent = message;
+        const usernameElem = document.createElement("strong");
+        const textElem = document.createElement("span");
+        usernameElem.textContent = username + ": ";
+        textElem.textContent = message;
+        messageElem.appendChild(usernameElem);
+        messageElem.appendChild(textElem);
         chatDiv.appendChild(messageElem);
         chatDiv.scrollTop = chatDiv.scrollHeight; // Auto-scroll to the latest message
     }
-
 </script>
+
+<div id="outer-container">
+    <div id="sidebar">
+        <h1>Rooms</h1>
+        <ul>
+            <li><a href="#lobby">Lobby</a></li>
+            <!-- Add more navigation items as needed -->
+        </ul>
+    </div>
+    <div id="container">
+        <header>
+            <h1>Komrad Chat</h1>
+            <user-name></user-name>
+        </header>
+        <main id="chat"></main>
+        <footer id="controls">
+            <input type="text" id="messageInput" placeholder="..."/>
+            <button id="sendButton">Send</button>
+        </footer>
+    </div>
+</div>
+
 </body>
 </html>

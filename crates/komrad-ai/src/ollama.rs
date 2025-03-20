@@ -1,3 +1,4 @@
+use crate::conversation::Conversation;
 use komrad_agent::agent_lifecycle_impl;
 use komrad_ast::agent::{Agent, AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::{
@@ -6,6 +7,7 @@ use komrad_ast::prelude::{
 use ollama_rs::generation::completion::request::GenerationRequest;
 use ollama_rs::generation::options::GenerationOptions;
 use ollama_rs::Ollama;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{error, info};
@@ -17,6 +19,7 @@ pub struct OllamaAgent {
     ollama: Arc<Mutex<Ollama>>,
     model: String,
     temperature: f32,
+    conversations: HashMap<String, Conversation>,
 }
 
 impl OllamaAgent {
@@ -31,6 +34,7 @@ impl OllamaAgent {
             ollama: Arc::new(Mutex::new(ollama)),
             model,
             temperature,
+            conversations: HashMap::new(),
         }
     }
 
@@ -41,6 +45,10 @@ impl OllamaAgent {
         let response = ollama.generate(request).await.map_err(|e| e.to_string())?;
         Ok(response.response)
     }
+
+    pub async fn handle_conversation(&self) -> Result<String, String> {
+        Ok("Heyo".to_string())
+    }
 }
 
 agent_lifecycle_impl!(OllamaAgent);
@@ -50,7 +58,7 @@ impl AgentBehavior for OllamaAgent {
     async fn handle_message(&self, msg: Message) -> bool {
         match msg.first_word().unwrap().as_str() {
             "generate" => {
-                let default_prompt = Value::String("Write a poem about cat".to_string());
+                let default_prompt = Value::String("Write a poem about a cat".to_string());
 
                 let prompt = msg.rest().get(0).unwrap_or(&default_prompt);
 

@@ -2,6 +2,8 @@ use komrad_agent::{AgentBehavior, AgentLifecycle};
 use komrad_ast::prelude::Message;
 use komrad_ast::prelude::{Channel, ChannelListener, Value};
 use komrad_macros::agent_lifecycle_impl;
+use owo_colors::colored::Color;
+use owo_colors::OwoColorize;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::warn;
@@ -16,12 +18,15 @@ pub trait IoInterface: Send + Sync {
 #[derive(Debug, Clone)]
 pub struct StdIo;
 
+const STDIO_COLOR: Color = Color::BrightGreen;
+
 impl IoInterface for StdIo {
     fn print(&mut self, msg: &str) {
-        print!("{}", msg);
+        print!("{}", msg.color(STDIO_COLOR));
     }
+
     fn println(&mut self, msg: &str) {
-        println!("{}", msg);
+        println!("{}", msg.color(STDIO_COLOR));
     }
 }
 
@@ -62,12 +67,31 @@ impl IoAgent {
         let output: Vec<String> = msg.terms()[1..]
             .iter()
             .map(|part| match part {
+                Value::List(l) => {
+                    let mut s = String::new();
+                    s.push_str("[");
+                    let inner_s = l
+                        .iter()
+                        .map(|v| match v {
+                            Value::String(s) => s.clone(),
+                            Value::Number(n) => n.to_string(),
+                            Value::Boolean(b) => b.to_string(),
+                            Value::Channel(ch) => format!("Channel: {}", ch.uuid()),
+                            Value::Embedded(b) => b.text().to_string(),
+                            _ => format!("(no formatter: {:?})", v),
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    s.push_str(&inner_s);
+                    s.push_str("]");
+                    s
+                }
                 Value::String(s) => s.clone(),
                 Value::Number(n) => n.to_string(),
                 Value::Boolean(b) => b.to_string(),
                 Value::Channel(ch) => format!("Channel: {}", ch.uuid()),
                 Value::Embedded(b) => b.text().to_string(),
-                _ => format!("Unknown: {:?}", part),
+                _ => format!("(no formatter: {:?})", part),
             })
             .collect();
 
@@ -75,6 +99,53 @@ impl IoAgent {
             let mut io = self.io_interface.write().await;
             for line in output {
                 io.println(&line);
+            }
+        }
+
+        // Acknowledge if there's a reply channel
+        if let Some(reply_chan) = msg.reply_to() {
+            let ack = Message::new(vec![Value::String("ack".into())], None);
+            let _ = reply_chan.send(ack).await;
+        }
+    }
+
+    /// **Helper**: actual logic for "print" commands.
+    async fn handle_print(&self, msg: &Message) {
+        let output: Vec<String> = msg.terms()[1..]
+            .iter()
+            .map(|part| match part {
+                Value::List(l) => {
+                    let mut s = String::new();
+                    s.push_str("[");
+                    let inner_s = l
+                        .iter()
+                        .map(|v| match v {
+                            Value::String(s) => s.clone(),
+                            Value::Number(n) => n.to_string(),
+                            Value::Boolean(b) => b.to_string(),
+                            Value::Channel(ch) => format!("Channel: {}", ch.uuid()),
+                            Value::Embedded(b) => b.text().to_string(),
+                            _ => format!("(no formatter: {:?})", v),
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    s.push_str(&inner_s);
+                    s.push_str("]");
+                    s
+                }
+                Value::String(s) => s.clone(),
+                Value::Number(n) => n.to_string(),
+                Value::Boolean(b) => b.to_string(),
+                Value::Channel(ch) => format!("Channel: {}", ch.uuid()),
+                Value::Embedded(b) => b.text().to_string(),
+                _ => format!("(no formatter: {:?})", part),
+            })
+            .collect();
+
+        {
+            let mut io = self.io_interface.write().await;
+            for part in output {
+                io.print(&part);
             }
         }
 
@@ -96,6 +167,9 @@ impl AgentBehavior for IoAgent {
                 "println" => {
                     self.handle_println(&msg).await;
                     return true;
+                }
+                "print" => {
+                    self.handle_print(&msg).await;
                 }
                 "shutdown" => {
                     warn!("Io agent received shutdown command, stopping.");

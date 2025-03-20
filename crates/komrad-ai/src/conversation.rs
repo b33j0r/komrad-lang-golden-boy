@@ -1,3 +1,4 @@
+use komrad_ast::prelude::{Channel, ChannelListener, Scope};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -82,3 +83,13 @@ mod tests {
         assert_eq!(conversation.events.len(), 1);
     }
 }
+
+pub struct ConversationAgent {
+    pub scope: Scope,
+    pub channel: Channel,
+    pub listener: Arc<ChannelListener>,
+    pub conversation: Conversation,
+    pub generator: Channel,
+}
+
+pub struct ConversationFactory;

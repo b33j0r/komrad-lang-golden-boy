@@ -1773,6 +1773,7 @@ dependencies = [
  "komrad-ast",
  "komrad-macros",
  "komrad-web",
+ "owo-colors",
  "quote",
  "tokio",
  "tokio-stream",

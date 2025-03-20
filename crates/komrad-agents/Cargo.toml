@@ -10,6 +10,7 @@ komrad-agent = { path = "../komrad-agent" }
 komrad-web = { path = "../komrad-web" }
 komrad-macros = { path = "../komrad-macros" }
 
+owo-colors.workspace = true
 async-trait.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true

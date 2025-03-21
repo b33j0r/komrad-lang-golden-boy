@@ -235,26 +235,6 @@ impl Execute for Expr {
                 Value::Channel(list_channel)
             }
             Expr::Value(val) => val.clone(),
-            Expr::Member(member) => {
-                if member.len() != 2 {
-                    return Value::Error(RuntimeError::InvalidArugments(
-                        "Member path must be of length 2".to_string(),
-                    ));
-                }
-                let target_value: String = member[0].clone();
-                let target_member = member[1].clone();
-
-                if let Some(Value::Channel(target)) = scope.get(&target_value) {
-                    let value = target.get(&target_member).await;
-                    if let Ok(value) = value {
-                        value
-                    } else {
-                        Value::Error(RuntimeError::NameNotFound(target_member))
-                    }
-                } else {
-                    Value::Error(RuntimeError::NameNotFound(target_value))
-                }
-            }
             Expr::Variable(name) => {
                 if let Some(value) = scope.get(name) {
                     value.clone()
@@ -471,6 +451,38 @@ impl Execute for BinaryExpr {
                     Value::Boolean(true)
                 } else {
                     Value::Boolean(false)
+                }
+            }
+            BinaryOp::Access => {
+                // Access operator e.g. `a.b` or `foo.bar`
+                match (left.clone(), right.clone()) {
+                    (Value::Channel(channel), Value::Word(word)) => {
+                        // left is a channel, right is a word
+                        match channel.get(word.as_str()).await {
+                            Ok(value) => value,
+                            Err(_) => Value::Error(RuntimeError::NameNotFound(word)),
+                        }
+                    }
+                    (Value::Word(word), Value::Word(member)) => {
+                        // left is a word, right is a word
+                        if let Some(value) = scope.get(word.as_str()) {
+                            match value {
+                                Value::Channel(channel) => {
+                                    channel.get(member.as_str()).await.unwrap_or(Value::Empty)
+                                }
+                                _ => Value::Error(RuntimeError::TypeMismatch(format!(
+                                    "Expected a channel, found {:?}",
+                                    value
+                                ))),
+                            }
+                        } else {
+                            Value::Error(RuntimeError::NameNotFound(word))
+                        }
+                    }
+                    (_, _) => Value::Error(RuntimeError::TypeMismatch(format!(
+                        "Expected a channel or word, found {:?} {:?}",
+                        left, right
+                    ))),
                 }
             }
         }

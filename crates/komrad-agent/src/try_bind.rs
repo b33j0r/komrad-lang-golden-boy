@@ -45,7 +45,7 @@ impl TryBind for Pattern {
                     scope.set(name.clone(), value.clone()).await;
                 }
                 // For a type hole, check if the value is of the expected type.
-                TypeExpr::Type(typ) => {
+                TypeExpr::HasType(typ) => {
                     // Check if the value is of the expected type.
                     if !value.get_type().is_subtype_of(typ) {
                         return None;

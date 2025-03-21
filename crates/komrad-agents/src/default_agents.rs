@@ -4,6 +4,7 @@ use crate::fs_agent::FsAgent;
 use crate::io_agent::IoAgent;
 use crate::prelude::StdIo;
 use crate::spawn_agent::SpawnAgent;
+use komrad_agent::stdlib_agent::DictAgent;
 use komrad_agent::AgentBehavior;
 use komrad_ast::prelude::Channel;
 use std::collections::HashMap;
@@ -15,6 +16,7 @@ pub struct DefaultAgents {
     pub agent_agent: Arc<AgentAgent>,
     pub spawn_agent: Arc<SpawnAgent>,
     pub assert_agent: Arc<AssertAgent>,
+    pub dict_agent: Arc<DictAgent>,
 }
 
 pub struct DefaultAgentChannels {
@@ -24,6 +26,7 @@ pub struct DefaultAgentChannels {
     pub agent_agent: Channel,
     pub spawn_agent: Channel,
     pub assert_agent: Channel,
+    pub dict_agent: Channel,
 }
 
 /// The channels for each agent constructed within `DefaultAgents`
@@ -46,12 +49,14 @@ impl DefaultAgents {
         let agent_agent = AgentAgent::new(registry_channel.clone());
         let spawn_agent = SpawnAgent::new(registry_channel.clone());
         let assert_agent = AssertAgent::new();
+        let dict_agent = DictAgent::new();
 
         let io_agent_channel = io_agent.clone().spawn();
         let fs_agent_channel = fs_agent.clone().spawn();
         let agent_agent_channel = agent_agent.clone().spawn();
         let spawn_agent_channel = spawn_agent.clone().spawn();
         let assert_agent_channel = assert_agent.clone().spawn();
+        let dict_agent_channel = dict_agent.clone().spawn();
 
         (
             Self {
@@ -60,6 +65,7 @@ impl DefaultAgents {
                 agent_agent,
                 spawn_agent,
                 assert_agent,
+                dict_agent,
             },
             DefaultAgentChannels {
                 io_agent: io_agent_channel,
@@ -68,6 +74,7 @@ impl DefaultAgents {
                 agent_agent: agent_agent_channel,
                 spawn_agent: spawn_agent_channel,
                 assert_agent: assert_agent_channel,
+                dict_agent: dict_agent_channel,
             },
         )
     }
@@ -91,6 +98,7 @@ impl DefaultAgentChannels {
         channels.insert("agent".to_string(), self.agent_agent.clone());
         channels.insert("spawn".to_string(), self.spawn_agent.clone());
         channels.insert("assert".to_string(), self.assert_agent.clone());
+        channels.insert("dict".to_string(), self.dict_agent.clone());
 
         // Return the map of channels
         channels

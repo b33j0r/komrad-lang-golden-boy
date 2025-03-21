@@ -7,7 +7,7 @@ pub enum Predicate {}
 pub enum TypeExpr {
     Empty,
     Value(Value),
-    Type(ValueType),
+    HasType(ValueType),
     Word(String),
     Hole(String),
     TypeHole(String, ValueType),

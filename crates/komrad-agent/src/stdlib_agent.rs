@@ -6,7 +6,7 @@ use komrad_ast::prelude::{
     AgentFactory, Channel, ChannelListener, Message, MessageBuilder, Number, Value,
 };
 use komrad_ast::scope::Scope;
-use komrad_macros::agent_stateful_impl;
+use komrad_macros::{agent_stateful_impl, agent_stateless_impl};
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tracing::error;
@@ -155,6 +155,124 @@ impl AgentBehavior for ListAgent {
                         error!("ListAgent: failed to send 'error' reply");
                     }
                 }
+            }
+        }
+        true
+    }
+}
+
+pub struct DictAgent {
+    channel: Channel,
+    listener: Arc<ChannelListener>,
+}
+
+agent_stateless_impl!(DictAgent);
+
+#[async_trait]
+impl AgentBehavior for DictAgent {
+    async fn handle_message(&self, msg: Message) -> bool {
+        if msg.terms().len() != 1 {
+            error!("DictAgent: 'dict' takes a single block as an argument");
+            if let Some(reply_chan) = msg.reply_to() {
+                let reply = Message::default().with_terms(vec![Value::from("error")]);
+                let _ = reply_chan.send(reply).await;
+            }
+            return true;
+        }
+
+        if let Some(Value::Block(block)) = msg.terms().get(0) {
+            let dict_instance = DictInstanceAgent::new();
+            let dict_scope = dict_instance.scope.clone();
+
+            // Execute the block in the scope of the DictInstanceAgent
+            {
+                let mut scope_lock = dict_scope.lock().await;
+                block.execute(&mut scope_lock).await;
+            }
+
+            // Return the new agent’s channel
+            if let Some(reply_chan) = msg.reply_to() {
+                let reply = Message::default()
+                    .with_terms(vec![Value::Channel(dict_instance.channel.clone())]);
+                if reply_chan.send(reply).await.is_err() {
+                    error!("DictAgent: failed to send instance channel");
+                }
+            }
+
+            // Spawn the agent
+            dict_instance.spawn();
+        } else {
+            error!("DictAgent: expected block argument");
+            if let Some(reply_chan) = msg.reply_to() {
+                let reply = Message::default().with_terms(vec![Value::from("error")]);
+                let _ = reply_chan.send(reply).await;
+            }
+        }
+
+        true
+    }
+}
+
+pub struct DictInstanceAgent {
+    channel: Channel,
+    listener: Arc<ChannelListener>,
+    scope: Arc<Mutex<Scope>>, // required for stateful agents
+}
+
+agent_stateful_impl!(DictInstanceAgent);
+
+impl DictInstanceAgent {
+    /// Custom constructor (required for a stateful agent).
+    pub fn new() -> Arc<Self> {
+        let (channel, listener) = Channel::new(32);
+        Arc::new(Self {
+            channel,
+            listener: Arc::new(listener),
+            scope: Arc::new(Mutex::new(Scope::new())),
+        })
+    }
+}
+
+#[async_trait]
+impl AgentBehavior for DictInstanceAgent {
+    async fn handle_message(&self, msg: Message) -> bool {
+        match msg.first_word().as_deref() {
+            Some("get") => {
+                if let Some(key) = msg.rest().get(0) {
+                    let key_str = match key {
+                        Value::Word(w) => w.to_string(),
+                        Value::String(s) => s.clone(),
+                        other => {
+                            error!("DictInstanceAgent: unsupported key type: {:?}", other);
+                            if let Some(reply_chan) = msg.reply_to() {
+                                let reply = Message::default().with_terms(vec![Value::Empty]);
+                                let _ = reply_chan.send(reply).await;
+                            }
+                            return true;
+                        }
+                    };
+
+                    if let Some(reply_chan) = msg.reply_to() {
+                        let val = self.scope.lock().await.get(&key_str);
+                        let reply =
+                            Message::default().with_terms(vec![val.unwrap_or(Value::Empty)]);
+                        if reply_chan.send(reply).await.is_err() {
+                            error!("DictInstanceAgent: failed to send 'get' reply");
+                        }
+                    }
+                } else {
+                    error!("DictInstanceAgent: 'get' requires a key");
+                }
+            }
+            Some(other) => {
+                error!("DictInstanceAgent: unknown command '{}'", other);
+                if let Some(reply_chan) = msg.reply_to() {
+                    let reply = Message::default().with_terms(vec![Value::from("error")]);
+                    let _ = reply_chan.send(reply).await;
+                }
+            }
+            None => {
+                error!("DictInstanceAgent: no command found in message");
             }
         }
         true

@@ -16,7 +16,6 @@ pub fn parse_value_expression(input: Span) -> KResult<Box<Expr>> {
             block::parse_block_expression,
             parse_number_expression,
             parse_string_expression,
-            map(identifier::parse_member, Expr::Member),
             map(identifier::parse_identifier, Expr::Variable),
         )),
         Box::new,
@@ -33,7 +32,6 @@ pub fn parse_expression(input: Span) -> KResult<Expr> {
         parse_number_expression,
         parse_string_expression,
         map(parse_embedded_block_value, Expr::Value),
-        map(identifier::parse_member, Expr::Member),
         map(identifier::parse_identifier, Expr::Variable),
     ))
     .parse(input)

@@ -18,6 +18,7 @@ fn precedence(op: &BinaryOp) -> u8 {
         BinaryOp::And => 2,
         BinaryOp::Add | BinaryOp::Sub => 3,
         BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod => 4,
+        BinaryOp::Access => 5,
     }
 }
 
@@ -34,6 +35,7 @@ fn parse_binary_operator(input: Span) -> KResult<BinaryOp> {
         map(tag("%"), |_| BinaryOp::Mod),
         map(tag("=="), |_| BinaryOp::Eq),
         map(tag("!="), |_| BinaryOp::Ne),
+        map(tag("."), |_| BinaryOp::Access),
     ))
     .parse(input)
 }
@@ -47,7 +49,6 @@ fn parse_primary(input: Span) -> KResult<Expr> {
         expressions::parse_expression::parse_number_expression,
         expressions::parse_expression::parse_string_expression,
         map(embedded_block::parse_embedded_block_value, Expr::Value),
-        map(identifier::parse_member, Expr::Member),
         map(identifier::parse_identifier, Expr::Variable),
     ))
     .parse(input)

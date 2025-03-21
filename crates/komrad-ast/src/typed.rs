@@ -50,7 +50,7 @@ impl Typed for TypeExpr {
     fn is_same_type(&self, other: &Self) -> bool {
         match (self, other) {
             (TypeExpr::Empty, TypeExpr::Empty) => true,
-            (TypeExpr::Type(t1), TypeExpr::Type(t2)) => t1 == t2,
+            (TypeExpr::HasType(t1), TypeExpr::HasType(t2)) => t1 == t2,
             (TypeExpr::Word(w1), TypeExpr::Word(w2)) => w1 == w2,
             (TypeExpr::Hole(h1), TypeExpr::Hole(h2)) => h1 == h2,
             (TypeExpr::BlockHole(bh1), TypeExpr::BlockHole(bh2)) => bh1 == bh2,
@@ -62,7 +62,7 @@ impl Typed for TypeExpr {
     fn is_subtype_of(&self, other: &Self) -> bool {
         match (self, other) {
             (TypeExpr::Empty, _) => true,
-            (TypeExpr::Type(t1), TypeExpr::Type(t2)) => t1.is_subtype_of(t2),
+            (TypeExpr::HasType(t1), TypeExpr::HasType(t2)) => t1.is_subtype_of(t2),
             (TypeExpr::Word(w1), TypeExpr::Word(w2)) => w1 == w2,
             (TypeExpr::Hole(h1), TypeExpr::Hole(h2)) => h1 == h2,
             (TypeExpr::BlockHole(bh1), TypeExpr::BlockHole(bh2)) => bh1 == bh2,

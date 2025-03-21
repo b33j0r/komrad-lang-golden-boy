@@ -2,7 +2,7 @@ use crate::ast::Block;
 use crate::channel::Channel;
 use crate::error::RuntimeError;
 use crate::number::Number;
-use crate::prelude::{EmbeddedBlock, TypeExpr, literal};
+use crate::prelude::{literal, EmbeddedBlock, TypeExpr};
 use crate::value_type::ValueType;
 use std::fmt::Display;
 use std::hash::Hash;
@@ -150,16 +150,16 @@ impl Value {
     pub fn get_type_expr(&self) -> TypeExpr {
         match self {
             Value::Empty => TypeExpr::new_empty(),
-            Value::Error(_) => TypeExpr::Type(ValueType::Error),
-            Value::Channel(_) => TypeExpr::Type(ValueType::Channel),
-            Value::Boolean(_) => TypeExpr::Type(ValueType::Boolean),
-            Value::Word(_) => TypeExpr::Type(ValueType::Word),
-            Value::String(_) => TypeExpr::Type(ValueType::String),
-            Value::Number(_) => TypeExpr::Type(ValueType::Number),
-            Value::List(_) => TypeExpr::Type(ValueType::List),
-            Value::Block(_) => TypeExpr::Type(ValueType::Block),
-            Value::Bytes(_) => TypeExpr::Type(ValueType::Bytes),
-            Value::Embedded(_) => TypeExpr::Type(ValueType::EmbeddedBlock),
+            Value::Error(_) => TypeExpr::HasType(ValueType::Error),
+            Value::Channel(_) => TypeExpr::HasType(ValueType::Channel),
+            Value::Boolean(_) => TypeExpr::HasType(ValueType::Boolean),
+            Value::Word(_) => TypeExpr::HasType(ValueType::Word),
+            Value::String(_) => TypeExpr::HasType(ValueType::String),
+            Value::Number(_) => TypeExpr::HasType(ValueType::Number),
+            Value::List(_) => TypeExpr::HasType(ValueType::List),
+            Value::Block(_) => TypeExpr::HasType(ValueType::Block),
+            Value::Bytes(_) => TypeExpr::HasType(ValueType::Bytes),
+            Value::Embedded(_) => TypeExpr::HasType(ValueType::EmbeddedBlock),
         }
     }
 }

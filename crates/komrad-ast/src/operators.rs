@@ -38,6 +38,7 @@ pub enum BinaryOp {
     Or,
     Eq,
     Ne,
+    Access,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

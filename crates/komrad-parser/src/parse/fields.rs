@@ -23,7 +23,7 @@ pub fn parse_field_definition(input: Span) -> KResult<Statement> {
         .parse(input)?;
 
     let (name, _, typ, _, expr) = field;
-    let type_expr = TypeExpr::Type(typ.clone());
+    let type_expr = TypeExpr::HasType(typ.clone());
     let field_definition = Statement::Field(name.to_string(), type_expr, expr);
     Ok((remaining, field_definition))
 }
@@ -45,7 +45,7 @@ mod tests {
             field,
             Statement::Field(
                 "foo".to_string(),
-                TypeExpr::Type(ValueType::Number),
+                TypeExpr::HasType(ValueType::Number),
                 Some(Expr::Value(Value::Number(Number::UInt(42))))
             )
         );

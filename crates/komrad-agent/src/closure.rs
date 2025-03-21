@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use komrad_ast::prelude::{BinaryExpr, Block, CallExpr, Expr, Statement, Value};
+use komrad_ast::prelude::{BinaryExpr, Block, CallExpr, Expr, RuntimeError, Statement, Value};
 use komrad_ast::scope::Scope;
 
 #[async_trait]
@@ -80,6 +80,26 @@ impl Closure for Expr {
                     Expr::Value(val)
                 } else {
                     self.clone()
+                }
+            }
+            Expr::Member(path) => {
+                if path.len() != 2 {
+                    return Expr::Value(Value::Error(RuntimeError::InvalidArugments(
+                        "Member path must be of length 2".to_string(),
+                    )));
+                }
+                let target_value: String = path[0].clone();
+                let target_member = path[1].clone();
+
+                if let Some(Value::Channel(target)) = context.get(&target_value) {
+                    let value = target.get(&target_member).await;
+                    if let Ok(value) = value {
+                        Expr::Value(value)
+                    } else {
+                        Expr::Value(Value::Error(RuntimeError::NameNotFound(target_member)))
+                    }
+                } else {
+                    Expr::Value(Value::Error(RuntimeError::NameNotFound(target_value)))
                 }
             }
             Expr::Block(block) => {

@@ -1,6 +1,5 @@
-use crate::parse::expressions::parse_expression;
-use crate::parse::identifier::parse_identifier;
-use crate::parse::{block, embedded_block};
+use crate::parse::expressions;
+use crate::parse::{block, embedded_block, identifier};
 use crate::span::KResult;
 use komrad_ast::prelude::{BinaryExpr, BinaryOp, Expr, Span};
 use nom::branch::alt;
@@ -14,6 +13,7 @@ use nom::Parser;
 /// Higher numbers bind more tightly.
 fn precedence(op: &BinaryOp) -> u8 {
     match op {
+        BinaryOp::Eq | BinaryOp::Ne => 0,
         BinaryOp::Or => 1,
         BinaryOp::And => 2,
         BinaryOp::Add | BinaryOp::Sub => 3,
@@ -32,6 +32,8 @@ fn parse_binary_operator(input: Span) -> KResult<BinaryOp> {
         map(tag("*"), |_| BinaryOp::Mul),
         map(tag("/"), |_| BinaryOp::Div),
         map(tag("%"), |_| BinaryOp::Mod),
+        map(tag("=="), |_| BinaryOp::Eq),
+        map(tag("!="), |_| BinaryOp::Ne),
     ))
     .parse(input)
 }
@@ -42,10 +44,11 @@ fn parse_primary(input: Span) -> KResult<Expr> {
     alt((
         //expressions::parse_call_expression,
         block::parse_block_expression,
-        parse_expression::parse_number_expression,
-        parse_expression::parse_string_expression,
+        expressions::parse_expression::parse_number_expression,
+        expressions::parse_expression::parse_string_expression,
         map(embedded_block::parse_embedded_block_value, Expr::Value),
-        map(parse_identifier, Expr::Variable),
+        map(identifier::parse_member, Expr::Member),
+        map(identifier::parse_identifier, Expr::Variable),
     ))
     .parse(input)
 }

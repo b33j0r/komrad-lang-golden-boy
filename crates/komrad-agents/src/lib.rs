@@ -4,6 +4,7 @@ mod dynamic_agent;
 mod fs_agent;
 mod io_agent;
 
+mod assert_agent;
 mod registry_agent;
 mod spawn_agent;
 

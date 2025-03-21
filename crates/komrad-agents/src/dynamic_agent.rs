@@ -9,7 +9,7 @@ use komrad_ast::scope::Scope;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
-use tracing::{debug, trace};
+use tracing::{debug, error, trace};
 use tracing_subscriber::registry;
 
 /// A universal dynamic "module" or "agent" that handles an AST block.
@@ -72,6 +72,55 @@ impl DynamicAgent {
             listener: Arc::new(listener),
         })
     }
+
+    async fn handle_builtins(&self, msg: Message, scope: &mut Scope) -> Option<bool> {
+        // Check if the message is a built-in command
+        match msg.first_word().unwrap().as_str() {
+            "get" => {
+                if msg.rest().len() != 1 {
+                    let reply_value = Value::Error(RuntimeError::InvalidArugments(
+                        "get requires 1 argument (name)".to_string(),
+                    ));
+                    if let Some(reply_to) = msg.reply_to() {
+                        let reply_msg = Message::new(vec![reply_value], None);
+                        match reply_to.send(reply_msg).await {
+                            Ok(_) => {}
+                            Err(e) => {
+                                error!(
+                                    "DynamicAgent {} -> get error, reply error: {:?}",
+                                    self.name, e
+                                );
+                            }
+                        }
+                    }
+                }
+                // Get the value of a variable
+                if let Some(var_name) = msg.rest().get(0) {
+                    if let Value::String(name) = var_name {
+                        if let Some(value) = scope.get(name) {
+                            let reply_msg = Message::new(vec![value.clone()], None);
+                            if let Some(reply_to) = msg.reply_to() {
+                                match reply_to.send(reply_msg).await {
+                                    Ok(_) => {
+                                        debug!("DynamicAgent {} -> get reply sent", self.name);
+                                    }
+                                    Err(e) => {
+                                        debug!(
+                                            "DynamicAgent {} -> get reply error: {:?}",
+                                            self.name, e
+                                        );
+                                    }
+                                }
+                            }
+                            return Some(true);
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+        None
+    }
 }
 
 #[async_trait::async_trait]
@@ -99,6 +148,10 @@ impl AgentBehavior for DynamicAgent {
 
         // Lock the scope
         let mut base_scope = self.scope.lock().await.clone();
+
+        if let Some(result) = self.handle_builtins(msg.clone(), &mut base_scope).await {
+            return result;
+        }
 
         // Pattern match against each handler
         for h in &local_handlers {

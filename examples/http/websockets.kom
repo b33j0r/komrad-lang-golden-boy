@@ -2,7 +2,6 @@ agent WsHandler {
 	name = "Unknown"
 
 	[ws _socket connected] {
-		Io println "Connected: " + socket
 		socket send "[\"WsHandler\", \"Hello!\"]"
 	}
 

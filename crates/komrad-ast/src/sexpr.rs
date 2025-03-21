@@ -104,6 +104,8 @@ impl ToSexpr for BinaryOp {
             BinaryOp::Mod => Sexpr::Atom("%".to_string()),
             BinaryOp::And => Sexpr::Atom("and".to_string()),
             BinaryOp::Or => Sexpr::Atom("or".to_string()),
+            BinaryOp::Eq => Sexpr::Atom("==".to_string()),
+            BinaryOp::Ne => Sexpr::Atom("!=".to_string()),
         }
     }
 }
@@ -195,6 +197,13 @@ impl ToSexpr for Expr {
             }
             Expr::Value(value) => value.to_sexpr(),
             Expr::Variable(name) => Sexpr::Atom(name.clone()),
+            Expr::Member(member) => {
+                let mut items = vec![Sexpr::Atom("member".to_string())];
+                for m in member {
+                    items.push(Sexpr::Atom(m.clone()));
+                }
+                Sexpr::List(items)
+            }
             Expr::Binary(binary) => {
                 let left = binary.left().to_sexpr();
                 let op = binary.operator().to_sexpr();

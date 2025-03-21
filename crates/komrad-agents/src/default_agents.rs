@@ -1,4 +1,5 @@
 use crate::agent_agent::AgentAgent;
+use crate::assert_agent::AssertAgent;
 use crate::fs_agent::FsAgent;
 use crate::io_agent::IoAgent;
 use crate::prelude::StdIo;
@@ -13,6 +14,7 @@ pub struct DefaultAgents {
     pub fs_agent: Arc<FsAgent>,
     pub agent_agent: Arc<AgentAgent>,
     pub spawn_agent: Arc<SpawnAgent>,
+    pub assert_agent: Arc<AssertAgent>,
 }
 
 pub struct DefaultAgentChannels {
@@ -21,6 +23,7 @@ pub struct DefaultAgentChannels {
     pub registry_agent: Channel,
     pub agent_agent: Channel,
     pub spawn_agent: Channel,
+    pub assert_agent: Channel,
 }
 
 /// The channels for each agent constructed within `DefaultAgents`
@@ -42,11 +45,13 @@ impl DefaultAgents {
         let fs_agent = FsAgent::new();
         let agent_agent = AgentAgent::new(registry_channel.clone());
         let spawn_agent = SpawnAgent::new(registry_channel.clone());
+        let assert_agent = AssertAgent::new();
 
         let io_agent_channel = io_agent.clone().spawn();
         let fs_agent_channel = fs_agent.clone().spawn();
         let agent_agent_channel = agent_agent.clone().spawn();
         let spawn_agent_channel = spawn_agent.clone().spawn();
+        let assert_agent_channel = assert_agent.clone().spawn();
 
         (
             Self {
@@ -54,6 +59,7 @@ impl DefaultAgents {
                 fs_agent,
                 agent_agent,
                 spawn_agent,
+                assert_agent,
             },
             DefaultAgentChannels {
                 io_agent: io_agent_channel,
@@ -61,6 +67,7 @@ impl DefaultAgents {
                 registry_agent: registry_channel,
                 agent_agent: agent_agent_channel,
                 spawn_agent: spawn_agent_channel,
+                assert_agent: assert_agent_channel,
             },
         )
     }
@@ -83,6 +90,7 @@ impl DefaultAgentChannels {
         // Special Agents (Keywords)
         channels.insert("agent".to_string(), self.agent_agent.clone());
         channels.insert("spawn".to_string(), self.spawn_agent.clone());
+        channels.insert("assert".to_string(), self.assert_agent.clone());
 
         // Return the map of channels
         channels

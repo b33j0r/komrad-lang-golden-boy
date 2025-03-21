@@ -1,5 +1,6 @@
 use crate::error::RuntimeError;
 use crate::message::Message;
+use crate::prelude::Value;
 use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
@@ -22,6 +23,26 @@ impl Channel {
         let msg_with_response = Message::new(msg.terms().clone(), Some(response_sender));
         self.send(msg_with_response).await?;
         response_receiver.recv().await
+    }
+
+    pub async fn get(&self, key: &str) -> Result<Value, RuntimeError> {
+        let msg = Message::new(
+            vec![
+                Value::Word("get".to_string()),
+                Value::String(key.to_string()),
+            ],
+            None,
+        );
+        let reply = self.send_and_recv(msg).await;
+        match reply {
+            Ok(msg) => Ok(msg.terms().iter().next().unwrap_or(&Value::Empty).clone()),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn items(&self) -> Result<Message, RuntimeError> {
+        let msg = Message::new(vec![Value::Word("items".to_string())], None);
+        self.send_and_recv(msg).await
     }
 }
 

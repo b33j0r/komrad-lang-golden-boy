@@ -103,17 +103,32 @@ pub enum ErrorKind {
 
 #[derive(Debug, Clone, Error, PartialEq, Eq, Hash)]
 pub enum RuntimeError {
+    #[error("Failed to parse message")]
+    ParseError(ParserError),
+
+    #[error("Assertion failed: {0}")]
+    AssertionFailed(String),
+
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
+
+    #[error("Invalid arguments: {0}")]
+    InvalidArugments(String),
+
+    #[error("Name not found in scope: {0}")]
+    NameNotFound(String),
+
     #[error("Failed to send message")]
     SendError,
 
     #[error("Failed to receive message")]
     ReceiveError,
 
+    #[error("Failed to send control message")]
+    SendControlError,
+
     #[error("Failed to receive control message")]
     ReceiveControlError,
-
-    #[error("Failed to parse message")]
-    ParseError(ParserError),
 
     #[error("Division by zero")]
     DivisionByZero,
@@ -127,17 +142,8 @@ pub enum RuntimeError {
     #[error("Type mismatch: {0}")]
     TypeMismatch(String),
 
-    #[error("Failed to send control message")]
-    SendControlError,
-
     #[error("Index out of bounds: {0}")]
     IndexOutOfBounds(usize),
-
-    #[error("Invalid arguments: {0}")]
-    InvalidArugments(String),
-
-    #[error("Name not found in scope: {0}")]
-    NameNotFound(String),
 
     #[error("No handler found for message: {0}")]
     HandlerNotFound(String),

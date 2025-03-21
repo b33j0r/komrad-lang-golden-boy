@@ -1,0 +1,11 @@
+user = {
+	name = "Alfred"
+	color = "#0000FF"
+}
+
+user_name = user get name
+
+assert user_name == "Alfred"
+assert user_name != "Bob"
+
+assert user.name == "Alfred"

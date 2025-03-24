@@ -4,12 +4,13 @@ use crate::error::RuntimeError;
 use crate::number::Number;
 use crate::prelude::{literal, EmbeddedBlock, TypeExpr};
 use crate::value_type::ValueType;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::hash::Hash;
 use std::ops::Rem;
 use tracing::error;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Value {
     Empty,
     Error(RuntimeError),

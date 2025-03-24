@@ -2,14 +2,20 @@ agent WsHandler {
 	name = "Unknown"
 
 	[ws _socket connected] {
-		socket send "[\"WsHandler\", \"Hello!\"]"
+		msg = dict {
+			name = "System"
+			message = "WsHandler connected"
+		}
+		msg_json = json encode msg
+		socket send msg_json
 	}
 
 	[ws _socket disconnected] {
 		Io println "Disconnected: " + socket
 	}
 
-	[ws _socket text _message] {
+	[ws _socket text _message_json] {
+		message = json decode message_json
 		server broadcast name message
 		1337
 	}
@@ -36,15 +42,12 @@ agent Server {
 	}
 
 	[ws _socket connect] {
-		socket send ```
-		["Server", "Hello!"]
-		```
 		client = spawn WsHandler {
 			server = me
 		}
 		messages foreach x {
-			Io println "Previous message: " + x
-			socket send x
+			x_json = json encode x
+			socket send x_json
 		}
 		socket set-delegate client
 		clients add client

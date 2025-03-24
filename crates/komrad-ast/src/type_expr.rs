@@ -1,9 +1,10 @@
 use crate::prelude::{ComparisonOp, Value};
 use crate::value_type::ValueType;
+use serde::{Deserialize, Serialize};
 
 pub enum Predicate {}
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TypeExpr {
     Empty,
     Value(Value),

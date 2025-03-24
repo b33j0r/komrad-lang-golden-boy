@@ -5,6 +5,7 @@ mod fs_agent;
 mod io_agent;
 
 mod assert_agent;
+mod json_agent;
 mod registry_agent;
 mod spawn_agent;
 

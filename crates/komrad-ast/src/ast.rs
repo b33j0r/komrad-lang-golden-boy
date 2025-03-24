@@ -2,16 +2,17 @@ use crate::operators::BinaryExpr;
 use crate::prelude::BinaryOp;
 use crate::type_expr::TypeExpr;
 use crate::value::Value;
+use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct CallExpr {
     target: Box<Expr>,
     args: Vec<Box<Expr>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Expr {
     Value(Value),
     List(Vec<Expr>),  // e.g., [1 2 3]
@@ -21,7 +22,7 @@ pub enum Expr {
     Block(Box<Block>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Statement {
     NoOp,
     Expander(Expr),
@@ -32,17 +33,17 @@ pub enum Statement {
     Handler(Arc<Handler>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Block {
     statements: Vec<Statement>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Pattern {
     terms: Vec<TypeExpr>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Handler {
     pattern: Pattern,
     block: Block,
@@ -163,7 +164,7 @@ impl Handler {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbeddedBlock {
     pub tags: Vec<String>,
     pub text: String,

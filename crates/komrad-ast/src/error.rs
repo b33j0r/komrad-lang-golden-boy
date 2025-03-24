@@ -1,8 +1,11 @@
 use miette::{Diagnostic, NamedSource, SourceSpan};
 use nom::error::{ErrorKind as NomErrorKind, FromExternalError, ParseError as NomParseError};
 use nom_locate::LocatedSpan;
+use serde::ser::SerializeStruct;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
+
 pub type Span<'a> = LocatedSpan<&'a str, Arc<NamedSource<String>>>;
 
 /// Our master parser error type.
@@ -18,6 +21,39 @@ pub struct ParserError {
     pub span: SourceSpan,
 
     pub kind: ErrorKind,
+}
+
+impl Serialize for ParserError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("ParserError", 3)?;
+        state.serialize_field("src", &self.src.name())?;
+        state.serialize_field("kind", &self.kind)?;
+        state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for ParserError {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct ParserErrorData {
+            src: String,
+            kind: ErrorKind,
+        }
+
+        let data = ParserErrorData::deserialize(deserializer)?;
+        let src = Arc::new(NamedSource::new(data.src.clone(), "".to_string()));
+        Ok(ParserError {
+            src,
+            span: SourceSpan::new(0.into(), data.src.len().into()),
+            kind: data.kind,
+        })
+    }
 }
 
 impl ParserError {
@@ -68,7 +104,7 @@ pub fn empty_span() -> Span<'static> {
     Span::new_extra("", Arc::new(NamedSource::new("<empty>", "".to_string())))
 }
 
-#[derive(Debug, Clone, Error, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Error, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ErrorKind {
     #[error("Invalid syntax")]
     InvalidSyntax,
@@ -101,7 +137,7 @@ pub enum ErrorKind {
     UnexpectedEndOfEmbeddedBlock,
 }
 
-#[derive(Debug, Clone, Error, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Error, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RuntimeError {
     #[error("Failed to parse message")]
     ParseError(ParserError),

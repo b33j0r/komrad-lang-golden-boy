@@ -19,6 +19,8 @@ tracing-subscriber.workspace = true
 uuid.workspace = true
 tokio-stream.workspace = true
 quote = "1.0.39"
+serde.workspace = true
+serde_json.workspace = true
 
 [features]
 default = ["hyper", "templates", "ollama"]

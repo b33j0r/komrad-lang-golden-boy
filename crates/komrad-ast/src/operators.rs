@@ -1,7 +1,8 @@
 use crate::prelude::Expr;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ComparisonOp {
     Eq,
     Ne,
@@ -27,7 +28,7 @@ impl Display for ComparisonOp {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BinaryOp {
     Add,
     Sub,
@@ -41,7 +42,7 @@ pub enum BinaryOp {
     Access,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum UnaryOp {
     Neg,
     Not,
@@ -49,14 +50,14 @@ pub enum UnaryOp {
     Dec,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BinaryExpr {
     pub op: BinaryOp,
     pub left: Box<Expr>,
     pub right: Box<Expr>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct UnaryExpr {
     pub op: UnaryOp,
     pub expr: Box<Expr>,

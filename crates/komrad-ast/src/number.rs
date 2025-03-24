@@ -1,9 +1,11 @@
 use crate::prelude::literal;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::hash::Hash;
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Number {
     Int(literal::Int),
     UInt(literal::UInt),

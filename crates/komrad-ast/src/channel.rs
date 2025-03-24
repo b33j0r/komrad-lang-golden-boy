@@ -1,6 +1,7 @@
 use crate::error::RuntimeError;
 use crate::message::Message;
 use crate::prelude::Value;
+use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
@@ -15,6 +16,32 @@ pub struct Channel {
     uuid: Uuid,
     sender: mpsc::Sender<Message>,
     control_sender: mpsc::Sender<ControlMessage>,
+}
+
+impl<'de> Deserialize<'de> for Channel {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let uuid = Uuid::deserialize(deserializer)?;
+        let (sender, _message_receiver) = mpsc::channel(1);
+        let (control_sender, _control_receiver) = mpsc::channel(1);
+        let channel = Channel {
+            uuid,
+            sender,
+            control_sender,
+        };
+        Ok(channel)
+    }
+}
+
+impl Serialize for Channel {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.uuid.serialize(serializer)
+    }
 }
 
 impl Channel {

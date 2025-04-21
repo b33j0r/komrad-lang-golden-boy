@@ -1,24 +1,5 @@
 # The Komrad Programming Language
 
-`komrad` is designed to make async programming simple and fun.
-In Komrad, or komrad if you prefer, everything is a message or
-a handler.
-
-```komrad+repl
-~> 1 + 1
-2
-```
-
-This sends the message `+ 1` to the built-in type 1.
-
-```
-type Nat (x: Int) and (x >= 0)
-
-[(a:Nat) + (b:Nat)] {
-    Number add a b
-}
-```
-
 Things in `[]` are called _message boxes_, and the {} that comes
 after them is called a _block_. Together, a `[] {}` pair is called
 a _message handler_.
@@ -28,11 +9,32 @@ send messages to it with a statement that looks like the
 message box's _pattern_:
 
 ```
-[do something] {
-  IO println "ok, I did something"
+Io println "Hello, world!"
+
+agent Alice {
+	bob: Bob
+
+	[start] {
+		Io println "Alice messaged bob!"
+		bob tell "This is a message from Alice"
+	}
 }
 
-do something
+agent Bob {
+	[tell _msg] {
+		Io println "Bob received message"
+	}
+}
+
+[main] {
+	Io println "Main started"
+	bob = spawn Bob
+	alice = spawn Alice {
+		bob = bob
+	}
+
+	alice start
+}
 ```
 
 Or, with _pattern holes_, you can send parameters/arguments in a
@@ -43,8 +45,10 @@ an arbitrary value with `_name`, one that matches a predicate with
 The first form is just called a hole.
 
 ```
-[say hi to _name] {
-  IO println "Hi, " + name + "!"
+agent X {
+    [say hi to _name] {
+      IO println "Hi, " + name + "!"
+    }
 }
 ```
 

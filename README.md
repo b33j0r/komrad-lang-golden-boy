@@ -1,5 +1,7 @@
 # The Komrad Programming Language
 
+**Warning: this is an old version of komrad, preserved because it has the richest set of example programs**
+
 Things in `[]` are called _message boxes_, and the {} that comes
 after them is called a _block_. Together, a `[] {}` pair is called
 a _message handler_.
